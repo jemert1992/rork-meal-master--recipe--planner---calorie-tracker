@@ -59,14 +59,16 @@ export const useUserStore = create<UserState>()(
       },
       
       updateProfile: (updates) => {
-        set({
+        // First update the profile
+        set((state) => ({
           profile: {
-            ...get().profile,
+            ...state.profile,
             ...updates,
           },
-        });
+        }));
         
-        // Recalculate nutrition goals if relevant fields were updated
+        // Then check if we need to recalculate nutrition goals
+        // This prevents the infinite loop by separating the state updates
         if (
           updates.weight !== undefined ||
           updates.height !== undefined ||
@@ -74,7 +76,10 @@ export const useUserStore = create<UserState>()(
           updates.gender !== undefined ||
           updates.activityLevel !== undefined
         ) {
-          get().calculateNutritionGoals();
+          // Use setTimeout to ensure this runs after the state update
+          setTimeout(() => {
+            get().calculateNutritionGoals();
+          }, 0);
         }
       },
       
@@ -87,8 +92,10 @@ export const useUserStore = create<UserState>()(
           },
         }));
         
-        // Recalculate nutrition goals
-        get().calculateNutritionGoals();
+        // Use setTimeout to ensure this runs after the state update
+        setTimeout(() => {
+          get().calculateNutritionGoals();
+        }, 0);
       },
       
       updateWeightImperial: (pounds) => {
@@ -100,8 +107,10 @@ export const useUserStore = create<UserState>()(
           },
         }));
         
-        // Recalculate nutrition goals
-        get().calculateNutritionGoals();
+        // Use setTimeout to ensure this runs after the state update
+        setTimeout(() => {
+          get().calculateNutritionGoals();
+        }, 0);
       },
       
       calculateNutritionGoals: () => {
@@ -139,15 +148,15 @@ export const useUserStore = create<UserState>()(
         const carbsGoal = Math.round((calorieGoal * 0.4) / 4);   // 4 calories per gram of carbs
         const fatGoal = Math.round((calorieGoal * 0.3) / 9);     // 9 calories per gram of fat
         
-        set({
+        set((state) => ({
           profile: {
-            ...profile,
+            ...state.profile,
             calorieGoal,
             proteinGoal,
             carbsGoal,
             fatGoal,
           },
-        });
+        }));
       },
     }),
     {

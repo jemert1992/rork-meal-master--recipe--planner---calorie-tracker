@@ -28,6 +28,7 @@ export default function NutritionGoalsScreen() {
   }, []); // Empty dependency array, only run once
   
   // Update local state when profile is updated with calculated values
+  // Only run when profile values or useCalculated changes
   useEffect(() => {
     if (profile.calorieGoal && useCalculated) {
       setCalorieGoal(profile.calorieGoal.toString());

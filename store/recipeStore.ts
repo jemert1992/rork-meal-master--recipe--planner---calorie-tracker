@@ -66,7 +66,7 @@ export const useRecipeStore = create<RecipeState>()(
       
       loadRecipesFromApi: async () => {
         // Skip if we've already loaded from API
-        if (get().hasLoadedFromApi) return;
+        if (get().hasLoadedFromApi && get().recipes.length > mockRecipes.length) return;
         
         set({ isLoading: true });
         

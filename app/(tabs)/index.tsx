@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Filter, RefreshCw } from 'lucide-react-native';
@@ -34,21 +34,26 @@ export default function RecipesScreen() {
     loadRecipesFromApi();
   }, []);
 
-  // Handle search
+  // Memoize the search function to prevent recreating it on every render
+  const performSearch = useCallback(async (query: string) => {
+    if (query.trim().length >= 2) {
+      setIsSearching(true);
+      const results = await searchRecipes(query);
+      setSearchResults(results);
+      setIsSearching(false);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchRecipes]);
+
+  // Handle search with debounce
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.trim().length >= 2) {
-        setIsSearching(true);
-        const results = await searchRecipes(searchQuery);
-        setSearchResults(results);
-        setIsSearching(false);
-      } else {
-        setSearchResults([]);
-      }
+    const delayDebounceFn = setTimeout(() => {
+      performSearch(searchQuery);
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, performSearch]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

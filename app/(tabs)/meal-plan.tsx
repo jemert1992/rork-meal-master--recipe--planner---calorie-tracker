@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -63,8 +63,8 @@ export default function MealPlanScreen() {
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }, []);
 
+  // Calculate daily nutrition whenever dayPlan or recipes change
   useEffect(() => {
-    // Calculate total nutrition for the day
     let totalCalories = 0;
     let totalProtein = 0;
     let totalCarbs = 0;
@@ -171,8 +171,8 @@ export default function MealPlanScreen() {
     return uniqueSuggestions.slice(0, 6);
   }, [dayPlan, recipes, profile.dietaryPreferences]);
 
+  // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
-    // Update meal suggestions when relevant data changes
     if (showSuggestions) {
       const suggestions = generateMealSuggestions();
       setMealSuggestions(suggestions);
@@ -249,11 +249,6 @@ export default function MealPlanScreen() {
 
   const handleToggleSuggestions = () => {
     setShowSuggestions(!showSuggestions);
-    if (!showSuggestions) {
-      // Only generate suggestions when opening the panel
-      const suggestions = generateMealSuggestions();
-      setMealSuggestions(suggestions);
-    }
   };
 
   const handleAddSuggestion = (recipeId: string, recipeName: string, mealType: string) => {
