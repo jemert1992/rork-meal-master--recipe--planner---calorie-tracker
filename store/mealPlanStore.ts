@@ -14,6 +14,7 @@ interface MealPlanState {
   clearDay: (date: string) => void;
   generateMealPlan: (date: string, recipes: Recipe[]) => Promise<void>;
   isRecipeSuitable: (recipe: Recipe, dietType?: DietType, allergies?: string[], excludedIngredients?: string[]) => boolean;
+  getUsedRecipeIds: () => Set<string>;
 }
 
 export const useMealPlanStore = create<MealPlanState>()(
@@ -117,6 +118,28 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
       },
       
+      getUsedRecipeIds: () => {
+        const state = get();
+        const usedRecipeIds = new Set<string>();
+        
+        // Iterate through all days in the meal plan
+        Object.values(state.mealPlan).forEach(dayPlan => {
+          // Check main meals (breakfast, lunch, dinner)
+          if (dayPlan.breakfast?.recipeId) usedRecipeIds.add(dayPlan.breakfast.recipeId);
+          if (dayPlan.lunch?.recipeId) usedRecipeIds.add(dayPlan.lunch.recipeId);
+          if (dayPlan.dinner?.recipeId) usedRecipeIds.add(dayPlan.dinner.recipeId);
+          
+          // Check snacks
+          if (dayPlan.snacks && dayPlan.snacks.length > 0) {
+            dayPlan.snacks.forEach(snack => {
+              if (snack.recipeId) usedRecipeIds.add(snack.recipeId);
+            });
+          }
+        });
+        
+        return usedRecipeIds;
+      },
+      
       isRecipeSuitable: (recipe, dietType = 'any', allergies = [], excludedIngredients = []) => {
         // Check if recipe matches diet type
         if (dietType !== 'any') {
@@ -191,6 +214,20 @@ export const useMealPlanStore = create<MealPlanState>()(
             
             // Create a copy of recipes to avoid modifying the original
             let availableRecipes = [...recipes];
+            
+            // Get already used recipe IDs to avoid duplicates
+            const usedRecipeIds = get().getUsedRecipeIds();
+            
+            // Filter out already used recipes to avoid duplicates
+            const uniqueRecipes = availableRecipes.filter(recipe => !usedRecipeIds.has(recipe.id));
+            
+            // If we have enough unique recipes, use them; otherwise, use all recipes
+            if (uniqueRecipes.length >= 3) {
+              availableRecipes = uniqueRecipes;
+              console.log(`Using ${uniqueRecipes.length} unique recipes`);
+            } else {
+              console.warn("Not enough unique recipes available. Some meals may be repeated.");
+            }
             
             // Filter recipes based on user preferences
             availableRecipes = availableRecipes.filter(recipe => 
