@@ -155,7 +155,11 @@ export const useMealPlanStore = create<MealPlanState>()(
           };
           
           const requiredTags = dietTags[dietType];
-          if (requiredTags.length > 0 && !requiredTags.some(tag => recipe.tags.includes(tag))) {
+          if (requiredTags.length > 0 && !requiredTags.some(tag => 
+            recipe.tags.some(recipeTag => 
+              recipeTag.toLowerCase() === tag.toLowerCase()
+            )
+          )) {
             return false;
           }
         }
@@ -238,16 +242,16 @@ export const useMealPlanStore = create<MealPlanState>()(
             console.warn("Not enough recipes matching dietary preferences. Using all available recipes.");
           }
           
+          // Define tags that match each meal type
+          const mealTypeTags: Record<string, string[]> = {
+            breakfast: ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg'],
+            lunch: ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl'],
+            dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta']
+          };
+          
           // Find recipes for each meal type based on tags and calories
-          const findRecipeForMealType = (mealType: string, targetCalories: number): Recipe | null => {
-            // Define tags that match each meal type
-            const mealTypeTags: Record<string, string[]> = {
-              breakfast: ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg'],
-              lunch: ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl'],
-              dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta']
-            };
-            
-            // Try to find a recipe with matching tags and close to target calories
+          const getRecipeForMeal = (mealType: string, targetCalories: number): Recipe | null => {
+            // Find recipes with matching tags and close to target calories
             const matchingRecipes = availableRecipes.filter(recipe => {
               // Normalize tags by converting to lowercase
               const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
@@ -257,10 +261,12 @@ export const useMealPlanStore = create<MealPlanState>()(
                 recipeTags.includes(mealType.toLowerCase()) || 
                 recipeTags.some(tag => mealTypeTags[mealType]?.includes(tag));
               
-              return tagMatches && 
-                // Allow some flexibility in calorie matching (±20%)
+              // Check if calories are within 20% of target
+              const calorieMatches = 
                 recipe.calories >= targetCalories * 0.8 &&
                 recipe.calories <= targetCalories * 1.2;
+              
+              return tagMatches && calorieMatches;
             });
             
             if (matchingRecipes.length > 0) {
@@ -326,9 +332,9 @@ export const useMealPlanStore = create<MealPlanState>()(
           };
           
           // Generate meals for each type with target calories
-          const breakfast = findRecipeForMealType('breakfast', breakfastCalories);
-          const lunch = findRecipeForMealType('lunch', lunchCalories);
-          const dinner = findRecipeForMealType('dinner', dinnerCalories);
+          const breakfast = getRecipeForMeal('breakfast', breakfastCalories);
+          const lunch = getRecipeForMeal('lunch', lunchCalories);
+          const dinner = getRecipeForMeal('dinner', dinnerCalories);
           
           // Calculate remaining calories for snacks
           let remainingCalories = snackCalories;
