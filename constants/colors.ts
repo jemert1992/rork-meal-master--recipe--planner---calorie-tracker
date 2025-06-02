@@ -4,15 +4,15 @@ export default {
   secondary: '#64B5F6',
   secondaryLight: '#BBDEFB',
   background: '#FFFFFF',
-  backgroundLight: '#F5F5F5',  // Added missing color
+  backgroundLight: '#F5F5F5',
   card: '#F9F9F9',
   text: '#333333',
   textLight: '#757575',
   border: '#E0E0E0',
   success: '#66BB6A',
   error: '#EF5350',
-  warning: '#FFC107',  // Added missing color
-  warningBg: '#FFF3CD',  // Added missing color
+  warning: '#FFC107',
+  warningBg: '#FFF3CD',
   white: '#FFFFFF',
   black: '#000000',
 };

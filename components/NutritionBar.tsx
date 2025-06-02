@@ -14,7 +14,7 @@ type NutritionBarProps = {
     carbs: number;
     fat: number;
   };
-  // Add these optional props to match what's being passed in meal-plan.tsx
+  // Add these props to match what's being passed in meal-plan.tsx
   calorieGoal?: number;
   proteinGoal?: number;
   carbsGoal?: number;

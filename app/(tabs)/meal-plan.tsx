@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   warningContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.warningBg || '#FFF3CD',
+    backgroundColor: Colors.warningBg,
     marginHorizontal: 20,
     marginBottom: 16,
     padding: 12,
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: 14,
-    color: Colors.warning || '#856404',
+    color: Colors.warning,
     marginLeft: 8,
     flex: 1,
   },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 10,
     color: Colors.textLight,
-    backgroundColor: Colors.backgroundLight || '#F5F5F5',
+    backgroundColor: Colors.backgroundLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: Colors.backgroundLight || '#F5F5F5',
+    backgroundColor: Colors.backgroundLight,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9800', // Orange
   },
   progressBarExceeded: {
-    backgroundColor: Colors.warning || '#FFC107',
+    backgroundColor: Colors.warning,
   },
   bottomPadding: {
     height: 80, // Extra padding at the bottom

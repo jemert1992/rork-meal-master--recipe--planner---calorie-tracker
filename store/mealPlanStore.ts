@@ -175,6 +175,20 @@ export const useMealPlanStore = create<MealPlanState>()(
               fatGoal
             } = userProfile;
             
+            // Define meal split percentages for calorie distribution
+            const mealSplit = {
+              breakfast: 0.25, // 25% of daily calories
+              lunch: 0.35,     // 35% of daily calories
+              dinner: 0.3,     // 30% of daily calories
+              snacks: 0.1      // 10% of daily calories
+            };
+            
+            // Calculate target calories per meal
+            const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
+            const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
+            const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
+            const snackCalories = Math.round(calorieGoal * mealSplit.snacks);
+            
             // Create a copy of recipes to avoid modifying the original
             let availableRecipes = [...recipes];
             
@@ -188,18 +202,6 @@ export const useMealPlanStore = create<MealPlanState>()(
               availableRecipes = [...recipes];
               console.warn("Not enough recipes matching dietary preferences. Using all available recipes.");
             }
-            
-            // Shuffle the recipes
-            for (let i = availableRecipes.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [availableRecipes[i], availableRecipes[j]] = [availableRecipes[j], availableRecipes[i]];
-            }
-            
-            // Calculate target calories per meal
-            const breakfastCalories = Math.round(calorieGoal * 0.25); // 25% of daily calories
-            const lunchCalories = Math.round(calorieGoal * 0.35);     // 35% of daily calories
-            const dinnerCalories = Math.round(calorieGoal * 0.3);     // 30% of daily calories
-            const snackCalories = Math.round(calorieGoal * 0.1);      // 10% of daily calories
             
             // Find recipes for each meal type based on tags and calories
             const findRecipeForMealType = (mealType: string, targetCalories: number): Recipe | null => {
@@ -244,9 +246,13 @@ export const useMealPlanStore = create<MealPlanState>()(
               );
               
               if (tagMatchingRecipes.length > 0) {
-                // Get a random matching recipe
-                const selectedIndex = Math.floor(Math.random() * tagMatchingRecipes.length);
-                const selectedRecipe = tagMatchingRecipes[selectedIndex];
+                // Sort by how close they are to the target calories
+                tagMatchingRecipes.sort((a, b) => 
+                  Math.abs(a.calories - targetCalories) - Math.abs(b.calories - targetCalories)
+                );
+                
+                // Get the closest match
+                const selectedRecipe = tagMatchingRecipes[0];
                 
                 // Remove the selected recipe from available recipes
                 const index = availableRecipes.findIndex(r => r.id === selectedRecipe.id);
@@ -258,7 +264,13 @@ export const useMealPlanStore = create<MealPlanState>()(
               }
               
               // If no matching recipe found, just use the first available recipe
+              // that's closest to the target calories
               if (availableRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                availableRecipes.sort((a, b) => 
+                  Math.abs(a.calories - targetCalories) - Math.abs(b.calories - targetCalories)
+                );
+                
                 const selectedRecipe = availableRecipes[0];
                 availableRecipes.splice(0, 1);
                 return selectedRecipe;
@@ -272,40 +284,62 @@ export const useMealPlanStore = create<MealPlanState>()(
             const lunch = findRecipeForMealType('lunch', lunchCalories);
             const dinner = findRecipeForMealType('dinner', dinnerCalories);
             
-            // Generate 1-2 snacks
-            const snackCount = Math.floor(Math.random() * 2) + 1;
-            const snacks: MealItem[] = [];
+            // Calculate remaining calories for snacks
+            let remainingCalories = snackCalories;
+            if (breakfast) remainingCalories += (breakfastCalories - breakfast.calories);
+            if (lunch) remainingCalories += (lunchCalories - lunch.calories);
+            if (dinner) remainingCalories += (dinnerCalories - dinner.calories);
             
-            for (let i = 0; i < snackCount && availableRecipes.length > 0; i++) {
+            // Determine how many snacks to add based on remaining calories
+            // Aim for 100-300 calories per snack
+            const avgSnackCalories = 200;
+            const targetSnackCount = Math.max(1, Math.min(3, Math.round(remainingCalories / avgSnackCalories)));
+            
+            // Generate snacks
+            const snacks: MealItem[] = [];
+            const snackCaloriesPerItem = remainingCalories / targetSnackCount;
+            
+            for (let i = 0; i < targetSnackCount && availableRecipes.length > 0; i++) {
               // Try to find a snack with appropriate calories
               const snackRecipes = availableRecipes.filter(recipe => 
-                recipe.calories <= snackCalories * 1.2 &&
+                Math.abs(recipe.calories - snackCaloriesPerItem) < snackCaloriesPerItem * 0.3 &&
                 (recipe.tags.includes('snack') || recipe.tags.includes('dessert') || 
                  recipe.tags.includes('appetizer'))
               );
               
-              let snackRecipe: Recipe | undefined;
+              let selectedSnackRecipe: Recipe | undefined;
+              
               if (snackRecipes.length > 0) {
-                const index = Math.floor(Math.random() * snackRecipes.length);
-                snackRecipe = snackRecipes[index];
+                // Sort by how close they are to the target calories
+                snackRecipes.sort((a, b) => 
+                  Math.abs(a.calories - snackCaloriesPerItem) - Math.abs(b.calories - snackCaloriesPerItem)
+                );
+                
+                selectedSnackRecipe = snackRecipes[0];
+                
                 // Remove from available recipes
-                const availableIndex = availableRecipes.findIndex(r => r.id === snackRecipe.id);
+                const availableIndex = availableRecipes.findIndex(r => r.id === selectedSnackRecipe.id);
                 if (availableIndex !== -1) {
                   availableRecipes.splice(availableIndex, 1);
                 }
               } else if (availableRecipes.length > 0) {
-                snackRecipe = availableRecipes[0];
+                // Sort by how close they are to the target calories
+                availableRecipes.sort((a, b) => 
+                  Math.abs(a.calories - snackCaloriesPerItem) - Math.abs(b.calories - snackCaloriesPerItem)
+                );
+                
+                selectedSnackRecipe = availableRecipes[0];
                 availableRecipes.splice(0, 1);
               }
               
-              if (snackRecipe) {
+              if (selectedSnackRecipe) {
                 snacks.push({
-                  recipeId: snackRecipe.id,
-                  name: snackRecipe.name,
-                  calories: snackRecipe.calories || 0,
-                  protein: snackRecipe.protein || 0,
-                  carbs: snackRecipe.carbs || 0,
-                  fat: snackRecipe.fat || 0
+                  recipeId: selectedSnackRecipe.id,
+                  name: selectedSnackRecipe.name,
+                  calories: selectedSnackRecipe.calories || 0,
+                  protein: selectedSnackRecipe.protein || 0,
+                  carbs: selectedSnackRecipe.carbs || 0,
+                  fat: selectedSnackRecipe.fat || 0
                 });
               }
             }
