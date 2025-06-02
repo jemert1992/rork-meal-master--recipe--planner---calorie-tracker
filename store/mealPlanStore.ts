@@ -244,19 +244,26 @@ export const useMealPlanStore = create<MealPlanState>()(
             const findRecipeForMealType = (mealType: string, targetCalories: number): Recipe | null => {
               // Define tags that match each meal type
               const mealTypeTags: Record<string, string[]> = {
-                breakfast: ['breakfast', 'brunch', 'morning'],
-                lunch: ['lunch', 'salad', 'sandwich', 'light'],
-                dinner: ['dinner', 'main', 'supper', 'entree']
+                breakfast: ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg'],
+                lunch: ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl'],
+                dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta']
               };
               
               // Try to find a recipe with matching tags and close to target calories
-              const matchingRecipes = availableRecipes.filter(recipe => 
-                (recipe.tags.includes(mealType) || 
-                recipe.tags.some(tag => mealTypeTags[mealType]?.includes(tag))) &&
-                // Allow some flexibility in calorie matching (±20%)
-                recipe.calories >= targetCalories * 0.8 &&
-                recipe.calories <= targetCalories * 1.2
-              );
+              const matchingRecipes = availableRecipes.filter(recipe => {
+                // Normalize tags by converting to lowercase
+                const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
+                
+                // Check if any tag matches the meal type or related tags
+                const tagMatches = 
+                  recipeTags.includes(mealType.toLowerCase()) || 
+                  recipeTags.some(tag => mealTypeTags[mealType]?.includes(tag));
+                
+                return tagMatches && 
+                  // Allow some flexibility in calorie matching (±20%)
+                  recipe.calories >= targetCalories * 0.8 &&
+                  recipe.calories <= targetCalories * 1.2;
+              });
               
               if (matchingRecipes.length > 0) {
                 // Sort by how close they are to the target calories
@@ -277,10 +284,14 @@ export const useMealPlanStore = create<MealPlanState>()(
               }
               
               // If no matching recipe with target calories, just find one with matching tags
-              const tagMatchingRecipes = availableRecipes.filter(recipe => 
-                recipe.tags.includes(mealType) || 
-                recipe.tags.some(tag => mealTypeTags[mealType]?.includes(tag))
-              );
+              const tagMatchingRecipes = availableRecipes.filter(recipe => {
+                // Normalize tags by converting to lowercase
+                const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
+                
+                // Check if any tag matches the meal type or related tags
+                return recipeTags.includes(mealType.toLowerCase()) || 
+                       recipeTags.some(tag => mealTypeTags[mealType]?.includes(tag));
+              });
               
               if (tagMatchingRecipes.length > 0) {
                 // Sort by how close they are to the target calories
@@ -338,11 +349,14 @@ export const useMealPlanStore = create<MealPlanState>()(
             
             for (let i = 0; i < targetSnackCount && availableRecipes.length > 0; i++) {
               // Try to find a snack with appropriate calories
-              const snackRecipes = availableRecipes.filter(recipe => 
-                Math.abs(recipe.calories - snackCaloriesPerItem) < snackCaloriesPerItem * 0.3 &&
-                (recipe.tags.includes('snack') || recipe.tags.includes('dessert') || 
-                 recipe.tags.includes('appetizer'))
-              );
+              const snackRecipes = availableRecipes.filter(recipe => {
+                // Normalize tags by converting to lowercase
+                const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
+                
+                return Math.abs(recipe.calories - snackCaloriesPerItem) < snackCaloriesPerItem * 0.3 &&
+                  (recipeTags.includes('snack') || recipeTags.includes('dessert') || 
+                   recipeTags.includes('appetizer'));
+              });
               
               let selectedSnackRecipe: Recipe | undefined;
               
