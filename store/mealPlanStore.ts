@@ -302,10 +302,10 @@ export const useMealPlanStore = create<MealPlanState>()(
                 snacks.push({
                   recipeId: snackRecipe.id,
                   name: snackRecipe.name,
-                  calories: snackRecipe.calories,
-                  protein: snackRecipe.protein,
-                  carbs: snackRecipe.carbs,
-                  fat: snackRecipe.fat
+                  calories: snackRecipe.calories || 0,
+                  protein: snackRecipe.protein || 0,
+                  carbs: snackRecipe.carbs || 0,
+                  fat: snackRecipe.fat || 0
                 });
               }
             }
