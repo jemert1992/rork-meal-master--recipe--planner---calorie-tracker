@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -15,15 +15,17 @@ export default function NutritionGoalsScreen() {
   const [carbsGoal, setCarbsGoal] = useState(profile.carbsGoal?.toString() || '');
   const [fatGoal, setFatGoal] = useState(profile.fatGoal?.toString() || '');
   const [useCalculated, setUseCalculated] = useState(true);
-  const [hasCalculated, setHasCalculated] = useState(false);
+  
+  // Use a ref to track if we've calculated goals to prevent infinite loops
+  const hasCalculatedRef = useRef(false);
   
   // Calculate nutrition goals only once when the screen loads
   useEffect(() => {
-    if (!hasCalculated) {
+    if (!hasCalculatedRef.current) {
       calculateNutritionGoals();
-      setHasCalculated(true);
+      hasCalculatedRef.current = true;
     }
-  }, [hasCalculated]); // Only depend on hasCalculated to prevent infinite loops
+  }, []); // Empty dependency array, only run once
   
   // Update local state when profile is updated with calculated values
   useEffect(() => {

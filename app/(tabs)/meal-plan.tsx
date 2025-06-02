@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -40,6 +40,29 @@ export default function MealPlanScreen() {
   const dateString = selectedDate.toISOString().split('T')[0];
   const dayPlan = mealPlan[dateString] || {};
 
+  // Memoize the addNutritionFromMeal function to prevent recreating it on every render
+  const addNutritionFromMeal = useCallback((meal: any, recipeList: Recipe[]) => {
+    if (meal?.recipeId) {
+      const recipe = recipeList.find(r => r.id === meal.recipeId);
+      if (recipe) {
+        return {
+          calories: recipe.calories || 0,
+          protein: recipe.protein || 0,
+          carbs: recipe.carbs || 0,
+          fat: recipe.fat || 0
+        };
+      }
+    } else if (meal?.calories) {
+      return {
+        calories: meal.calories || 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0
+      };
+    }
+    return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  }, []);
+
   useEffect(() => {
     // Calculate total nutrition for the day
     let totalCalories = 0;
@@ -47,28 +70,37 @@ export default function MealPlanScreen() {
     let totalCarbs = 0;
     let totalFat = 0;
 
-    // Helper function to add nutrition from a meal
-    const addNutritionFromMeal = (meal: any) => {
-      if (meal?.recipeId) {
-        const recipe = recipes.find(r => r.id === meal.recipeId);
-        if (recipe) {
-          totalCalories += recipe.calories || 0;
-          totalProtein += recipe.protein || 0;
-          totalCarbs += recipe.carbs || 0;
-          totalFat += recipe.fat || 0;
-        }
-      } else if (meal?.calories) {
-        totalCalories += meal.calories;
-      }
-    };
-
-    if (dayPlan.breakfast) addNutritionFromMeal(dayPlan.breakfast);
-    if (dayPlan.lunch) addNutritionFromMeal(dayPlan.lunch);
-    if (dayPlan.dinner) addNutritionFromMeal(dayPlan.dinner);
+    if (dayPlan.breakfast) {
+      const nutrition = addNutritionFromMeal(dayPlan.breakfast, recipes);
+      totalCalories += nutrition.calories;
+      totalProtein += nutrition.protein;
+      totalCarbs += nutrition.carbs;
+      totalFat += nutrition.fat;
+    }
+    
+    if (dayPlan.lunch) {
+      const nutrition = addNutritionFromMeal(dayPlan.lunch, recipes);
+      totalCalories += nutrition.calories;
+      totalProtein += nutrition.protein;
+      totalCarbs += nutrition.carbs;
+      totalFat += nutrition.fat;
+    }
+    
+    if (dayPlan.dinner) {
+      const nutrition = addNutritionFromMeal(dayPlan.dinner, recipes);
+      totalCalories += nutrition.calories;
+      totalProtein += nutrition.protein;
+      totalCarbs += nutrition.carbs;
+      totalFat += nutrition.fat;
+    }
     
     if (dayPlan.snacks) {
       dayPlan.snacks.forEach(snack => {
-        addNutritionFromMeal(snack);
+        const nutrition = addNutritionFromMeal(snack, recipes);
+        totalCalories += nutrition.calories;
+        totalProtein += nutrition.protein;
+        totalCarbs += nutrition.carbs;
+        totalFat += nutrition.fat;
       });
     }
 
@@ -78,66 +110,74 @@ export default function MealPlanScreen() {
       carbs: totalCarbs,
       fat: totalFat
     });
-  }, [dayPlan, recipes]);
+  }, [dayPlan, recipes, addNutritionFromMeal]);
 
-  useEffect(() => {
-    // Generate meal suggestions based on what's missing from the day
-    if (recipes.length > 0) {
-      const suggestions = [];
-      const mealTypes = ['breakfast', 'lunch', 'dinner'];
-      const existingMealIds = new Set<string>();
+  // Memoize the function to generate meal suggestions
+  const generateMealSuggestions = useCallback(() => {
+    if (recipes.length === 0) return [];
+    
+    const suggestions = [];
+    const mealTypes = ['breakfast', 'lunch', 'dinner'];
+    const existingMealIds = new Set<string>();
+    
+    // Add existing recipe IDs to the set
+    if (dayPlan.breakfast?.recipeId) existingMealIds.add(dayPlan.breakfast.recipeId);
+    if (dayPlan.lunch?.recipeId) existingMealIds.add(dayPlan.lunch.recipeId);
+    if (dayPlan.dinner?.recipeId) existingMealIds.add(dayPlan.dinner.recipeId);
+    
+    // Filter recipes by dietary preferences if available
+    let availableRecipes = recipes.filter(recipe => !existingMealIds.has(recipe.id));
+    
+    if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
+      const filteredRecipes = availableRecipes.filter(recipe => 
+        profile.dietaryPreferences?.some(pref => 
+          recipe.tags.includes(pref)
+        )
+      );
       
-      // Add existing recipe IDs to the set
-      if (dayPlan.breakfast?.recipeId) existingMealIds.add(dayPlan.breakfast.recipeId);
-      if (dayPlan.lunch?.recipeId) existingMealIds.add(dayPlan.lunch.recipeId);
-      if (dayPlan.dinner?.recipeId) existingMealIds.add(dayPlan.dinner.recipeId);
-      
-      // Filter recipes by dietary preferences if available
-      let availableRecipes = recipes.filter(recipe => !existingMealIds.has(recipe.id));
-      
-      if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
-        availableRecipes = availableRecipes.filter(recipe => 
-          profile.dietaryPreferences?.some(pref => 
-            recipe.tags.includes(pref)
-          )
+      // If no recipes match the preferences, fall back to all recipes
+      if (filteredRecipes.length > 0) {
+        availableRecipes = filteredRecipes;
+      }
+    }
+    
+    // Get suggestions for each meal type that's missing
+    for (const mealType of mealTypes) {
+      // Use type assertion to tell TypeScript this is a valid key
+      if (!dayPlan[mealType as keyof DailyMeals]) {
+        // Filter recipes by tags that match the meal type
+        const typeRecipes = availableRecipes.filter(recipe => 
+          recipe.tags.includes(mealType) || 
+          (mealType === 'breakfast' && recipe.tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag))) ||
+          (mealType === 'lunch' && recipe.tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) ||
+          (mealType === 'dinner' && recipe.tags.some(tag => ['dinner', 'main', 'supper', 'entree'].includes(tag)))
         );
         
-        // If no recipes match the preferences, fall back to all recipes
-        if (availableRecipes.length === 0) {
-          availableRecipes = recipes.filter(recipe => !existingMealIds.has(recipe.id));
+        // If we have recipes that match the meal type, add them to suggestions
+        if (typeRecipes.length > 0) {
+          suggestions.push(...typeRecipes.slice(0, 2));
+        } else if (availableRecipes.length > 0) {
+          // Otherwise, just add some random recipes
+          const randomRecipes = [...availableRecipes]
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 2);
+          suggestions.push(...randomRecipes);
         }
       }
-      
-      // Get suggestions for each meal type that's missing
-      for (const mealType of mealTypes) {
-        // Use type assertion to tell TypeScript this is a valid key
-        if (!dayPlan[mealType as keyof DailyMeals]) {
-          // Filter recipes by tags that match the meal type
-          const typeRecipes = availableRecipes.filter(recipe => 
-            recipe.tags.includes(mealType) || 
-            (mealType === 'breakfast' && recipe.tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag))) ||
-            (mealType === 'lunch' && recipe.tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) ||
-            (mealType === 'dinner' && recipe.tags.some(tag => ['dinner', 'main', 'supper', 'entree'].includes(tag)))
-          );
-          
-          // If we have recipes that match the meal type, add them to suggestions
-          if (typeRecipes.length > 0) {
-            suggestions.push(...typeRecipes.slice(0, 2));
-          } else {
-            // Otherwise, just add some random recipes
-            const randomRecipes = availableRecipes
-              .sort(() => 0.5 - Math.random())
-              .slice(0, 2);
-            suggestions.push(...randomRecipes);
-          }
-        }
-      }
-      
-      // Limit to 6 suggestions and remove duplicates
-      const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
-      setMealSuggestions(uniqueSuggestions.slice(0, 6));
     }
-  }, [dayPlan, recipes, dateString, profile.dietaryPreferences]);
+    
+    // Limit to 6 suggestions and remove duplicates
+    const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
+    return uniqueSuggestions.slice(0, 6);
+  }, [dayPlan, recipes, profile.dietaryPreferences]);
+
+  useEffect(() => {
+    // Update meal suggestions when relevant data changes
+    if (showSuggestions) {
+      const suggestions = generateMealSuggestions();
+      setMealSuggestions(suggestions);
+    }
+  }, [showSuggestions, generateMealSuggestions]);
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
@@ -204,6 +244,15 @@ export default function MealPlanScreen() {
       Alert.alert('Error', 'Failed to generate meal plan. Please try again.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleToggleSuggestions = () => {
+    setShowSuggestions(!showSuggestions);
+    if (!showSuggestions) {
+      // Only generate suggestions when opening the panel
+      const suggestions = generateMealSuggestions();
+      setMealSuggestions(suggestions);
     }
   };
 
@@ -350,7 +399,7 @@ export default function MealPlanScreen() {
         <View style={styles.suggestionsContainer}>
           <Pressable 
             style={styles.suggestionsHeader} 
-            onPress={() => setShowSuggestions(!showSuggestions)}
+            onPress={handleToggleSuggestions}
           >
             <Text style={styles.sectionTitle}>Meal Suggestions</Text>
             {showSuggestions ? (

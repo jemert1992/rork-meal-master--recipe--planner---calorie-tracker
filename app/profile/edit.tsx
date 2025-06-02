@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -46,13 +46,15 @@ export default function EditProfileScreen() {
     { id: 'mediterranean', label: 'Mediterranean' },
   ];
   
-  const togglePreference = (id: string) => {
-    if (selectedPreferences.includes(id)) {
-      setSelectedPreferences(selectedPreferences.filter(p => p !== id));
-    } else {
-      setSelectedPreferences([...selectedPreferences, id]);
-    }
-  };
+  const togglePreference = useCallback((id: string) => {
+    setSelectedPreferences(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(p => p !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  }, []);
   
   const handleSave = () => {
     // Update profile with name, age, gender, activity level, and nutrition goals
