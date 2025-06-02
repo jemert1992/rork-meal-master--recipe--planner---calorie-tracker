@@ -284,7 +284,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                  recipe.tags.includes('appetizer'))
               );
               
-              let snackRecipe;
+              let snackRecipe: Recipe | undefined;
               if (snackRecipes.length > 0) {
                 const index = Math.floor(Math.random() * snackRecipes.length);
                 snackRecipe = snackRecipes[index];

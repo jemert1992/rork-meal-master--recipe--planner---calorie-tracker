@@ -14,6 +14,11 @@ type NutritionBarProps = {
     carbs: number;
     fat: number;
   };
+  // Add these optional props to match what's being passed in meal-plan.tsx
+  calorieGoal?: number;
+  proteinGoal?: number;
+  carbsGoal?: number;
+  fatGoal?: number;
 };
 
 export default function NutritionBar({ 
@@ -21,16 +26,20 @@ export default function NutritionBar({
   protein, 
   carbs, 
   fat, 
-  goal 
+  goal,
+  calorieGoal,
+  proteinGoal,
+  carbsGoal,
+  fatGoal
 }: NutritionBarProps) {
   const { profile } = useUserStore();
   
   // Use provided goals or fall back to user profile goals or defaults
   const nutritionGoals = goal || {
-    calories: profile.calorieGoal || 2000,
-    protein: profile.proteinGoal || 100,
-    carbs: profile.carbsGoal || 250,
-    fat: profile.fatGoal || 70
+    calories: calorieGoal || profile.calorieGoal || 2000,
+    protein: proteinGoal || profile.proteinGoal || 100,
+    carbs: carbsGoal || profile.carbsGoal || 250,
+    fat: fatGoal || profile.fatGoal || 70
   };
   
   const calculatePercentage = (value: number, target: number) => {
