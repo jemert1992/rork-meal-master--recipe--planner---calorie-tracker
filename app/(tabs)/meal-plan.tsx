@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react-native';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
@@ -21,7 +21,8 @@ export default function MealPlanScreen() {
     addSnack, 
     removeSnack, 
     clearDay, 
-    generateMealPlan 
+    generateMealPlan,
+    isRecipeSuitable
   } = useMealPlanStore();
   const { recipes, isLoading } = useRecipeStore();
   const { profile } = useUserStore();
@@ -36,6 +37,7 @@ export default function MealPlanScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mealSuggestions, setMealSuggestions] = useState<typeof recipes>([]);
+  const [showDietaryWarning, setShowDietaryWarning] = useState(false);
 
   const dateString = selectedDate.toISOString().split('T')[0];
   const dayPlan = mealPlan[dateString] || {};
@@ -55,9 +57,9 @@ export default function MealPlanScreen() {
     } else if (meal?.calories) {
       return {
         calories: meal.calories || 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0
+        protein: meal.protein || 0,
+        carbs: meal.carbs || 0,
+        fat: meal.fat || 0
       };
     }
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
@@ -112,6 +114,33 @@ export default function MealPlanScreen() {
     });
   }, [dayPlan, recipes, addNutritionFromMeal]);
 
+  // Check if the current meal plan meets dietary requirements
+  useEffect(() => {
+    if (Object.keys(dayPlan).length === 0 || !profile.dietType || profile.dietType === 'any') {
+      setShowDietaryWarning(false);
+      return;
+    }
+
+    const checkMeal = (meal: any) => {
+      if (!meal?.recipeId) return true;
+      const recipe = recipes.find(r => r.id === meal.recipeId);
+      if (!recipe) return true;
+      return isRecipeSuitable(
+        recipe, 
+        profile.dietType, 
+        profile.allergies, 
+        profile.excludedIngredients
+      );
+    };
+
+    const breakfastOk = !dayPlan.breakfast || checkMeal(dayPlan.breakfast);
+    const lunchOk = !dayPlan.lunch || checkMeal(dayPlan.lunch);
+    const dinnerOk = !dayPlan.dinner || checkMeal(dayPlan.dinner);
+    const snacksOk = !dayPlan.snacks || dayPlan.snacks.every(checkMeal);
+
+    setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk && snacksOk));
+  }, [dayPlan, profile, recipes, isRecipeSuitable]);
+
   // Memoize the function to generate meal suggestions
   const generateMealSuggestions = useCallback(() => {
     if (recipes.length === 0) return [];
@@ -128,7 +157,18 @@ export default function MealPlanScreen() {
     // Filter recipes by dietary preferences if available
     let availableRecipes = recipes.filter(recipe => !existingMealIds.has(recipe.id));
     
-    if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
+    // Apply user dietary preferences, allergies, and excluded ingredients
+    if (profile.dietType && profile.dietType !== 'any') {
+      availableRecipes = availableRecipes.filter(recipe => 
+        isRecipeSuitable(
+          recipe, 
+          profile.dietType, 
+          profile.allergies, 
+          profile.excludedIngredients
+        )
+      );
+    } else if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
+      // Fallback to old dietary preferences if dietType is not set
       const filteredRecipes = availableRecipes.filter(recipe => 
         profile.dietaryPreferences?.some(pref => 
           recipe.tags.includes(pref)
@@ -169,7 +209,7 @@ export default function MealPlanScreen() {
     // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
-  }, [dayPlan, recipes, profile.dietaryPreferences]);
+  }, [dayPlan, recipes, profile, isRecipeSuitable]);
 
   // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
@@ -224,7 +264,29 @@ export default function MealPlanScreen() {
       // Filter recipes by dietary preferences if available
       let recipesToUse = [...recipes];
       
-      if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
+      // Apply user dietary preferences, allergies, and excluded ingredients
+      if (profile.dietType && profile.dietType !== 'any') {
+        const filteredRecipes = recipes.filter(recipe => 
+          isRecipeSuitable(
+            recipe, 
+            profile.dietType, 
+            profile.allergies, 
+            profile.excludedIngredients
+          )
+        );
+        
+        // Only use filtered recipes if we have enough
+        if (filteredRecipes.length >= 5) {
+          recipesToUse = filteredRecipes;
+        } else {
+          Alert.alert(
+            'Limited Recipe Selection',
+            `Only ${filteredRecipes.length} recipes match your dietary preferences. Using all available recipes instead.`,
+            [{ text: 'OK' }]
+          );
+        }
+      } else if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
+        // Fallback to old dietary preferences if dietType is not set
         const filteredRecipes = recipes.filter(recipe => 
           profile.dietaryPreferences?.some(pref => 
             recipe.tags.includes(pref)
@@ -285,6 +347,12 @@ export default function MealPlanScreen() {
     }
   };
 
+  // Calculate nutrition goal progress
+  const calorieProgress = profile.calorieGoal ? (dailyNutrition.calories / profile.calorieGoal) * 100 : 0;
+  const proteinProgress = profile.proteinGoal ? (dailyNutrition.protein / profile.proteinGoal) * 100 : 0;
+  const carbsProgress = profile.carbsGoal ? (dailyNutrition.carbs / profile.carbsGoal) * 100 : 0;
+  const fatProgress = profile.fatGoal ? (dailyNutrition.fat / profile.fatGoal) * 100 : 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
@@ -296,9 +364,14 @@ export default function MealPlanScreen() {
 
       <View style={styles.actionsContainer}>
         <View style={styles.nutritionSummary}>
-          <Text style={styles.calorieText}>{dailyNutrition.calories} calories</Text>
+          <Text style={styles.calorieText}>
+            {dailyNutrition.calories} 
+            {profile.calorieGoal ? ` / ${profile.calorieGoal}` : ''} calories
+          </Text>
           <Text style={styles.macroText}>
-            P: {dailyNutrition.protein}g • C: {dailyNutrition.carbs}g • F: {dailyNutrition.fat}g
+            P: {dailyNutrition.protein}{profile.proteinGoal ? `/${profile.proteinGoal}` : ''}g • 
+            C: {dailyNutrition.carbs}{profile.carbsGoal ? `/${profile.carbsGoal}` : ''}g • 
+            F: {dailyNutrition.fat}{profile.fatGoal ? `/${profile.fatGoal}` : ''}g
           </Text>
         </View>
         
@@ -332,7 +405,20 @@ export default function MealPlanScreen() {
             protein={dailyNutrition.protein}
             carbs={dailyNutrition.carbs}
             fat={dailyNutrition.fat}
+            calorieGoal={profile.calorieGoal}
+            proteinGoal={profile.proteinGoal}
+            carbsGoal={profile.carbsGoal}
+            fatGoal={profile.fatGoal}
           />
+        </View>
+      )}
+
+      {showDietaryWarning && (
+        <View style={styles.warningContainer}>
+          <AlertCircle size={16} color={Colors.warning} />
+          <Text style={styles.warningText}>
+            Some meals may not match your dietary preferences ({profile.dietType})
+          </Text>
         </View>
       )}
 
@@ -416,6 +502,15 @@ export default function MealPlanScreen() {
                     <View style={styles.suggestionContent}>
                       <Text style={styles.suggestionName}>{recipe.name}</Text>
                       <Text style={styles.suggestionCalories}>{recipe.calories} calories</Text>
+                      {recipe.tags.length > 0 && (
+                        <View style={styles.tagContainer}>
+                          {recipe.tags.slice(0, 3).map((tag, index) => (
+                            <Text key={index} style={styles.tagText}>
+                              {tag}
+                            </Text>
+                          ))}
+                        </View>
+                      )}
                     </View>
                     <Plus size={16} color={Colors.primary} />
                   </Pressable>
@@ -426,6 +521,88 @@ export default function MealPlanScreen() {
             </View>
           )}
         </View>
+        
+        {/* Nutrition Goals Section */}
+        {profile.calorieGoal && (
+          <View style={styles.nutritionGoalsContainer}>
+            <Text style={styles.sectionTitle}>Nutrition Goals</Text>
+            
+            <View style={styles.goalItem}>
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalLabel}>Calories</Text>
+                <Text style={styles.goalValue}>
+                  {dailyNutrition.calories} / {profile.calorieGoal}
+                </Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { width: `${Math.min(calorieProgress, 100)}%` },
+                    calorieProgress > 100 ? styles.progressBarExceeded : null
+                  ]} 
+                />
+              </View>
+            </View>
+            
+            <View style={styles.goalItem}>
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalLabel}>Protein</Text>
+                <Text style={styles.goalValue}>
+                  {dailyNutrition.protein}g / {profile.proteinGoal}g
+                </Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    styles.progressBarProtein,
+                    { width: `${Math.min(proteinProgress, 100)}%` },
+                    proteinProgress > 100 ? styles.progressBarExceeded : null
+                  ]} 
+                />
+              </View>
+            </View>
+            
+            <View style={styles.goalItem}>
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalLabel}>Carbs</Text>
+                <Text style={styles.goalValue}>
+                  {dailyNutrition.carbs}g / {profile.carbsGoal}g
+                </Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    styles.progressBarCarbs,
+                    { width: `${Math.min(carbsProgress, 100)}%` },
+                    carbsProgress > 100 ? styles.progressBarExceeded : null
+                  ]} 
+                />
+              </View>
+            </View>
+            
+            <View style={styles.goalItem}>
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalLabel}>Fat</Text>
+                <Text style={styles.goalValue}>
+                  {dailyNutrition.fat}g / {profile.fatGoal}g
+                </Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    styles.progressBarFat,
+                    { width: `${Math.min(fatProgress, 100)}%` },
+                    fatProgress > 100 ? styles.progressBarExceeded : null
+                  ]} 
+                />
+              </View>
+            </View>
+          </View>
+        )}
         
         {/* Add extra padding at the bottom to ensure everything is scrollable */}
         <View style={styles.bottomPadding} />
@@ -509,6 +686,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.warningBg || '#FFF3CD',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: Colors.warning || '#856404',
+    marginLeft: 8,
+    flex: 1,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -548,7 +740,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   suggestionsContainer: {
-    marginBottom: 40,
+    marginBottom: 24,
   },
   suggestionsHeader: {
     flexDirection: 'row',
@@ -593,6 +785,69 @@ const styles = StyleSheet.create({
   suggestionCalories: {
     fontSize: 12,
     color: Colors.primary,
+  },
+  tagContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  tagText: {
+    fontSize: 10,
+    color: Colors.textLight,
+    backgroundColor: Colors.backgroundLight || '#F5F5F5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  nutritionGoalsContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  goalItem: {
+    marginTop: 12,
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  goalLabel: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  goalValue: {
+    fontSize: 14,
+    color: Colors.textLight,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: Colors.backgroundLight || '#F5F5F5',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 4,
+  },
+  progressBarProtein: {
+    backgroundColor: '#4CAF50', // Green
+  },
+  progressBarCarbs: {
+    backgroundColor: '#2196F3', // Blue
+  },
+  progressBarFat: {
+    backgroundColor: '#FF9800', // Orange
+  },
+  progressBarExceeded: {
+    backgroundColor: Colors.warning || '#FFC107',
   },
   bottomPadding: {
     height: 80, // Extra padding at the bottom

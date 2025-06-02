@@ -18,6 +18,9 @@ export type MealItem = {
   recipeId?: string;
   name: string;
   calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
 };
 
 export type DailyMeals = {
@@ -59,3 +62,5 @@ export type GroceryItem = {
   category: string;
   checked: boolean;
 };
+
+export type DietType = 'any' | 'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb';

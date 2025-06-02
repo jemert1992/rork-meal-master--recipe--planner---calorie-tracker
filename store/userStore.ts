@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { poundsToKg, feetInchesToCm } from '@/utils/unitConversions';
+import { DietType } from '@/types';
 
 export type UserProfile = {
   name: string;
@@ -11,6 +12,9 @@ export type UserProfile = {
   gender?: 'male' | 'female' | 'other';
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
   dietaryPreferences?: string[];
+  dietType?: DietType;
+  allergies?: string[];
+  excludedIngredients?: string[];
   calorieGoal?: number;
   proteinGoal?: number;
   carbsGoal?: number;
@@ -33,6 +37,9 @@ const DEFAULT_PROFILE: UserProfile = {
   name: '',
   completedOnboarding: false,
   dietaryPreferences: [],
+  allergies: [],
+  excludedIngredients: [],
+  dietType: 'any',
 };
 
 export const useUserStore = create<UserState>()(
@@ -115,7 +122,7 @@ export const useUserStore = create<UserState>()(
       
       calculateNutritionGoals: () => {
         const { profile } = get();
-        const { gender, weight, height, age, activityLevel } = profile;
+        const { gender, weight, height, age, activityLevel, dietType } = profile;
         
         // Skip calculation if required fields are missing
         if (!gender || !weight || !height || !age || !activityLevel) {
@@ -140,13 +147,37 @@ export const useUserStore = create<UserState>()(
         };
         
         const multiplier = activityMultipliers[activityLevel];
-        const calorieGoal = Math.round(bmr * multiplier);
+        let calorieGoal = Math.round(bmr * multiplier);
         
-        // Calculate macronutrient goals (standard distribution)
-        // Protein: 30%, Carbs: 40%, Fat: 30%
-        const proteinGoal = Math.round((calorieGoal * 0.3) / 4); // 4 calories per gram of protein
-        const carbsGoal = Math.round((calorieGoal * 0.4) / 4);   // 4 calories per gram of carbs
-        const fatGoal = Math.round((calorieGoal * 0.3) / 9);     // 9 calories per gram of fat
+        // Adjust calorie goal based on diet type
+        if (dietType === 'keto' || dietType === 'low-carb') {
+          // Keto and low-carb diets often have slightly lower calorie targets
+          calorieGoal = Math.round(calorieGoal * 0.9);
+        }
+        
+        // Calculate macronutrient goals based on diet type
+        let proteinPercentage = 0.3; // 30%
+        let carbsPercentage = 0.4;   // 40%
+        let fatPercentage = 0.3;     // 30%
+        
+        // Adjust macros based on diet type
+        if (dietType === 'keto') {
+          proteinPercentage = 0.25;  // 25%
+          carbsPercentage = 0.05;    // 5%
+          fatPercentage = 0.7;       // 70%
+        } else if (dietType === 'low-carb') {
+          proteinPercentage = 0.3;   // 30%
+          carbsPercentage = 0.2;     // 20%
+          fatPercentage = 0.5;       // 50%
+        } else if (dietType === 'vegan' || dietType === 'vegetarian') {
+          proteinPercentage = 0.25;  // 25%
+          carbsPercentage = 0.5;     // 50%
+          fatPercentage = 0.25;      // 25%
+        }
+        
+        const proteinGoal = Math.round((calorieGoal * proteinPercentage) / 4); // 4 calories per gram of protein
+        const carbsGoal = Math.round((calorieGoal * carbsPercentage) / 4);     // 4 calories per gram of carbs
+        const fatGoal = Math.round((calorieGoal * fatPercentage) / 9);         // 9 calories per gram of fat
         
         set((state) => ({
           profile: {
