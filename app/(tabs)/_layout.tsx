@@ -1,60 +1,58 @@
-import React from "react";
-import { Tabs } from "expo-router";
-import { BookOpen, Calendar, BarChart2, ShoppingBag, User } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import React from 'react';
+import { Tabs } from 'expo-router';
+import { useColorScheme } from 'react-native';
+import { Home, Calendar, BookOpen, ShoppingCart, User } from 'lucide-react-native';
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+  
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
+        tabBarActiveTintColor: colorScheme === 'dark' ? '#4DA1FF' : '#007AFF',
+        tabBarInactiveTintColor: colorScheme === 'dark' ? '#8E8E93' : '#8E8E93',
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.border,
+          backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
         },
-        headerShown: false, // Hide all headers in the tab navigator
-        headerTitle: "", // Ensure no title is shown
+        headerStyle: {
+          backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+        },
+        headerTintColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Recipes",
-          tabBarIcon: ({ color }) => <BookOpen size={24} color={color} />,
-          headerShown: false,
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="meal-plan"
         options={{
-          title: "Meal Plan",
-          tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
-          headerShown: false,
+          title: 'Meal Plan',
+          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="calorie-tracker"
         options={{
-          title: "Tracker",
-          tabBarIcon: ({ color }) => <BarChart2 size={24} color={color} />,
-          headerShown: false,
+          title: 'Food Log',
+          tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="grocery-list"
         options={{
-          title: "Grocery",
-          tabBarIcon: ({ color }) => <ShoppingBag size={24} color={color} />,
-          headerShown: false,
+          title: 'Groceries',
+          tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="settings"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
-          headerShown: false,
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
     </Tabs>
