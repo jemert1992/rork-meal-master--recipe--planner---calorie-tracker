@@ -9,15 +9,15 @@ import Colors from '@/constants/colors';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user, updateUser } = useUserStore();
+  const { profile, updateProfile } = useUserStore();
   const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Local state for form fields
-  const [name, setName] = useState(user.name);
-  const [dietType, setDietType] = useState(user.dietType);
-  const [calorieGoal, setCalorieGoal] = useState(user.calorieGoal.toString());
-  const [allergies, setAllergies] = useState(user.allergies.join(', '));
+  const [name, setName] = useState(profile.name);
+  const [dietType, setDietType] = useState(profile.dietType);
+  const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
+  const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
   
   // Local state for API toggles
   const [useMealDB, setUseMealDB] = useState(apiSources.useMealDB);
@@ -26,12 +26,11 @@ export default function EditProfileScreen() {
   
   const handleSave = () => {
     // Update user profile
-    updateUser({
-      ...user,
+    updateProfile({
       name,
       dietType,
       calorieGoal: parseInt(calorieGoal) || 2000,
-      allergies: allergies.split(',').map(item => item.trim()).filter(item => item),
+      allergies: allergies.split(',').map((item: string) => item.trim()).filter((item: string) => item),
     });
     
     // Update API sources

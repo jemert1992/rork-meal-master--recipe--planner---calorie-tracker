@@ -103,8 +103,8 @@ const convertEdamamRecipe = (recipe: any): Recipe => {
  * Search for recipes using Spoonacular API
  */
 export const searchSpoonacularRecipes = async (query: string, count: number = 20): Promise<Recipe[]> => {
-  // Check if API key is available (fixed comparison)
-  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === '') {
+  // Check if API key is available
+  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY.length === 0) {
     console.warn('Spoonacular API key not configured');
     return [];
   }
@@ -130,7 +130,7 @@ export const searchSpoonacularRecipes = async (query: string, count: number = 20
  * Search for recipes using Edamam API
  */
 export const searchEdamamRecipes = async (query: string, count: number = 10): Promise<Recipe[]> => {
-  // Check if API credentials are available (fixed comparison)
+  // Check if API credentials are available
   if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY || 
       EDAMAM_APP_ID === 'YOUR_APP_ID_HERE' || 
       EDAMAM_APP_KEY === 'YOUR_APP_KEY_HERE') {
@@ -159,8 +159,8 @@ export const searchEdamamRecipes = async (query: string, count: number = 10): Pr
  * Get random recipes from Spoonacular
  */
 export const getRandomSpoonacularRecipes = async (count: number = 30): Promise<Recipe[]> => {
-  // Check if API key is available (fixed comparison)
-  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === '') {
+  // Check if API key is available
+  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY.length === 0) {
     console.warn('Spoonacular API key not configured');
     return [];
   }

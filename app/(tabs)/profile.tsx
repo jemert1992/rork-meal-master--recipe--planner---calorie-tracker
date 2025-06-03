@@ -9,7 +9,7 @@ import Colors from '@/constants/colors';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user } = useUserStore();
+  const { profile } = useUserStore();
   const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
   
   const handleRefreshRecipes = async () => {
@@ -30,24 +30,24 @@ export default function ProfileScreen() {
             </View>
           </View>
           
-          <Text style={styles.userName}>{user.name || 'User'}</Text>
+          <Text style={styles.userName}>{profile.name || 'User'}</Text>
           
           <View style={styles.userInfoRow}>
             <View style={styles.userInfoItem}>
               <Text style={styles.userInfoLabel}>Diet Type</Text>
-              <Text style={styles.userInfoValue}>{user.dietType || 'Not set'}</Text>
+              <Text style={styles.userInfoValue}>{profile.dietType || 'Not set'}</Text>
             </View>
             
             <View style={styles.userInfoItem}>
               <Text style={styles.userInfoLabel}>Calorie Goal</Text>
-              <Text style={styles.userInfoValue}>{user.calorieGoal} kcal</Text>
+              <Text style={styles.userInfoValue}>{profile.calorieGoal} kcal</Text>
             </View>
           </View>
           
           <View style={styles.allergiesContainer}>
             <Text style={styles.allergiesLabel}>Allergies:</Text>
             <Text style={styles.allergiesValue}>
-              {user.allergies.length > 0 ? user.allergies.join(', ') : 'None'}
+              {profile.allergies && profile.allergies.length > 0 ? profile.allergies.join(', ') : 'None'}
             </Text>
           </View>
           
