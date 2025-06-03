@@ -280,11 +280,41 @@ export const useMealPlanStore = create<MealPlanState>()(
           }
         }
         
+        // Filter out desserts from main meal options
+        const dessertTags = [
+          'dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 
+          'chocolate', 'candy', 'pastry', 'biscuit', 'brownie', 'custard', 
+          'tart', 'cheesecake', 'mousse', 'frosting', 'icing', 'glaze'
+        ];
+        
+        const nonDessertRecipes = availableRecipes.filter(recipe => 
+          !recipe.tags.some(tag => dessertTags.includes(tag.toLowerCase()))
+        );
+        
+        // If we have enough non-dessert recipes, use them; otherwise, use all recipes
+        if (nonDessertRecipes.length >= 3) {
+          availableRecipes = nonDessertRecipes;
+        } else {
+          console.warn("Not enough non-dessert recipes available. Some desserts may be included in the meal plan.");
+        }
+        
         // Define tags that match each meal type
         const mealTypeTags: Record<string, string[]> = {
-          breakfast: ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg', 'toast', 'smoothie', 'yogurt'],
-          lunch: ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 'taco', 'quesadilla', 'burger'],
-          dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole']
+          breakfast: [
+            'breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 
+            'waffle', 'egg', 'toast', 'smoothie', 'yogurt', 'muffin', 'bagel',
+            'croissant', 'granola', 'porridge'
+          ],
+          lunch: [
+            'lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 
+            'taco', 'quesadilla', 'burger', 'roll', 'pita', 'flatbread', 
+            'hummus', 'falafel'
+          ],
+          dinner: [
+            'dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 
+            'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole',
+            'grill', 'bake', 'hearty', 'substantial'
+          ]
         };
         
         // Define excluded tags for each meal type
@@ -296,7 +326,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         
         // Improved recipe matching function with calorie targeting and meal type appropriateness
         const getRecipeForMeal = (mealType: string, targetCalories: number): Recipe | null => {
-          // First, check if any recipes have the explicit meal type property matching this meal
+          // First, filter recipes by their explicit meal type property
           const typeSpecificRecipes = availableRecipes.filter(recipe => {
             // Check if recipe has the meal type property matching this meal
             const hasExplicitMealType = recipe.mealType === mealType;

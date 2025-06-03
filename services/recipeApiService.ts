@@ -269,22 +269,59 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   if (isDessert) {
     mealType = undefined;
   } else {
+    // Breakfast-related tags
+    const breakfastTags = [
+      'breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 
+      'waffle', 'egg', 'toast', 'smoothie', 'yogurt', 'muffin', 'bagel',
+      'croissant', 'granola', 'porridge'
+    ];
+    
+    // Lunch-related tags
+    const lunchTags = [
+      'lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 
+      'taco', 'quesadilla', 'burger', 'roll', 'pita', 'flatbread', 
+      'hummus', 'falafel'
+    ];
+    
+    // Dinner-related tags
+    const dinnerTags = [
+      'dinner', 'supper', 'main course', 'entree', 'roast', 'stew', 
+      'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 
+      'casserole', 'grill', 'bake', 'hearty', 'substantial'
+    ];
+    
     // Check for breakfast-related tags
-    if (tags.some((tag: string) => ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg', 'toast', 'smoothie', 'yogurt'].includes(tag)) || 
+    if (tags.some((tag: string) => breakfastTags.includes(tag)) || 
         meal.strCategory?.toLowerCase() === 'breakfast') {
       mealType = 'breakfast';
     }
     // Check for lunch-related tags
-    else if (tags.some((tag: string) => ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 'taco', 'quesadilla', 'burger'].includes(tag))) {
+    else if (tags.some((tag: string) => lunchTags.includes(tag))) {
       mealType = 'lunch';
     }
     // Check for dinner-related tags
-    else if (tags.some((tag: string) => ['dinner', 'supper', 'main course', 'entree', 'roast', 'stew', 'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole'].includes(tag))) {
+    else if (tags.some((tag: string) => dinnerTags.includes(tag))) {
       mealType = 'dinner';
     }
-    // Default to dinner for most recipes if no specific meal type is identified
+    // Default to lunch for most recipes if no specific meal type is identified
+    // This is safer than defaulting to dinner, as lunch can be more versatile
     else {
-      mealType = 'dinner';
+      // Check if it's a side dish, appetizer, or starter
+      const sideOrAppetizer = tags.some((tag: string) => 
+        ['side', 'side dish', 'appetizer', 'starter', 'snack'].includes(tag)
+      );
+      
+      if (sideOrAppetizer) {
+        // Side dishes and appetizers can be either lunch or dinner, default to lunch
+        mealType = 'lunch';
+      } else {
+        // For main dishes with protein, default to dinner
+        const hasProtein = ingredients.some(ingredient => 
+          /\b(chicken|beef|pork|lamb|fish|seafood|shrimp|turkey|meat)\b/i.test(ingredient)
+        );
+        
+        mealType = hasProtein ? 'dinner' : 'lunch';
+      }
     }
   }
   
