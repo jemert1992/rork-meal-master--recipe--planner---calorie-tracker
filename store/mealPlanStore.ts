@@ -259,7 +259,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               // Check if any tag matches the meal type or related tags
               const tagMatches = 
                 recipeTags.includes(mealType.toLowerCase()) || 
-                recipeTags.some(tag => mealTypeTags[mealType]?.includes(tag));
+                recipeTags.some(tag => mealTypeTags[mealType]?.some(mealTag => 
+                  tag.includes(mealTag) || mealTag.includes(tag)
+                ));
               
               // Check if calories are within 20% of target
               const calorieMatches = 
@@ -294,7 +296,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               
               // Check if any tag matches the meal type or related tags
               return recipeTags.includes(mealType.toLowerCase()) || 
-                     recipeTags.some(tag => mealTypeTags[mealType]?.includes(tag));
+                     recipeTags.some(tag => mealTypeTags[mealType]?.some(mealTag => 
+                       tag.includes(mealTag) || mealTag.includes(tag)
+                     ));
             });
             
             if (tagMatchingRecipes.length > 0) {
