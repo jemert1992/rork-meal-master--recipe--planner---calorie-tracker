@@ -217,7 +217,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           // Create a copy of recipes to avoid modifying the original
           let availableRecipes = [...recipes];
           
-          // Get already used recipe IDs to avoid duplicates
+          // Get already used recipe IDs to avoid duplicates across all days
           const usedRecipeIds = get().getUsedRecipeIds();
           
           // Filter out already used recipes to avoid duplicates
@@ -249,7 +249,7 @@ export const useMealPlanStore = create<MealPlanState>()(
             dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta']
           };
           
-          // Find recipes for each meal type based on tags and calories
+          // Improved recipe matching function with calorie targeting
           const getRecipeForMeal = (mealType: string, targetCalories: number): Recipe | null => {
             // Find recipes with matching tags and close to target calories
             const matchingRecipes = availableRecipes.filter(recipe => {
@@ -387,6 +387,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               availableRecipes.splice(0, 1);
             }
             
+            // Fix TypeScript error by checking if selectedSnackRecipe exists
             if (selectedSnackRecipe) {
               snacks.push({
                 recipeId: selectedSnackRecipe.id,
