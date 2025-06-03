@@ -5,14 +5,15 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
-import { dietTypes } from '@/constants/dietTypes';
+import { DIET_TYPES } from '@/constants/dietTypes';
+import { DietType } from '@/types';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useUserStore();
   
   const [name, setName] = useState(profile.name || '');
-  const [dietType, setDietType] = useState(profile.dietType || 'any');
+  const [dietType, setDietType] = useState<DietType>(profile.dietType || 'any');
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
   
@@ -68,24 +69,24 @@ export default function EditProfileScreen() {
           
           <Text style={styles.inputLabel}>Diet Type</Text>
           <View style={styles.dietTypeContainer}>
-            {dietTypes.map((option) => (
+            {DIET_TYPES.map((option) => (
               <Pressable
-                key={option.value}
+                key={option.id}
                 style={[
                   styles.dietTypeOption,
-                  dietType === option.value && styles.selectedDietType
+                  dietType === option.id && styles.selectedDietType
                 ]}
-                onPress={() => setDietType(option.value)}
+                onPress={() => setDietType(option.id)}
               >
                 <Text 
                   style={[
                     styles.dietTypeText,
-                    dietType === option.value && styles.selectedDietTypeText
+                    dietType === option.id && styles.selectedDietTypeText
                   ]}
                 >
                   {option.label}
                 </Text>
-                {dietType === option.value && (
+                {dietType === option.id && (
                   <Check size={16} color={Colors.white} style={styles.checkIcon} />
                 )}
               </Pressable>

@@ -5,17 +5,18 @@ import { useRouter } from 'expo-router';
 import { Check, ChevronRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
-import { dietTypes } from '@/constants/dietTypes';
-import { allergies } from '@/constants/allergies';
+import { DIET_TYPES } from '@/constants/dietTypes';
+import { COMMON_ALLERGIES } from '@/constants/allergies';
+import { DietType } from '@/types';
 
 export default function DietaryPreferencesScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useUserStore();
   
-  const [selectedDietType, setSelectedDietType] = useState<string>(profile.dietType || 'any');
+  const [selectedDietType, setSelectedDietType] = useState<DietType>(profile.dietType || 'any');
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>(profile.allergies || []);
   
-  const handleDietTypeSelect = (dietType: string) => {
+  const handleDietTypeSelect = (dietType: DietType) => {
     setSelectedDietType(dietType);
   };
   
@@ -51,32 +52,32 @@ export default function DietaryPreferencesScreen() {
           <Text style={styles.sectionSubtitle}>Select one that best describes your diet</Text>
           
           <View style={styles.optionsContainer}>
-            {dietTypes.map((dietType) => (
+            {DIET_TYPES.map((dietType) => (
               <Pressable
-                key={dietType.value}
+                key={dietType.id}
                 style={[
                   styles.dietTypeOption,
-                  selectedDietType === dietType.value && styles.selectedOption
+                  selectedDietType === dietType.id && styles.selectedOption
                 ]}
-                onPress={() => handleDietTypeSelect(dietType.value)}
+                onPress={() => handleDietTypeSelect(dietType.id)}
               >
                 <View style={styles.optionContent}>
                   <Text style={[
                     styles.optionLabel,
-                    selectedDietType === dietType.value && styles.selectedOptionLabel
+                    selectedDietType === dietType.id && styles.selectedOptionLabel
                   ]}>
                     {dietType.label}
                   </Text>
                   {dietType.description && (
                     <Text style={[
                       styles.optionDescription,
-                      selectedDietType === dietType.value && styles.selectedOptionDescription
+                      selectedDietType === dietType.id && styles.selectedOptionDescription
                     ]}>
                       {dietType.description}
                     </Text>
                   )}
                 </View>
-                {selectedDietType === dietType.value && (
+                {selectedDietType === dietType.id && (
                   <View style={styles.checkIconContainer}>
                     <Check size={20} color={Colors.white} />
                   </View>
@@ -91,22 +92,22 @@ export default function DietaryPreferencesScreen() {
           <Text style={styles.sectionSubtitle}>Select all that apply</Text>
           
           <View style={styles.allergiesContainer}>
-            {allergies.map((allergy) => (
+            {COMMON_ALLERGIES.map((allergy) => (
               <Pressable
-                key={allergy.value}
+                key={allergy}
                 style={[
                   styles.allergyOption,
-                  selectedAllergies.includes(allergy.value) && styles.selectedAllergyOption
+                  selectedAllergies.includes(allergy) && styles.selectedAllergyOption
                 ]}
-                onPress={() => handleAllergyToggle(allergy.value)}
+                onPress={() => handleAllergyToggle(allergy)}
               >
                 <Text style={[
                   styles.allergyLabel,
-                  selectedAllergies.includes(allergy.value) && styles.selectedAllergyLabel
+                  selectedAllergies.includes(allergy) && styles.selectedAllergyLabel
                 ]}>
-                  {allergy.label}
+                  {allergy}
                 </Text>
-                {selectedAllergies.includes(allergy.value) && (
+                {selectedAllergies.includes(allergy) && (
                   <Check size={16} color={Colors.white} style={styles.allergyCheckIcon} />
                 )}
               </Pressable>
