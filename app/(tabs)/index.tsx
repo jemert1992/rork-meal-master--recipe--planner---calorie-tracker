@@ -75,6 +75,7 @@ export default function RecipesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Discover Recipes</Text>
         <Text style={styles.subtitle}>Find and save your favorite meals</Text>
+        <Text style={styles.recipeCount}>{recipes.length} recipes available</Text>
       </View>
 
       <View style={styles.searchContainer}>
@@ -101,7 +102,7 @@ export default function RecipesScreen() {
 
       {categories.length > 0 && (
         <CategoryFilter 
-          categories={categories.slice(0, 10)} // Limit to 10 categories
+          categories={categories.slice(0, 15)} // Increased to 15 categories
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
@@ -156,7 +157,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: Colors.textLight,
+    marginBottom: 4,
+  },
+  recipeCount: {
+    fontSize: 14,
+    color: Colors.primary,
     marginBottom: 16,
+    fontWeight: '500',
   },
   searchContainer: {
     flexDirection: 'row',

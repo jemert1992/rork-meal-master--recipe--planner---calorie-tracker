@@ -1,156 +1,128 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronRight, LogOut, Settings, User, Heart, Info, HelpCircle } from 'lucide-react-native';
+import { User, Edit, RefreshCw, Info } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
-import { formatHeight, formatWeight } from '@/utils/unitConversions';
-import NutritionBar from '@/components/NutritionBar';
+import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, logout } = useUserStore();
+  const { user } = useUserStore();
+  const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
   
-  const handleEditProfile = () => {
-    router.push('/profile/edit');
-  };
-  
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive', 
-          onPress: () => {
-            logout();
-            router.replace('/');
-          }
-        },
-      ]
-    );
-  };
-  
-  const getActivityLevelText = (level: string | undefined) => {
-    switch (level) {
-      case 'sedentary': return 'Sedentary';
-      case 'light': return 'Light Activity';
-      case 'moderate': return 'Moderate Activity';
-      case 'active': return 'Active';
-      case 'very-active': return 'Very Active';
-      default: return 'Not specified';
-    }
+  const handleRefreshRecipes = async () => {
+    await loadRecipesFromApi();
   };
   
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
-        <Text style={styles.subtitle}>Your personal information and settings</Text>
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
+        <View style={styles.userSection}>
+          <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{profile.name.charAt(0).toUpperCase()}</Text>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profile.name}</Text>
-              <Text style={styles.profileDetails}>
-                {profile.age} years • {profile.weight ? formatWeight(profile.weight) : '--'} • {profile.height ? formatHeight(profile.height) : '--'}
-              </Text>
-              <Text style={styles.profileActivity}>
-                {getActivityLevelText(profile.activityLevel)}
-              </Text>
+              <User size={40} color={Colors.white} />
             </View>
           </View>
           
-          <Pressable style={styles.editButton} onPress={handleEditProfile}>
+          <Text style={styles.userName}>{user.name || 'User'}</Text>
+          
+          <View style={styles.userInfoRow}>
+            <View style={styles.userInfoItem}>
+              <Text style={styles.userInfoLabel}>Diet Type</Text>
+              <Text style={styles.userInfoValue}>{user.dietType || 'Not set'}</Text>
+            </View>
+            
+            <View style={styles.userInfoItem}>
+              <Text style={styles.userInfoLabel}>Calorie Goal</Text>
+              <Text style={styles.userInfoValue}>{user.calorieGoal} kcal</Text>
+            </View>
+          </View>
+          
+          <View style={styles.allergiesContainer}>
+            <Text style={styles.allergiesLabel}>Allergies:</Text>
+            <Text style={styles.allergiesValue}>
+              {user.allergies.length > 0 ? user.allergies.join(', ') : 'None'}
+            </Text>
+          </View>
+          
+          <Pressable 
+            style={styles.editButton} 
+            onPress={() => router.push('/profile/edit')}
+          >
+            <Edit size={16} color={Colors.white} />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </Pressable>
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Nutrition Goals</Text>
-          <NutritionBar
-            calories={0}
-            protein={0}
-            carbs={0}
-            fat={0}
-            goal={{
-              calories: profile.calorieGoal || 2000,
-              protein: profile.proteinGoal || 100,
-              carbs: profile.carbsGoal || 250,
-              fat: profile.fatGoal || 70,
-            }}
-          />
+          <Text style={styles.sectionTitle}>Recipe Data Sources</Text>
+          <Text style={styles.sectionSubtitle}>Choose which recipe APIs to use</Text>
+          
+          <View style={styles.toggleGroup}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>TheMealDB</Text>
+              <Text style={styles.toggleDescription}>Free recipe database</Text>
+            </View>
+            <Switch
+              value={apiSources.useMealDB}
+              onValueChange={(value) => setApiSource('useMealDB', value)}
+              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+              thumbColor={apiSources.useMealDB ? Colors.primary : Colors.white}
+            />
+          </View>
+          
+          <View style={styles.toggleGroup}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>Spoonacular</Text>
+              <Text style={styles.toggleDescription}>Comprehensive recipe API</Text>
+            </View>
+            <Switch
+              value={apiSources.useSpoonacular}
+              onValueChange={(value) => setApiSource('useSpoonacular', value)}
+              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+              thumbColor={apiSources.useSpoonacular ? Colors.primary : Colors.white}
+            />
+          </View>
+          
+          <View style={styles.toggleGroup}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>Edamam</Text>
+              <Text style={styles.toggleDescription}>Nutrition-focused API</Text>
+            </View>
+            <Switch
+              value={apiSources.useEdamam}
+              onValueChange={(value) => setApiSource('useEdamam', value)}
+              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+              thumbColor={apiSources.useEdamam ? Colors.primary : Colors.white}
+            />
+          </View>
+          
+          <Pressable 
+            style={styles.refreshButton} 
+            onPress={handleRefreshRecipes}
+          >
+            <RefreshCw size={16} color={Colors.white} />
+            <Text style={styles.refreshButtonText}>Refresh Recipe Database</Text>
+          </Pressable>
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dietary Preferences</Text>
-          <View style={styles.preferencesContainer}>
-            {profile.dietaryPreferences && profile.dietaryPreferences.length > 0 ? (
-              profile.dietaryPreferences.map((preference, index) => (
-                <View key={index} style={styles.preferenceTag}>
-                  <Text style={styles.preferenceText}>{preference}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>No dietary preferences set</Text>
-            )}
+          <View style={styles.infoBox}>
+            <Info size={20} color={Colors.primary} style={styles.infoIcon} />
+            <Text style={styles.infoText}>
+              This app uses TheMealDB and Spoonacular APIs to provide recipe data. 
+              You can enable or disable each source above.
+            </Text>
           </View>
+          
+          <Text style={styles.versionText}>App Version 1.0.0</Text>
         </View>
-        
-        <View style={styles.menuSection}>
-          <Pressable style={styles.menuItem} onPress={handleEditProfile}>
-            <View style={styles.menuItemLeft}>
-              <User size={20} color={Colors.primary} style={styles.menuIcon} />
-              <Text style={styles.menuText}>Edit Profile</Text>
-            </View>
-            <ChevronRight size={20} color={Colors.textLight} />
-          </Pressable>
-          
-          <Pressable style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Settings size={20} color={Colors.primary} style={styles.menuIcon} />
-              <Text style={styles.menuText}>App Settings</Text>
-            </View>
-            <ChevronRight size={20} color={Colors.textLight} />
-          </Pressable>
-          
-          <Pressable style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Heart size={20} color={Colors.primary} style={styles.menuIcon} />
-              <Text style={styles.menuText}>Favorite Recipes</Text>
-            </View>
-            <ChevronRight size={20} color={Colors.textLight} />
-          </Pressable>
-          
-          <Pressable style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <HelpCircle size={20} color={Colors.primary} style={styles.menuIcon} />
-              <Text style={styles.menuText}>Help & Support</Text>
-            </View>
-            <ChevronRight size={20} color={Colors.textLight} />
-          </Pressable>
-          
-          <Pressable style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Info size={20} color={Colors.primary} style={styles.menuIcon} />
-              <Text style={styles.menuText}>About</Text>
-            </View>
-            <ChevronRight size={20} color={Colors.textLight} />
-          </Pressable>
-        </View>
-        
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <LogOut size={20} color={Colors.error} style={styles.logoutIcon} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -172,155 +144,165 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.textLight,
-    marginBottom: 16,
-  },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-  },
-  profileCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
     padding: 20,
-    marginBottom: 24,
+    paddingTop: 0,
+  },
+  userSection: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    marginBottom: 20,
   },
-  profileHeader: {
-    flexDirection: 'row',
+  avatarContainer: {
     marginBottom: 16,
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
   },
-  avatarText: {
+  userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.white,
-  },
-  profileInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: 16,
   },
-  profileDetails: {
-    fontSize: 14,
-    color: Colors.textLight,
-    marginBottom: 2,
+  userInfoRow: {
+    flexDirection: 'row',
+    width: '100%',
+    marginBottom: 16,
   },
-  profileActivity: {
-    fontSize: 14,
-    color: Colors.textLight,
-  },
-  editButton: {
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    paddingVertical: 12,
+  userInfoItem: {
+    flex: 1,
     alignItems: 'center',
   },
-  editButtonText: {
+  userInfoLabel: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginBottom: 4,
+  },
+  userInfoValue: {
     fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  allergiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '100%',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  allergiesLabel: {
+    fontSize: 14,
     fontWeight: '500',
-    color: Colors.primary,
+    color: Colors.textLight,
+    marginRight: 4,
+  },
+  allergiesValue: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   section: {
-    marginBottom: 24,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  preferencesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  preferenceTag: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  preferenceText: {
-    fontSize: 14,
-    color: Colors.primary,
-  },
-  emptyText: {
+  sectionSubtitle: {
     fontSize: 14,
     color: Colors.textLight,
-    fontStyle: 'italic',
+    marginBottom: 16,
   },
-  menuSection: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 24,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  menuItem: {
+  toggleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  toggleInfo: {
+    flex: 1,
   },
-  menuIcon: {
-    marginRight: 12,
-  },
-  menuText: {
+  toggleLabel: {
     fontSize: 16,
+    fontWeight: '500',
     color: Colors.text,
   },
-  logoutButton: {
+  toggleDescription: {
+    fontSize: 12,
+    color: Colors.textLight,
+  },
+  refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 40,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginTop: 16,
   },
-  logoutIcon: {
-    marginRight: 8,
+  refreshButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    marginLeft: 8,
   },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.error,
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  infoIcon: {
+    marginRight: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: Colors.textLight,
   },
 });

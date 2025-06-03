@@ -36,7 +36,7 @@ export const useRecipeStore = create<RecipeState>()(
       hasLoadedFromApi: false,
       apiSources: {
         useMealDB: true,
-        useSpoonacular: false,
+        useSpoonacular: true, // Enable Spoonacular by default
         useEdamam: false,
       },
       
@@ -86,28 +86,39 @@ export const useRecipeStore = create<RecipeState>()(
       },
       
       loadRecipesFromApi: async () => {
-        // Skip if we've already loaded from API
-        if (get().hasLoadedFromApi && get().recipes.length > mockRecipes.length) return;
-        
+        // Always load from API to get fresh recipes
         set({ isLoading: true });
         
         try {
           const { apiSources } = get();
           
-          // If no API sources are enabled, default to MealDB
+          // If no API sources are enabled, default to MealDB and Spoonacular
           const useDefaultSource = !Object.values(apiSources).some(Boolean);
           
           if (useDefaultSource) {
-            const mealDbRecipes = await loadInitialRecipes(30);
+            set((state) => ({
+              apiSources: {
+                ...state.apiSources,
+                useMealDB: true,
+                useSpoonacular: true,
+              }
+            }));
             
-            if (mealDbRecipes.length > 0) {
+            const apiRecipes = await loadInitialRecipesFromAllSources(100, {
+              useMealDB: true,
+              useSpoonacular: true,
+              useEdamam: false
+            });
+            
+            if (apiRecipes.length > 0) {
               set((state) => ({
-                recipes: [...mealDbRecipes, ...mockRecipes],
+                recipes: [...apiRecipes, ...mockRecipes],
                 hasLoadedFromApi: true,
               }));
             }
           } else {
-            const apiRecipes = await loadInitialRecipesFromAllSources(30, apiSources);
+            // Increased count to 100 to get more recipes
+            const apiRecipes = await loadInitialRecipesFromAllSources(100, apiSources);
             
             if (apiRecipes.length > 0) {
               set((state) => ({
@@ -129,13 +140,19 @@ export const useRecipeStore = create<RecipeState>()(
         try {
           const { apiSources } = get();
           
-          // If no API sources are enabled, default to MealDB
+          // If no API sources are enabled, default to MealDB and Spoonacular
           const useDefaultSource = !Object.values(apiSources).some(Boolean);
           
           if (useDefaultSource) {
-            return await searchMealsByName(query);
+            // Search from both MealDB and Spoonacular
+            return await searchRecipesFromAllSources(query, 30, {
+              useMealDB: true,
+              useSpoonacular: true,
+              useEdamam: false
+            });
           } else {
-            return await searchRecipesFromAllSources(query, 20, apiSources);
+            // Increased count to 30 to get more search results
+            return await searchRecipesFromAllSources(query, 30, apiSources);
           }
         } catch (error) {
           console.error('Error searching recipes:', error);
@@ -166,9 +183,19 @@ export const useRecipeStore = create<RecipeState>()(
           }
         }
         
-        // For other API sources, we'd need to implement specific fetching logic
-        // This would depend on how IDs are structured for each API
-        console.warn(`Fetching recipe details for ID ${id} from other APIs not implemented yet`);
+        // For Spoonacular IDs
+        if (id.startsWith('spoonacular_')) {
+          const spoonacularId = id.replace('spoonacular_', '');
+          // We would need to implement a function to fetch a recipe by ID from Spoonacular
+          console.warn(`Fetching recipe details for Spoonacular ID ${spoonacularId} not implemented yet`);
+        }
+        
+        // For Edamam IDs
+        if (id.startsWith('edamam_')) {
+          // We would need to implement a function to fetch a recipe by ID from Edamam
+          console.warn(`Fetching recipe details for Edamam ID ${id} not implemented yet`);
+        }
+        
         return null;
       },
     }),

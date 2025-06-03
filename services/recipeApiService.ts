@@ -102,8 +102,9 @@ const convertEdamamRecipe = (recipe: any): Recipe => {
 /**
  * Search for recipes using Spoonacular API
  */
-export const searchSpoonacularRecipes = async (query: string, count: number = 10): Promise<Recipe[]> => {
-  if (!SPOONACULAR_API_KEY) {
+export const searchSpoonacularRecipes = async (query: string, count: number = 20): Promise<Recipe[]> => {
+  // Check if API key is available (fixed comparison)
+  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === '') {
     console.warn('Spoonacular API key not configured');
     return [];
   }
@@ -129,6 +130,7 @@ export const searchSpoonacularRecipes = async (query: string, count: number = 10
  * Search for recipes using Edamam API
  */
 export const searchEdamamRecipes = async (query: string, count: number = 10): Promise<Recipe[]> => {
+  // Check if API credentials are available (fixed comparison)
   if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY || 
       EDAMAM_APP_ID === 'YOUR_APP_ID_HERE' || 
       EDAMAM_APP_KEY === 'YOUR_APP_KEY_HERE') {
@@ -156,8 +158,9 @@ export const searchEdamamRecipes = async (query: string, count: number = 10): Pr
 /**
  * Get random recipes from Spoonacular
  */
-export const getRandomSpoonacularRecipes = async (count: number = 10): Promise<Recipe[]> => {
-  if (!SPOONACULAR_API_KEY) {
+export const getRandomSpoonacularRecipes = async (count: number = 30): Promise<Recipe[]> => {
+  // Check if API key is available (fixed comparison)
+  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === '') {
     console.warn('Spoonacular API key not configured');
     return [];
   }
@@ -185,12 +188,12 @@ export const getRandomSpoonacularRecipes = async (count: number = 10): Promise<R
  */
 export const searchRecipesFromAllSources = async (
   query: string, 
-  count: number = 10,
+  count: number = 20,
   options: {
     useMealDB?: boolean;
     useSpoonacular?: boolean;
     useEdamam?: boolean;
-  } = { useMealDB: true, useSpoonacular: false, useEdamam: false }
+  } = { useMealDB: true, useSpoonacular: true, useEdamam: false }
 ): Promise<Recipe[]> => {
   const { useMealDB, useSpoonacular, useEdamam } = options;
   
@@ -237,12 +240,12 @@ export const searchRecipesFromAllSources = async (
  * Load initial recipes from multiple sources
  */
 export const loadInitialRecipesFromAllSources = async (
-  count: number = 30,
+  count: number = 50,
   options: {
     useMealDB?: boolean;
     useSpoonacular?: boolean;
     useEdamam?: boolean;
-  } = { useMealDB: true, useSpoonacular: false, useEdamam: false }
+  } = { useMealDB: true, useSpoonacular: true, useEdamam: false }
 ): Promise<Recipe[]> => {
   const { useMealDB, useSpoonacular, useEdamam } = options;
   
@@ -263,7 +266,14 @@ export const loadInitialRecipesFromAllSources = async (
   }
   
   if (useSpoonacular) {
+    // For Spoonacular, get random recipes
     promises.push(getRandomSpoonacularRecipes(perSourceCount));
+    
+    // Also get recipes by popular cuisines to ensure variety
+    const cuisines = ['italian', 'mexican', 'asian', 'american', 'mediterranean'];
+    for (const cuisine of cuisines) {
+      promises.push(searchSpoonacularRecipes(cuisine, Math.ceil(perSourceCount / cuisines.length)));
+    }
   }
   
   if (useEdamam) {
@@ -281,11 +291,16 @@ export const loadInitialRecipesFromAllSources = async (
   // Combine and shuffle the results
   const allRecipes = results.flat();
   
+  // Remove duplicates by ID
+  const uniqueRecipes = Array.from(
+    new Map(allRecipes.map(recipe => [recipe.id, recipe])).values()
+  );
+  
   // Shuffle array
-  for (let i = allRecipes.length - 1; i > 0; i--) {
+  for (let i = uniqueRecipes.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [allRecipes[i], allRecipes[j]] = [allRecipes[j], allRecipes[i]];
+    [uniqueRecipes[i], uniqueRecipes[j]] = [uniqueRecipes[j], uniqueRecipes[i]];
   }
   
-  return allRecipes.slice(0, count);
+  return uniqueRecipes.slice(0, count);
 };

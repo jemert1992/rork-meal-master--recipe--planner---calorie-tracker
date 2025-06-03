@@ -1,20 +1,19 @@
-import React from 'react';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
-import { Home, Calendar, BookOpen, ShoppingCart } from 'lucide-react-native';
+import { Home, CalendarClock, BookOpen, ShoppingCart, User } from 'lucide-react-native';
+import Colors from '@/constants/colors';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // Hide the header bar
-        tabBarActiveTintColor: colorScheme === 'dark' ? '#4DA1FF' : '#007AFF',
-        tabBarInactiveTintColor: colorScheme === 'dark' ? '#8E8E93' : '#8E8E93',
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textLight,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+          backgroundColor: Colors.white,
+          borderTopWidth: 1,
+          borderTopColor: Colors.border,
         },
+        headerShown: false, // Hide the header for all tab screens
       }}
     >
       <Tabs.Screen
@@ -28,7 +27,7 @@ export default function TabLayout() {
         name="meal-plan"
         options={{
           title: 'Meal Plan',
-          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <CalendarClock size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -43,6 +42,13 @@ export default function TabLayout() {
         options={{
           title: 'Groceries',
           tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
     </Tabs>
