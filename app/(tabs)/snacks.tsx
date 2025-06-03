@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, Heart, RefreshCw } from 'lucide-react-native';
-import { useRecipeStore } from '@/store/recipeStore';
+import { Search, Filter, Heart, RefreshCw, Info } from 'lucide-react-native';
+import { useUserStore } from '@/store/userStore';
 import { SnackItem } from '@/types';
 import Colors from '@/constants/colors';
 
@@ -120,10 +120,11 @@ const mockSnacks: SnackItem[] = [
   },
 ];
 
-const SnackCard = ({ snack, onToggleFavorite, isFavorite }: { 
+const SnackCard = ({ snack, onToggleFavorite, isFavorite, onViewDetails }: { 
   snack: SnackItem; 
   onToggleFavorite: (id: string) => void;
   isFavorite: boolean;
+  onViewDetails: (snack: SnackItem) => void;
 }) => {
   return (
     <View style={styles.snackCard}>
@@ -173,6 +174,14 @@ const SnackCard = ({ snack, onToggleFavorite, isFavorite }: {
             </View>
           ))}
         </View>
+        
+        <Pressable 
+          style={styles.detailsButton}
+          onPress={() => onViewDetails(snack)}
+        >
+          <Info size={16} color={Colors.primary} />
+          <Text style={styles.detailsButtonText}>View Details</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -185,6 +194,7 @@ export default function SnacksScreen() {
   const [filterFavorites, setFilterFavorites] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { profile } = useUserStore();
 
   // Extract unique categories from snacks
   const categories = [...new Set(
@@ -193,6 +203,21 @@ export default function SnacksScreen() {
   )].sort();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Load favorites from storage on mount
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        // In a real app, you would load from AsyncStorage here
+        // For now, we'll just use a mock
+        setFavoriteSnackIds(['snack-1', 'snack-5']);
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      }
+    };
+    
+    loadFavorites();
+  }, []);
 
   const toggleFavorite = (id: string) => {
     setFavoriteSnackIds(prev => {
@@ -214,6 +239,22 @@ export default function SnacksScreen() {
     }, 1000);
   };
 
+  const handleViewDetails = (snack: SnackItem) => {
+    // Show a modal with detailed information
+    Alert.alert(
+      snack.name,
+      `${snack.description}\n\nNutrition per serving:\nCalories: ${snack.calories}\nProtein: ${snack.protein}g\nCarbs: ${snack.carbs}g\nFat: ${snack.fat}g`,
+      [
+        { text: "Close", style: "cancel" },
+        { 
+          text: "Add to Favorites", 
+          onPress: () => toggleFavorite(snack.id),
+          style: isFavorite(snack.id) ? "destructive" : "default"
+        }
+      ]
+    );
+  };
+
   // Filter snacks based on search query, favorites filter, and category
   const filteredSnacks = snacks.filter(snack => {
     const matchesSearch = searchQuery.trim() === '' || 
@@ -225,7 +266,31 @@ export default function SnacksScreen() {
     
     const matchesCategory = selectedCategory ? snack.tags.includes(selectedCategory) : true;
     
-    return matchesSearch && matchesFavorite && matchesCategory;
+    // Filter by dietary preferences if set
+    let matchesDiet = true;
+    if (profile.dietType && profile.dietType !== 'any') {
+      // Check if snack matches diet type
+      switch (profile.dietType) {
+        case 'vegetarian':
+          matchesDiet = snack.tags.some(tag => ['vegetarian', 'vegan'].includes(tag));
+          break;
+        case 'vegan':
+          matchesDiet = snack.tags.includes('vegan');
+          break;
+        case 'keto':
+          matchesDiet = snack.tags.some(tag => ['keto', 'low-carb'].includes(tag));
+          break;
+        case 'gluten-free':
+          matchesDiet = snack.tags.includes('gluten-free');
+          break;
+        case 'dairy-free':
+          matchesDiet = snack.tags.includes('dairy-free');
+          break;
+        // Add more diet types as needed
+      }
+    }
+    
+    return matchesSearch && matchesFavorite && matchesCategory && matchesDiet;
   });
 
   const renderCategoryItem = ({ item }: { item: string }) => (
@@ -265,11 +330,15 @@ export default function SnacksScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={Colors.textLight}
+            accessibilityLabel="Search snacks"
+            accessibilityHint="Enter keywords to search for snacks"
           />
         </View>
         <Pressable 
           style={[styles.filterButton, filterFavorites && styles.filterButtonActive]} 
           onPress={() => setFilterFavorites(!filterFavorites)}
+          accessibilityLabel={filterFavorites ? "Show all snacks" : "Show favorites only"}
+          accessibilityRole="button"
         >
           <Filter size={20} color={filterFavorites ? Colors.white : Colors.text} />
         </Pressable>
@@ -283,6 +352,7 @@ export default function SnacksScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
+          accessibilityLabel="Categories list"
         />
       )}
 
@@ -300,6 +370,7 @@ export default function SnacksScreen() {
               snack={item} 
               onToggleFavorite={toggleFavorite}
               isFavorite={isFavorite(item.id)}
+              onViewDetails={handleViewDetails}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -310,7 +381,12 @@ export default function SnacksScreen() {
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No snacks found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
-              <Pressable style={styles.refreshButton} onPress={handleRefresh}>
+              <Pressable 
+                style={styles.refreshButton} 
+                onPress={handleRefresh}
+                accessibilityLabel="Refresh snacks"
+                accessibilityRole="button"
+              >
                 <RefreshCw size={16} color={Colors.white} />
                 <Text style={styles.refreshButtonText}>Refresh Snacks</Text>
               </Pressable>
@@ -472,6 +548,7 @@ const styles = StyleSheet.create({
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: 12,
   },
   tag: {
     backgroundColor: Colors.backgroundLight,
@@ -484,6 +561,20 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     color: Colors.textLight,
+  },
+  detailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.backgroundLight,
+  },
+  detailsButtonText: {
+    fontSize: 14,
+    color: Colors.primary,
+    marginLeft: 6,
+    fontWeight: '500',
   },
   loaderContainer: {
     flex: 1,

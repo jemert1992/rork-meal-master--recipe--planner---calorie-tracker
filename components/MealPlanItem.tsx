@@ -43,11 +43,18 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
     <View style={styles.container}>
       <Text style={styles.mealType}>{formatMealType(mealType)}</Text>
       {meal ? (
-        <Pressable style={styles.mealContainer} onPress={handlePress}>
+        <Pressable 
+          style={styles.mealContainer} 
+          onPress={handlePress}
+          accessibilityLabel={`${formatMealType(mealType)}: ${meal.name}`}
+          accessibilityHint={`${getCalories()} calories. Tap to view details.`}
+          accessibilityRole="button"
+        >
           {recipe && (
             <Image 
               source={{ uri: recipe.image }} 
               style={styles.mealImage} 
+              accessibilityLabel={`Image of ${meal.name}`}
             />
           )}
           <View style={styles.mealContent}>
@@ -77,12 +84,24 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
               </View>
             )}
           </View>
-          <Pressable style={styles.removeButton} onPress={onRemove} hitSlop={8}>
+          <Pressable 
+            style={styles.removeButton} 
+            onPress={onRemove} 
+            hitSlop={8}
+            accessibilityLabel={`Remove ${meal.name} from ${mealType}`}
+            accessibilityRole="button"
+          >
             <X size={18} color={Colors.textLight} />
           </Pressable>
         </Pressable>
       ) : (
-        <Pressable style={styles.addButton} onPress={onAdd}>
+        <Pressable 
+          style={styles.addButton} 
+          onPress={onAdd}
+          accessibilityLabel={`Add ${mealType}`}
+          accessibilityHint={`Tap to add a ${mealType} to your meal plan`}
+          accessibilityRole="button"
+        >
           <Text style={styles.addButtonText}>+ Add {mealType}</Text>
         </Pressable>
       )}

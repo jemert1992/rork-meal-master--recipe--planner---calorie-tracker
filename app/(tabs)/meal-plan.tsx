@@ -360,6 +360,8 @@ export default function MealPlanScreen() {
             style={[styles.actionButton, styles.generateButton]} 
             onPress={handleGenerateMealPlan}
             disabled={isGenerating || isLoading}
+            accessibilityLabel="Generate meal plan"
+            accessibilityHint="Automatically generates a meal plan for the selected day"
           >
             {isGenerating ? (
               <ActivityIndicator size="small" color={Colors.white} />
@@ -371,7 +373,12 @@ export default function MealPlanScreen() {
             )}
           </Pressable>
           
-          <Pressable style={styles.clearButton} onPress={handleClearDay}>
+          <Pressable 
+            style={styles.clearButton} 
+            onPress={handleClearDay}
+            accessibilityLabel="Clear day"
+            accessibilityHint="Removes all meals for the selected day"
+          >
             <Trash2 size={16} color={Colors.textLight} />
             <Text style={styles.clearButtonText}>Clear</Text>
           </Pressable>
@@ -436,6 +443,8 @@ export default function MealPlanScreen() {
           <Pressable 
             style={styles.suggestionsHeader} 
             onPress={handleToggleSuggestions}
+            accessibilityLabel={showSuggestions ? "Hide meal suggestions" : "Show meal suggestions"}
+            accessibilityRole="button"
           >
             <Text style={styles.sectionTitle}>Meal Suggestions</Text>
             {showSuggestions ? (
@@ -453,6 +462,8 @@ export default function MealPlanScreen() {
                     key={recipe.id}
                     style={styles.suggestionItem}
                     onPress={() => handleAddSuggestion(recipe.id, recipe.name, 'any')}
+                    accessibilityLabel={`Add ${recipe.name} to meal plan`}
+                    accessibilityHint={`${recipe.calories} calories, tags: ${recipe.tags.join(', ')}`}
                   >
                     <View style={styles.suggestionContent}>
                       <Text style={styles.suggestionName}>{recipe.name}</Text>

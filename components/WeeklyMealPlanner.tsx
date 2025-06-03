@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Calendar, ChevronRight, Plus, ShoppingBag, X, Sparkles } from 'lucide-react-native';
 import { format, addDays, startOfWeek } from 'date-fns';
@@ -45,6 +45,32 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const handleAutoGenerateMeal = async (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
     try {
       setGeneratingMeal({ date, mealType, loading: true });
+      
+      // Check if the meal type already has a recipe
+      const dayPlan = mealPlan[date] || {};
+      if (dayPlan[mealType]?.recipeId) {
+        // Ask for confirmation before replacing
+        Alert.alert(
+          "Replace Existing Meal?",
+          `You already have a ${mealType} planned for this day. Do you want to replace it?`,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => setGeneratingMeal(null) },
+            { 
+              text: "Replace", 
+              onPress: async () => {
+                await generateMealPlan(date, recipes, mealType);
+                Alert.alert(
+                  "Meal Generated",
+                  `Your ${mealType} has been automatically generated!`,
+                  [{ text: "OK" }]
+                );
+                setGeneratingMeal(null);
+              }
+            }
+          ]
+        );
+        return;
+      }
       
       // Generate a meal plan for the specific date and meal type
       await generateMealPlan(date, recipes, mealType);
@@ -96,6 +122,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       <Pressable 
         style={styles.planButton} 
         onPress={() => setModalVisible(true)}
+        accessibilityLabel="Plan your weekly meals"
+        accessibilityHint={`${plannedMealsCount} of ${totalPossibleMeals} meals planned`}
+        accessibilityRole="button"
       >
         <View style={styles.buttonContent}>
           <View style={styles.buttonIconContainer}>
@@ -117,6 +146,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         <Pressable 
           style={styles.groceryButton} 
           onPress={onGenerateGroceryList}
+          accessibilityLabel="Generate grocery list"
+          accessibilityHint="Create a shopping list based on your meal plan"
+          accessibilityRole="button"
         >
           <ShoppingBag size={16} color={Colors.primary} />
           <Text style={styles.groceryButtonText}>Generate Grocery List</Text>
@@ -136,12 +168,18 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               <Pressable 
                 style={styles.closeButton} 
                 onPress={() => setModalVisible(false)}
+                accessibilityLabel="Close"
+                accessibilityRole="button"
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
 
-            <ScrollView style={styles.modalScroll}>
+            <ScrollView 
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
               {weekDays.map((day) => (
                 <View key={day.dateString} style={styles.daySection}>
                   <View style={styles.dayHeader}>
@@ -177,11 +215,20 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                             ]}
                             onPress={() => handleMealSlotPress(day.dateString, mealType as 'breakfast' | 'lunch' | 'dinner')}
                             disabled={isGenerating}
+                            accessibilityLabel={name 
+                              ? `${mealType}: ${name}` 
+                              : `Add ${mealType} for ${day.dayName}`
+                            }
+                            accessibilityRole="button"
                           >
                             {name ? (
                               <View style={styles.filledMealContent}>
                                 {image ? (
-                                  <Image source={{ uri: image }} style={styles.mealImage} />
+                                  <Image 
+                                    source={{ uri: image }} 
+                                    style={styles.mealImage}
+                                    accessibilityLabel={`Image of ${name}`}
+                                  />
                                 ) : (
                                   <View style={styles.mealImagePlaceholder} />
                                 )}
@@ -198,7 +245,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                                   {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
                                 </Text>
                                 {isGenerating ? (
-                                  <Text style={styles.generatingText}>Generating...</Text>
+                                  <>
+                                    <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
+                                    <Text style={styles.generatingText}>Generating...</Text>
+                                  </>
                                 ) : (
                                   <>
                                     <Plus size={20} color={Colors.primary} />
@@ -216,6 +266,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                                 day.dateString, 
                                 mealType as 'breakfast' | 'lunch' | 'dinner'
                               )}
+                              accessibilityLabel={`Auto-generate ${mealType} for ${day.dayName}`}
+                              accessibilityHint="Let the app pick a recipe for you"
+                              accessibilityRole="button"
                             >
                               <Sparkles size={14} color={Colors.white} />
                               <Text style={styles.pickForMeText}>Pick for me</Text>
@@ -240,6 +293,12 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   setModalVisible(false);
                 }}
                 disabled={plannedMealsCount === 0}
+                accessibilityLabel="Generate grocery list"
+                accessibilityHint={plannedMealsCount === 0 
+                  ? "You need to add meals to your plan first" 
+                  : "Create a shopping list based on your meal plan"
+                }
+                accessibilityRole="button"
               >
                 <ShoppingBag size={20} color={Colors.white} />
                 <Text style={styles.generateButtonText}>Generate Grocery List</Text>
@@ -341,6 +400,9 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     flex: 1,
+  },
+  modalScrollContent: {
+    paddingBottom: 20,
   },
   daySection: {
     marginBottom: 24,
@@ -493,5 +555,8 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  generatingIndicator: {
+    marginBottom: 4,
   },
 });
