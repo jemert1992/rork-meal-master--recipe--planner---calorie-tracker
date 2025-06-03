@@ -103,7 +103,7 @@ const convertEdamamRecipe = (recipe: any): Recipe => {
  * Search for recipes using Spoonacular API
  */
 export const searchSpoonacularRecipes = async (query: string, count: number = 10): Promise<Recipe[]> => {
-  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === '') {
+  if (!SPOONACULAR_API_KEY) {
     console.warn('Spoonacular API key not configured');
     return [];
   }
@@ -157,7 +157,7 @@ export const searchEdamamRecipes = async (query: string, count: number = 10): Pr
  * Get random recipes from Spoonacular
  */
 export const getRandomSpoonacularRecipes = async (count: number = 10): Promise<Recipe[]> => {
-  if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === '') {
+  if (!SPOONACULAR_API_KEY) {
     console.warn('Spoonacular API key not configured');
     return [];
   }
