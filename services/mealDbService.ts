@@ -117,33 +117,43 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
     tags.push(meal.strArea.toLowerCase());
   }
 
+  // Dessert-related tags and categories
+  const dessertTags = [
+    'dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 
+    'chocolate', 'candy', 'pastry', 'biscuit', 'brownie', 'custard', 
+    'tart', 'cheesecake', 'mousse', 'frosting', 'icing', 'glaze'
+  ];
+  
+  // Check if it's a dessert
+  const isDessert = 
+    tags.some(tag => dessertTags.includes(tag)) || 
+    meal.strCategory?.toLowerCase() === 'dessert' ||
+    meal.strCategory?.toLowerCase() === 'sweets';
+  
   // Determine meal type based on tags and category
   let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
   
-  // Check for breakfast-related tags
-  if (tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag)) || 
-      meal.strCategory?.toLowerCase() === 'breakfast') {
-    mealType = 'breakfast';
-  }
-  // Check for lunch-related tags
-  else if (tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) {
-    mealType = 'lunch';
-  }
-  // Check for dinner-related tags
-  else if (tags.some(tag => ['dinner', 'supper', 'main course', 'entree'].includes(tag))) {
-    mealType = 'dinner';
-  }
-  // Default to dinner for most recipes if no specific meal type is identified
-  else {
-    // Avoid categorizing desserts as dinner
-    const isDessert = tags.some(tag => 
-      ['dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'chocolate', 'candy'].includes(tag)
-    ) || meal.strCategory?.toLowerCase() === 'dessert';
-    
-    if (!isDessert) {
+  // If it's a dessert, don't assign a meal type
+  if (isDessert) {
+    mealType = undefined;
+  } else {
+    // Check for breakfast-related tags
+    if (tags.some(tag => ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg', 'toast', 'smoothie', 'yogurt'].includes(tag)) || 
+        meal.strCategory?.toLowerCase() === 'breakfast') {
+      mealType = 'breakfast';
+    }
+    // Check for lunch-related tags
+    else if (tags.some(tag => ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 'taco', 'quesadilla', 'burger'].includes(tag))) {
+      mealType = 'lunch';
+    }
+    // Check for dinner-related tags
+    else if (tags.some(tag => ['dinner', 'supper', 'main course', 'entree', 'roast', 'stew', 'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole'].includes(tag))) {
       mealType = 'dinner';
     }
-    // For desserts, don't assign a meal type
+    // Default to dinner for most recipes if no specific meal type is identified
+    else {
+      mealType = 'dinner';
+    }
   }
 
   // Generate random nutrition info since MealDB doesn't provide it

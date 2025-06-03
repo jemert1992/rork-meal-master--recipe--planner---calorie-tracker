@@ -289,22 +289,17 @@ export const useMealPlanStore = create<MealPlanState>()(
         
         // Define excluded tags for each meal type
         const excludedTags: Record<string, string[]> = {
-          breakfast: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy'],
-          lunch: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'breakfast'],
-          dinner: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'breakfast']
+          breakfast: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'chocolate', 'pastry', 'sweet'],
+          lunch: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'chocolate', 'pastry', 'sweet', 'breakfast'],
+          dinner: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'chocolate', 'pastry', 'sweet', 'breakfast']
         };
         
         // Improved recipe matching function with calorie targeting and meal type appropriateness
         const getRecipeForMeal = (mealType: string, targetCalories: number): Recipe | null => {
-          // First, check if any recipes have the explicit meal type tag or are categorized for this meal
+          // First, check if any recipes have the explicit meal type property matching this meal
           const typeSpecificRecipes = availableRecipes.filter(recipe => {
             // Check if recipe has the meal type property matching this meal
             const hasExplicitMealType = recipe.mealType === mealType;
-            
-            // Check if recipe has the meal type tag
-            const hasTypeTag = recipe.tags.some(tag => 
-              tag.toLowerCase() === mealType.toLowerCase()
-            );
             
             // Check if recipe has any excluded tags for this meal type
             const hasExcludedTag = recipe.tags.some(tag => 
@@ -314,7 +309,7 @@ export const useMealPlanStore = create<MealPlanState>()(
             );
             
             // Only include if it has the right type and doesn't have excluded tags
-            return (hasExplicitMealType || hasTypeTag) && !hasExcludedTag;
+            return hasExplicitMealType && !hasExcludedTag;
           });
           
           // If we have type-specific recipes, prioritize those that are close to target calories
