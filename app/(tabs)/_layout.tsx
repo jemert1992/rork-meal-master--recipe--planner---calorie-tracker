@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
-import { Home, Calendar, BookOpen, ShoppingCart, User } from 'lucide-react-native';
+import { Home, Calendar, BookOpen, ShoppingCart } from 'lucide-react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -46,13 +46,6 @@ export default function TabLayout() {
         options={{
           title: 'Groceries',
           tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
     </Tabs>

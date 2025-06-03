@@ -2,9 +2,8 @@ import { Recipe } from '@/types';
 
 // Spoonacular API base URL
 const SPOONACULAR_API_BASE_URL = 'https://api.spoonacular.com/recipes';
-// You would need to get an API key from https://spoonacular.com/food-api
-// For now, we'll use a placeholder
-const SPOONACULAR_API_KEY = 'YOUR_API_KEY_HERE';
+// Spoonacular API key
+const SPOONACULAR_API_KEY = '802ab87547244544b1e9a9dc02f63a2b';
 
 // Edamam API base URL
 const EDAMAM_API_BASE_URL = 'https://api.edamam.com/api/recipes/v2';

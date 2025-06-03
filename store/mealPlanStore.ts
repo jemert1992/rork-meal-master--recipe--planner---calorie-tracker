@@ -468,44 +468,8 @@ export const useMealPlanStore = create<MealPlanState>()(
         const snackCaloriesPerItem = remainingCalories / targetSnackCount;
         
         for (let i = 0; i < targetSnackCount && availableRecipes.length > 0; i++) {
-          // Try to find a snack with appropriate calories
-          const snackRecipes = availableRecipes.filter(recipe => {
-            // Normalize tags by converting to lowercase
-            const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
-            
-            // Look for snack-appropriate recipes within calorie range
-            return recipe.calories >= minSnackCalories && 
-                   recipe.calories <= maxSnackCalories &&
-                   (recipeTags.includes('snack') || recipeTags.includes('dessert') || 
-                    recipeTags.includes('appetizer') || recipeTags.includes('side'));
-          });
-          
-          let selectedSnackRecipe: Recipe | undefined;
-          
-          if (snackRecipes.length > 0) {
-            // Sort by how close they are to the target calories
-            snackRecipes.sort((a, b) => 
-              Math.abs(a.calories - snackCaloriesPerItem) - Math.abs(b.calories - snackCaloriesPerItem)
-            );
-            
-            selectedSnackRecipe = snackRecipes[0];
-            
-            // Remove from available recipes
-            const availableIndex = availableRecipes.findIndex(r => r.id === selectedSnackRecipe.id);
-            if (availableIndex !== -1) {
-              availableRecipes.splice(availableIndex, 1);
-            }
-          } else if (availableRecipes.length > 0) {
-            // Sort by how close they are to the target calories
-            availableRecipes.sort((a, b) => 
-              Math.abs(a.calories - snackCaloriesPerItem) - Math.abs(b.calories - snackCaloriesPerItem)
-            );
-            
-            selectedSnackRecipe = availableRecipes[0];
-            availableRecipes.splice(0, 1);
-          }
-          
-          // Add type guard to fix TypeScript error
+          const selectedSnackRecipe = availableRecipes.shift(); // gets first recipe and removes it
+
           if (selectedSnackRecipe) {
             snacks.push({
               recipeId: selectedSnackRecipe.id,
