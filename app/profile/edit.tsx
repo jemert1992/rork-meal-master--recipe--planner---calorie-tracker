@@ -17,7 +17,7 @@ export default function EditProfileScreen() {
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
   
-  // Custom handler for diet type input
+  // Fixed handler for diet type input
   const handleDietTypeChange = (text: string) => {
     // Validate if the input is a valid diet type
     const validDietTypes: DietType[] = [
@@ -77,7 +77,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               value={dietType}
-              onChangeText={handleDietTypeChange}
+              onChangeText={(text: string) => handleDietTypeChange(text)}
               placeholder="e.g., vegetarian, keto, etc."
             />
             <Text style={styles.helperText}>

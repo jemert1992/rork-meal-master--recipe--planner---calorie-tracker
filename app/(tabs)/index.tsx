@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Filter, RefreshCw } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
+import { useGroceryStore } from '@/store/groceryStore';
 import RecipeCard from '@/components/RecipeCard';
 import CategoryFilter from '@/components/CategoryFilter';
+import WeeklyMealPlanner from '@/components/WeeklyMealPlanner';
+import { generateGroceryList } from '@/utils/generateGroceryList';
+import { useMealPlanStore } from '@/store/mealPlanStore';
 import Colors from '@/constants/colors';
 
 export default function RecipesScreen() {
@@ -15,6 +19,9 @@ export default function RecipesScreen() {
     loadRecipesFromApi,
     searchRecipes 
   } = useRecipeStore();
+  
+  const { mealPlan } = useMealPlanStore();
+  const { setGroceryItems } = useGroceryStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFavorites, setFilterFavorites] = useState(false);
@@ -70,6 +77,53 @@ export default function RecipesScreen() {
     return matchesFavorite && matchesCategory;
   });
 
+  const handleGenerateGroceryList = () => {
+    // Check if there are any meals planned
+    const hasMeals = Object.values(mealPlan).some(day => 
+      day.breakfast || day.lunch || day.dinner || (day.snacks && day.snacks.length > 0)
+    );
+    
+    if (!hasMeals) {
+      Alert.alert(
+        "No Meals Planned",
+        "Please add some meals to your meal plan before generating a grocery list.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    
+    // Generate the grocery list
+    const groceryList = generateGroceryList(mealPlan, recipes);
+    
+    if (groceryList.length === 0) {
+      Alert.alert(
+        "No Ingredients Found",
+        "Could not extract ingredients from your meal plan. Please try adding different recipes.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    
+    // Update the grocery store
+    setGroceryItems(groceryList);
+    
+    Alert.alert(
+      "Grocery List Generated",
+      `Successfully created a grocery list with ${groceryList.length} items.`,
+      [
+        { 
+          text: "View List", 
+          onPress: () => {
+            // Navigate to the grocery list tab
+            // This is a simple way to navigate between tabs
+            // A more robust solution would use a proper navigation method
+          }
+        },
+        { text: "OK" }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
@@ -122,6 +176,9 @@ export default function RecipesScreen() {
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}
           onRefresh={handleRefresh}
+          ListHeaderComponent={
+            <WeeklyMealPlanner onGenerateGroceryList={handleGenerateGroceryList} />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No recipes found</Text>

@@ -11,6 +11,7 @@ interface GroceryState {
   toggleChecked: (id: string) => void;
   clearCheckedItems: () => void;
   sortByCategory: () => GroceryItem[];
+  setGroceryItems: (items: GroceryItem[]) => void;
 }
 
 export const useGroceryStore = create<GroceryState>()(
@@ -52,6 +53,10 @@ export const useGroceryStore = create<GroceryState>()(
       sortByCategory: () => {
         const items = [...get().groceryItems];
         return items.sort((a, b) => a.category.localeCompare(b.category));
+      },
+      
+      setGroceryItems: (items) => {
+        set({ groceryItems: items });
       },
     }),
     {
