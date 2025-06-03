@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Image } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, Plus, ShoppingBag, X } from 'lucide-react-native';
+import { Calendar, ChevronRight, Plus, ShoppingBag, X, Sparkles } from 'lucide-react-native';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
@@ -13,9 +13,14 @@ type WeeklyMealPlannerProps = {
 
 export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealPlannerProps) {
   const router = useRouter();
-  const { mealPlan } = useMealPlanStore();
+  const { mealPlan, generateMealPlan } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [generatingMeal, setGeneratingMeal] = useState<{
+    date: string;
+    mealType: 'breakfast' | 'lunch' | 'dinner';
+    loading: boolean;
+  } | null>(null);
   
   // Get the current week starting from today
   const [weekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -35,6 +40,30 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const handleMealSlotPress = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
     router.push(`/add-meal/${date}?mealType=${mealType}`);
     setModalVisible(false);
+  };
+
+  const handleAutoGenerateMeal = async (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
+    try {
+      setGeneratingMeal({ date, mealType, loading: true });
+      
+      // Generate a meal plan for the specific date
+      await generateMealPlan(date, recipes);
+      
+      // Success message
+      Alert.alert(
+        "Meal Generated",
+        `Your ${mealType} has been automatically generated!`,
+        [{ text: "OK" }]
+      );
+    } catch (error) {
+      Alert.alert(
+        "Generation Failed",
+        "Could not generate a meal. Please try again or select a recipe manually.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setGeneratingMeal(null);
+    }
   };
 
   const getRecipeDetails = (recipeId?: string) => {
@@ -133,40 +162,66 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                       // Check if meal is defined and is not an array before accessing recipeId
                       const recipeId = meal && !Array.isArray(meal) ? meal.recipeId : undefined;
                       const { name, image } = getRecipeDetails(recipeId);
+                      
+                      const isGenerating = generatingMeal && 
+                        generatingMeal.date === day.dateString && 
+                        generatingMeal.mealType === mealType && 
+                        generatingMeal.loading;
 
                       return (
-                        <Pressable
-                          key={`${day.dateString}-${mealType}`}
-                          style={[
-                            styles.mealSlot,
-                            name ? styles.filledMealSlot : styles.emptyMealSlot
-                          ]}
-                          onPress={() => handleMealSlotPress(day.dateString, mealType as 'breakfast' | 'lunch' | 'dinner')}
-                        >
-                          {name ? (
-                            <View style={styles.filledMealContent}>
-                              {image ? (
-                                <Image source={{ uri: image }} style={styles.mealImage} />
-                              ) : (
-                                <View style={styles.mealImagePlaceholder} />
-                              )}
-                              <View style={styles.mealInfo}>
+                        <View key={`${day.dateString}-${mealType}`} style={styles.mealSlotContainer}>
+                          <Pressable
+                            style={[
+                              styles.mealSlot,
+                              name ? styles.filledMealSlot : styles.emptyMealSlot
+                            ]}
+                            onPress={() => handleMealSlotPress(day.dateString, mealType as 'breakfast' | 'lunch' | 'dinner')}
+                            disabled={isGenerating}
+                          >
+                            {name ? (
+                              <View style={styles.filledMealContent}>
+                                {image ? (
+                                  <Image source={{ uri: image }} style={styles.mealImage} />
+                                ) : (
+                                  <View style={styles.mealImagePlaceholder} />
+                                )}
+                                <View style={styles.mealInfo}>
+                                  <Text style={styles.mealTypeLabel}>
+                                    {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                                  </Text>
+                                  <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={styles.emptyMealContent}>
                                 <Text style={styles.mealTypeLabel}>
                                   {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
                                 </Text>
-                                <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
+                                {isGenerating ? (
+                                  <Text style={styles.generatingText}>Generating...</Text>
+                                ) : (
+                                  <>
+                                    <Plus size={20} color={Colors.primary} />
+                                    <Text style={styles.addMealText}>Add Recipe</Text>
+                                  </>
+                                )}
                               </View>
-                            </View>
-                          ) : (
-                            <View style={styles.emptyMealContent}>
-                              <Text style={styles.mealTypeLabel}>
-                                {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                              </Text>
-                              <Plus size={20} color={Colors.primary} />
-                              <Text style={styles.addMealText}>Add Recipe</Text>
-                            </View>
+                            )}
+                          </Pressable>
+                          
+                          {!name && !isGenerating && (
+                            <Pressable 
+                              style={styles.pickForMeButton}
+                              onPress={() => handleAutoGenerateMeal(
+                                day.dateString, 
+                                mealType as 'breakfast' | 'lunch' | 'dinner'
+                              )}
+                            >
+                              <Sparkles size={14} color={Colors.white} />
+                              <Text style={styles.pickForMeText}>Pick for me</Text>
+                            </Pressable>
                           )}
-                        </Pressable>
+                        </View>
                       );
                     })}
                   </View>
@@ -331,6 +386,9 @@ const styles = StyleSheet.create({
   mealsContainer: {
     gap: 12,
   },
+  mealSlotContainer: {
+    marginBottom: 8,
+  },
   mealSlot: {
     height: 80,
     borderRadius: 12,
@@ -412,5 +470,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.white,
     marginLeft: 8,
+  },
+  pickForMeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'center',
+  },
+  pickForMeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: Colors.white,
+    marginLeft: 4,
+  },
+  generatingText: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

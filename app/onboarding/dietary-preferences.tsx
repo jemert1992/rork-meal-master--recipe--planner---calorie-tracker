@@ -6,34 +6,8 @@ import { ArrowRight, Check } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
 import { DietType } from '@/types';
-
-// Common food allergies
-const COMMON_ALLERGIES = [
-  'Dairy',
-  'Eggs',
-  'Peanuts',
-  'Tree nuts',
-  'Shellfish',
-  'Fish',
-  'Wheat',
-  'Gluten',
-  'Soy',
-  'Sesame',
-  'Corn',
-  'Mustard'
-];
-
-// Diet types from our type definition
-const DIET_TYPES: { id: DietType; label: string; description: string }[] = [
-  { id: 'any', label: 'Any', description: 'No specific diet restrictions' },
-  { id: 'vegetarian', label: 'Vegetarian', description: 'No meat, fish, or poultry' },
-  { id: 'vegan', label: 'Vegan', description: 'No animal products' },
-  { id: 'keto', label: 'Keto', description: 'High-fat, low-carb diet' },
-  { id: 'paleo', label: 'Paleo', description: 'Based on foods presumed to be available to paleolithic humans' },
-  { id: 'gluten-free', label: 'Gluten-Free', description: 'No wheat, barley, or rye' },
-  { id: 'dairy-free', label: 'Dairy-Free', description: 'No milk, cheese, or dairy products' },
-  { id: 'low-carb', label: 'Low-Carb', description: 'Reduced carbohydrate consumption' },
-];
+import { DIET_TYPES } from '@/constants/dietTypes';
+import { COMMON_ALLERGIES } from '@/constants/allergies';
 
 export default function DietaryPreferencesScreen() {
   const router = useRouter();

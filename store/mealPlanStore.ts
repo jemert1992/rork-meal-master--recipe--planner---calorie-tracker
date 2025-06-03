@@ -436,19 +436,63 @@ export const useMealPlanStore = create<MealPlanState>()(
           return null;
         };
         
+        // Get the current day plan
+        const currentDayPlan = get().mealPlan[date] || {};
+        
         // Generate meals for each type with target calories
-        const breakfast = getRecipeForMeal('breakfast', breakfastCalories);
-        const lunch = getRecipeForMeal('lunch', lunchCalories);
-        const dinner = getRecipeForMeal('dinner', dinnerCalories);
+        // Only generate meals that don't already exist
+        let breakfast = currentDayPlan.breakfast;
+        let lunch = currentDayPlan.lunch;
+        let dinner = currentDayPlan.dinner;
+        
+        // If we're generating for a specific meal type, only update that one
+        if (!breakfast || Array.isArray(breakfast)) {
+          const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
+          if (breakfastRecipe) {
+            breakfast = {
+              recipeId: breakfastRecipe.id,
+              name: breakfastRecipe.name,
+              calories: breakfastRecipe.calories,
+              protein: breakfastRecipe.protein,
+              carbs: breakfastRecipe.carbs,
+              fat: breakfastRecipe.fat
+            };
+          }
+        }
+        
+        if (!lunch || Array.isArray(lunch)) {
+          const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
+          if (lunchRecipe) {
+            lunch = {
+              recipeId: lunchRecipe.id,
+              name: lunchRecipe.name,
+              calories: lunchRecipe.calories,
+              protein: lunchRecipe.protein,
+              carbs: lunchRecipe.carbs,
+              fat: lunchRecipe.fat
+            };
+          }
+        }
+        
+        if (!dinner || Array.isArray(dinner)) {
+          const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
+          if (dinnerRecipe) {
+            dinner = {
+              recipeId: dinnerRecipe.id,
+              name: dinnerRecipe.name,
+              calories: dinnerRecipe.calories,
+              protein: dinnerRecipe.protein,
+              carbs: dinnerRecipe.carbs,
+              fat: dinnerRecipe.fat
+            };
+          }
+        }
         
         // Calculate actual calories from main meals
         let actualMainMealCalories = 0;
-        if (breakfast) actualMainMealCalories += breakfast.calories;
-        if (lunch) actualMainMealCalories += lunch.calories;
-        if (dinner) actualMainMealCalories += dinner.calories;
-        
-        // Calculate target main meal calories
-        const targetMainMealCalories = breakfastCalories + lunchCalories + dinnerCalories;
+        if (breakfast && !Array.isArray(breakfast) && breakfast.calories) actualMainMealCalories += breakfast.calories;
+        if (lunch && !Array.isArray(lunch) && lunch.calories) actualMainMealCalories += lunch.calories;
+        if (dinner && !Array.isArray(dinner) && dinner.calories) actualMainMealCalories += dinner.calories;
         
         // Calculate remaining calories for snacks, adjusting for any deviation in main meals
         const remainingCalories = calorieGoal - actualMainMealCalories;
@@ -463,59 +507,43 @@ export const useMealPlanStore = create<MealPlanState>()(
         const maxSnacks = Math.min(2, Math.floor(remainingCalories / minSnackCalories));
         const targetSnackCount = Math.max(1, Math.min(maxSnacks, Math.round(remainingCalories / avgSnackCalories)));
         
-        // Generate snacks
-        const snacks: MealItem[] = [];
-        const snackCaloriesPerItem = remainingCalories / targetSnackCount;
+        // Generate snacks if they don't already exist
+        let snacks = currentDayPlan.snacks || [];
         
-        for (let i = 0; i < targetSnackCount && availableRecipes.length > 0; i++) {
-          const selectedSnackRecipe = availableRecipes.shift(); // gets first recipe and removes it
-
-          if (selectedSnackRecipe) {
-            snacks.push({
-              recipeId: selectedSnackRecipe.id,
-              name: selectedSnackRecipe.name,
-              calories: selectedSnackRecipe.calories || 0,
-              protein: selectedSnackRecipe.protein || 0,
-              carbs: selectedSnackRecipe.carbs || 0,
-              fat: selectedSnackRecipe.fat || 0
-            });
+        if (snacks.length < targetSnackCount && availableRecipes.length > 0) {
+          const additionalSnacksNeeded = targetSnackCount - snacks.length;
+          
+          for (let i = 0; i < additionalSnacksNeeded && availableRecipes.length > 0; i++) {
+            const selectedSnackRecipe = availableRecipes.shift(); // gets first recipe and removes it
+  
+            if (selectedSnackRecipe) {
+              snacks.push({
+                recipeId: selectedSnackRecipe.id,
+                name: selectedSnackRecipe.name,
+                calories: selectedSnackRecipe.calories || 0,
+                protein: selectedSnackRecipe.protein || 0,
+                carbs: selectedSnackRecipe.carbs || 0,
+                fat: selectedSnackRecipe.fat || 0
+              });
+            }
           }
         }
         
         // Create the meal plan
-        const newDayPlan: DailyMeals = {};
+        const newDayPlan: DailyMeals = {
+          ...currentDayPlan
+        };
         
         if (breakfast) {
-          newDayPlan.breakfast = {
-            recipeId: breakfast.id,
-            name: breakfast.name,
-            calories: breakfast.calories,
-            protein: breakfast.protein,
-            carbs: breakfast.carbs,
-            fat: breakfast.fat
-          };
+          newDayPlan.breakfast = breakfast;
         }
         
         if (lunch) {
-          newDayPlan.lunch = {
-            recipeId: lunch.id,
-            name: lunch.name,
-            calories: lunch.calories,
-            protein: lunch.protein,
-            carbs: lunch.carbs,
-            fat: lunch.fat
-          };
+          newDayPlan.lunch = lunch;
         }
         
         if (dinner) {
-          newDayPlan.dinner = {
-            recipeId: dinner.id,
-            name: dinner.name,
-            calories: dinner.calories,
-            protein: dinner.protein,
-            carbs: dinner.carbs,
-            fat: dinner.fat
-          };
+          newDayPlan.dinner = dinner;
         }
         
         if (snacks.length > 0) {
