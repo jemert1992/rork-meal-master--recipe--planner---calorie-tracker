@@ -9,15 +9,12 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false, // Hide the header bar
         tabBarActiveTintColor: colorScheme === 'dark' ? '#4DA1FF' : '#007AFF',
         tabBarInactiveTintColor: colorScheme === 'dark' ? '#8E8E93' : '#8E8E93',
         tabBarStyle: {
           backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
         },
-        headerStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-        },
-        headerTintColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
       }}
     >
       <Tabs.Screen
