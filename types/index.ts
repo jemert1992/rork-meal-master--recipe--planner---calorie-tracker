@@ -56,7 +56,7 @@ export interface MealPlan {
 // Food log types
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
-export interface FoodLogItem {
+export interface FoodEntry {
   name: string;
   calories: number;
   protein?: number;
@@ -66,16 +66,16 @@ export interface FoodLogItem {
   mealType: MealType;
 }
 
-export interface DayFoodLog {
+export interface DailyLog {
   totalCalories: number;
   totalProtein: number;
   totalCarbs: number;
   totalFat: number;
-  meals: FoodLogItem[];
+  meals: FoodEntry[];
 }
 
 export interface FoodLog {
-  [date: string]: DayFoodLog;
+  [date: string]: DailyLog;
 }
 
 // Grocery list types

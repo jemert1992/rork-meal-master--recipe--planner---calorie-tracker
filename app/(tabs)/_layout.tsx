@@ -1,8 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Home, CalendarClock, BookOpen, ShoppingCart, User, Cookie } from 'lucide-react-native';
+import { useColorScheme } from 'react-native';
+import { Home, Calendar, BookOpen, ShoppingBag, User, Cookie } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+
   return (
     <Tabs
       screenOptions={{
@@ -10,24 +13,30 @@ export default function TabLayout() {
         tabBarInactiveTintColor: Colors.textLight,
         tabBarStyle: {
           backgroundColor: Colors.white,
-          borderTopWidth: 1,
           borderTopColor: Colors.border,
         },
-        headerShown: false, // Hide the header for all tab screens
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          title: 'Recipes',
+          tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="meal-plan"
         options={{
           title: 'Meal Plan',
-          tabBarIcon: ({ color, size }) => <CalendarClock size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="calorie-tracker"
+        options={{
+          title: 'Tracker',
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -38,17 +47,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="calorie-tracker"
-        options={{
-          title: 'Food Log',
-          tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="grocery-list"
         options={{
           title: 'Groceries',
-          tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
         }}
       />
       <Tabs.Screen
