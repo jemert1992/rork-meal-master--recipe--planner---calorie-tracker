@@ -96,7 +96,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
       },
       
-      removeSnack: (date, index) => {
+      removeSnack: (date: string, index: number) => {
         set((state) => {
           const dayPlan = state.mealPlan[date];
           if (!dayPlan || !dayPlan.snacks) return state;
@@ -223,6 +223,7 @@ export const useMealPlanStore = create<MealPlanState>()(
             'any': [],
             'vegetarian': ['vegetarian'],
             'vegan': ['vegan'],
+            'pescatarian': ['pescatarian'],
             'keto': ['keto', 'low-carb'],
             'paleo': ['paleo'],
             'gluten-free': ['gluten-free'],
@@ -365,7 +366,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               ));
             
             // Check if calories are within 20% of target
-            const calorieMatches = 
+            const calorieMatches = recipe.calories !== undefined && 
               recipe.calories >= targetCalories * 0.8 &&
               recipe.calories <= targetCalories * 1.2;
             
@@ -374,9 +375,11 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           if (matchingRecipes.length > 0) {
             // Sort by how close they are to the target calories
-            matchingRecipes.sort((a, b) => 
-              Math.abs(a.calories - targetCalories) - Math.abs(b.calories - targetCalories)
-            );
+            matchingRecipes.sort((a, b) => {
+              const aCalories = a.calories || 0;
+              const bCalories = b.calories || 0;
+              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
+            });
             
             // Get the closest match
             const selectedRecipe = matchingRecipes[0];
@@ -404,9 +407,11 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           if (tagMatchingRecipes.length > 0) {
             // Sort by how close they are to the target calories
-            tagMatchingRecipes.sort((a, b) => 
-              Math.abs(a.calories - targetCalories) - Math.abs(b.calories - targetCalories)
-            );
+            tagMatchingRecipes.sort((a, b) => {
+              const aCalories = a.calories || 0;
+              const bCalories = b.calories || 0;
+              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
+            });
             
             // Get the closest match
             const selectedRecipe = tagMatchingRecipes[0];
@@ -424,9 +429,11 @@ export const useMealPlanStore = create<MealPlanState>()(
           // that's closest to the target calories
           if (availableRecipes.length > 0) {
             // Sort by how close they are to the target calories
-            availableRecipes.sort((a, b) => 
-              Math.abs(a.calories - targetCalories) - Math.abs(b.calories - targetCalories)
-            );
+            availableRecipes.sort((a, b) => {
+              const aCalories = a.calories || 0;
+              const bCalories = b.calories || 0;
+              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
+            });
             
             const selectedRecipe = availableRecipes[0];
             availableRecipes.splice(0, 1);

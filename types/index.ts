@@ -1,5 +1,5 @@
 // User profile types
-export type DietType = 'any' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free';
+export type DietType = 'any' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb';
 
 export interface UserProfile {
   name?: string;
@@ -38,6 +38,9 @@ export interface MealItem {
   recipeId?: string;
   name: string;
   calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
 }
 
 export interface DayMealPlan {
@@ -50,6 +53,9 @@ export interface DayMealPlan {
 export interface MealPlan {
   [date: string]: DayMealPlan;
 }
+
+// Alias for DayMealPlan to match usage in mealPlanStore
+export type DailyMeals = DayMealPlan;
 
 // Food log types
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';

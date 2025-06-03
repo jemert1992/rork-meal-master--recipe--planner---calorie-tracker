@@ -42,4 +42,9 @@ export const DIET_TYPES = [
     label: 'Dairy-Free',
     description: 'No dairy products',
   },
+  {
+    id: 'low-carb' as DietType,
+    label: 'Low-Carb',
+    description: 'Reduced carbohydrate intake',
+  },
 ];
