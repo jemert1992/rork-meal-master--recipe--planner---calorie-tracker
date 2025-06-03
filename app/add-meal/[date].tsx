@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, Pressable } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, X } from 'lucide-react-native';
@@ -12,7 +12,7 @@ export default function AddMealScreen() {
   const { date, mealType } = useLocalSearchParams<{ date: string; mealType: string }>();
   const router = useRouter();
   const { recipes } = useRecipeStore();
-  const { addMeal, addSnack } = useMealPlanStore();
+  const { addMeal, isRecipeUsedInMealPlan } = useMealPlanStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [customName, setCustomName] = useState('');
@@ -25,19 +25,20 @@ export default function AddMealScreen() {
   );
   
   const handleSelectRecipe = (recipeId: string, recipeName: string) => {
-    if (mealType === 'snack') {
-      const recipe = recipes.find(r => r.id === recipeId);
-      addSnack(date, { 
-        recipeId, 
-        name: recipeName,
-        calories: recipe?.calories
-      });
-    } else {
-      addMeal(date, mealType, { 
-        recipeId, 
-        name: recipeName 
-      });
+    // Check if recipe is already used in meal plan
+    if (isRecipeUsedInMealPlan(recipeId)) {
+      Alert.alert(
+        'Recipe Already Used',
+        'This recipe is already used in your meal plan. Please choose a different recipe.',
+        [{ text: 'OK' }]
+      );
+      return;
     }
+    
+    addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
+      recipeId, 
+      name: recipeName 
+    });
     router.back();
   };
   
@@ -46,17 +47,10 @@ export default function AddMealScreen() {
     
     const calories = parseInt(customCalories);
     
-    if (mealType === 'snack') {
-      addSnack(date, { 
-        name: customName.trim(),
-        calories: isNaN(calories) ? undefined : calories
-      });
-    } else {
-      addMeal(date, mealType, { 
-        name: customName.trim(),
-        calories: isNaN(calories) ? undefined : calories
-      });
-    }
+    addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
+      name: customName.trim(),
+      calories: isNaN(calories) ? undefined : calories
+    });
     router.back();
   };
 

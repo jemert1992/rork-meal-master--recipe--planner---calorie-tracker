@@ -18,11 +18,10 @@ export default function MealPlanScreen() {
     mealPlan, 
     addMeal, 
     removeMeal, 
-    addSnack, 
-    removeSnack, 
     clearDay, 
     generateMealPlan,
-    isRecipeSuitable
+    isRecipeSuitable,
+    isRecipeUsedInMealPlan
   } = useMealPlanStore();
   const { recipes, isLoading } = useRecipeStore();
   const { profile } = useUserStore();
@@ -95,16 +94,6 @@ export default function MealPlanScreen() {
       totalCarbs += nutrition.carbs;
       totalFat += nutrition.fat;
     }
-    
-    if (dayPlan.snacks) {
-      dayPlan.snacks.forEach(snack => {
-        const nutrition = addNutritionFromMeal(snack, recipes);
-        totalCalories += nutrition.calories;
-        totalProtein += nutrition.protein;
-        totalCarbs += nutrition.carbs;
-        totalFat += nutrition.fat;
-      });
-    }
 
     setDailyNutrition({
       calories: totalCalories,
@@ -136,9 +125,8 @@ export default function MealPlanScreen() {
     const breakfastOk = !dayPlan.breakfast || checkMeal(dayPlan.breakfast);
     const lunchOk = !dayPlan.lunch || checkMeal(dayPlan.lunch);
     const dinnerOk = !dayPlan.dinner || checkMeal(dayPlan.dinner);
-    const snacksOk = !dayPlan.snacks || dayPlan.snacks.every(checkMeal);
 
-    setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk && snacksOk));
+    setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk));
   }, [dayPlan, profile, recipes, isRecipeSuitable]);
 
   // Memoize the function to generate meal suggestions
@@ -147,15 +135,9 @@ export default function MealPlanScreen() {
     
     const suggestions = [];
     const mealTypes = ['breakfast', 'lunch', 'dinner'];
-    const existingMealIds = new Set<string>();
-    
-    // Add existing recipe IDs to the set
-    if (dayPlan.breakfast?.recipeId) existingMealIds.add(dayPlan.breakfast.recipeId);
-    if (dayPlan.lunch?.recipeId) existingMealIds.add(dayPlan.lunch.recipeId);
-    if (dayPlan.dinner?.recipeId) existingMealIds.add(dayPlan.dinner.recipeId);
     
     // Filter recipes by dietary preferences if available
-    let availableRecipes = recipes.filter(recipe => !existingMealIds.has(recipe.id));
+    let availableRecipes = recipes.filter(recipe => !isRecipeUsedInMealPlan(recipe.id));
     
     // Apply user dietary preferences, allergies, and excluded ingredients
     if (profile.dietType && profile.dietType !== 'any') {
@@ -209,7 +191,7 @@ export default function MealPlanScreen() {
     // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
-  }, [dayPlan, recipes, profile, isRecipeSuitable]);
+  }, [dayPlan, recipes, profile, isRecipeSuitable, isRecipeUsedInMealPlan]);
 
   // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
@@ -229,15 +211,7 @@ export default function MealPlanScreen() {
   };
 
   const handleRemoveMeal = (mealType: string) => {
-    removeMeal(dateString, mealType);
-  };
-
-  const handleAddSnack = () => {
-    router.push(`/add-meal/${dateString}?mealType=snack`);
-  };
-
-  const handleRemoveSnack = (index: number) => {
-    removeSnack(dateString, index);
+    removeMeal(dateString, mealType as 'breakfast' | 'lunch' | 'dinner');
   };
 
   const handleClearDay = () => {
@@ -314,6 +288,16 @@ export default function MealPlanScreen() {
   };
 
   const handleAddSuggestion = (recipeId: string, recipeName: string, mealType: string) => {
+    // Check if recipe is already used in meal plan
+    if (isRecipeUsedInMealPlan(recipeId)) {
+      Alert.alert(
+        'Recipe Already Used',
+        'This recipe is already used in your meal plan. Please choose a different recipe.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     // Find the first available meal slot
     let targetMealType = mealType;
     
@@ -337,14 +321,10 @@ export default function MealPlanScreen() {
       if (!dayPlan.breakfast) targetMealType = 'breakfast';
       else if (!dayPlan.lunch) targetMealType = 'lunch';
       else if (!dayPlan.dinner) targetMealType = 'dinner';
-      else targetMealType = 'snack';
+      else return; // No empty slots
     }
     
-    if (targetMealType === 'snack') {
-      addSnack(dateString, { recipeId, name: recipeName });
-    } else {
-      addMeal(dateString, targetMealType, { recipeId, name: recipeName });
-    }
+    addMeal(dateString, targetMealType as 'breakfast' | 'lunch' | 'dinner', { recipeId, name: recipeName });
   };
 
   // Calculate nutrition goal progress
@@ -450,31 +430,6 @@ export default function MealPlanScreen() {
           onRemove={() => handleRemoveMeal('dinner')}
           onAdd={() => handleAddMeal('dinner')}
         />
-
-        <View style={styles.snacksContainer}>
-          <View style={styles.snacksHeader}>
-            <Text style={styles.sectionTitle}>Snacks</Text>
-            <Pressable style={styles.addButton} onPress={handleAddSnack}>
-              <Plus size={16} color={Colors.primary} />
-              <Text style={styles.addButtonText}>Add Snack</Text>
-            </Pressable>
-          </View>
-
-          {dayPlan.snacks && dayPlan.snacks.length > 0 ? (
-            dayPlan.snacks.map((snack, index) => (
-              <MealPlanItem
-                key={index}
-                mealType={`snack ${index + 1}`}
-                meal={snack}
-                date={dateString}
-                onRemove={() => handleRemoveSnack(index)}
-                onAdd={() => {}}
-              />
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No snacks added yet</Text>
-          )}
-        </View>
 
         {/* Meal Suggestions Section */}
         <View style={styles.suggestionsContainer}>
@@ -708,28 +663,10 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: 120, // Add extra padding to ensure content is scrollable
   },
-  snacksContainer: {
-    marginBottom: 20,
-  },
-  snacksHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: Colors.text,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 14,
-    color: Colors.primary,
-    marginLeft: 4,
   },
   emptyText: {
     fontSize: 14,
@@ -741,6 +678,7 @@ const styles = StyleSheet.create({
   },
   suggestionsContainer: {
     marginBottom: 24,
+    marginTop: 16,
   },
   suggestionsHeader: {
     flexDirection: 'row',

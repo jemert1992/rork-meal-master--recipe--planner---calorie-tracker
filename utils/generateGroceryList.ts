@@ -153,10 +153,10 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
     ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
       const meal = day[mealType as keyof typeof day];
       
-      // Skip if meal is undefined or is an array
-      if (!meal || Array.isArray(meal)) return;
+      // Skip if meal is undefined
+      if (!meal) return;
       
-      // Skip if no recipeId - add type guard
+      // Skip if no recipeId
       if (!meal.recipeId) return;
       
       const recipe = recipes.find(r => r.id === meal.recipeId);
@@ -219,37 +219,6 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
         });
       }
     });
-    
-    // Process snacks
-    if (day.snacks && Array.isArray(day.snacks) && day.snacks.length > 0) {
-      day.snacks.forEach(snack => {
-        // Skip if no recipeId - add type guard
-        if (!snack || !snack.recipeId) return;
-        
-        const recipe = recipes.find(r => r.id === snack.recipeId);
-        if (recipe) {
-          recipe.ingredients.forEach(ingredientStr => {
-            const { quantity, unit, name } = parseIngredient(ingredientStr);
-            const normalizedName = normalizeIngredientName(name);
-            
-            // Determine category (same logic as above)
-            let category = 'Other';
-            // ... (same category determination logic)
-            
-            if (ingredientMap[normalizedName]) {
-              ingredientMap[normalizedName].quantity += quantity;
-            } else {
-              ingredientMap[normalizedName] = {
-                quantity,
-                unit,
-                originalName: name,
-                category: 'Other' // Default category
-              };
-            }
-          });
-        }
-      });
-    }
   });
   
   // Convert the ingredient map to a grocery list

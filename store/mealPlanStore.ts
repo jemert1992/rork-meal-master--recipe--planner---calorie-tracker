@@ -7,10 +7,8 @@ import { useUserStore } from '@/store/userStore';
 
 interface MealPlanState {
   mealPlan: MealPlan;
-  addMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | string, meal: MealItem) => void;
-  removeMeal: (date: string, mealType: string, index?: number) => void;
-  addSnack: (date: string, snack: MealItem) => void;
-  removeSnack: (date: string, index: number) => void;
+  addMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', meal: MealItem) => void;
+  removeMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
   clearDay: (date: string) => void;
   generateMealPlan: (date: string, recipes: Recipe[], specificMealType?: 'breakfast' | 'lunch' | 'dinner') => Promise<void>;
   isRecipeSuitable: (recipe: Recipe, dietType?: DietType, allergies?: string[], excludedIngredients?: string[]) => boolean;
@@ -21,6 +19,7 @@ interface MealPlanState {
     totalCalories: number;
     calorieDeviation: number;
   };
+  isRecipeUsedInMealPlan: (recipeId: string) => boolean;
 }
 
 export const useMealPlanStore = create<MealPlanState>()(
@@ -29,6 +28,12 @@ export const useMealPlanStore = create<MealPlanState>()(
       mealPlan: mockMealPlan,
       
       addMeal: (date, mealType, meal) => {
+        // Check if the recipe is already used in the meal plan
+        if (meal.recipeId && get().isRecipeUsedInMealPlan(meal.recipeId)) {
+          console.warn(`Recipe ${meal.recipeId} is already used in the meal plan`);
+          return;
+        }
+        
         set((state) => {
           const dayPlan = state.mealPlan[date] || {};
           
@@ -38,11 +43,6 @@ export const useMealPlanStore = create<MealPlanState>()(
           // Handle standard meal types
           if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
             updatedDayPlan[mealType] = meal;
-          } 
-          // Handle snacks separately
-          else if (mealType === 'snack') {
-            const currentSnacks = updatedDayPlan.snacks || [];
-            updatedDayPlan.snacks = [...currentSnacks, meal];
           }
           
           return {
@@ -54,62 +54,21 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
       },
       
-      removeMeal: (date, mealType, index) => {
+      removeMeal: (date, mealType) => {
         set((state) => {
           const dayPlan = state.mealPlan[date];
           if (!dayPlan) return state;
           
           const updatedDayPlan: DailyMeals = { ...dayPlan };
           
-          if (mealType === 'snacks' && typeof index === 'number') {
-            const updatedSnacks = [...(dayPlan.snacks || [])];
-            updatedSnacks.splice(index, 1);
-            updatedDayPlan.snacks = updatedSnacks;
-          } 
-          else if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
-            // Use type assertion to tell TypeScript this is a valid key
-            delete updatedDayPlan[mealType as keyof DailyMeals];
+          if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
+            delete updatedDayPlan[mealType];
           }
           
           return {
             mealPlan: {
               ...state.mealPlan,
               [date]: updatedDayPlan,
-            },
-          };
-        });
-      },
-      
-      addSnack: (date, snack) => {
-        set((state) => {
-          const dayPlan = state.mealPlan[date] || {};
-          const currentSnacks = dayPlan.snacks || [];
-          return {
-            mealPlan: {
-              ...state.mealPlan,
-              [date]: {
-                ...dayPlan,
-                snacks: [...currentSnacks, snack],
-              },
-            },
-          };
-        });
-      },
-      
-      removeSnack: (date: string, index: number) => {
-        set((state) => {
-          const dayPlan = state.mealPlan[date];
-          if (!dayPlan || !dayPlan.snacks) return state;
-          
-          const updatedSnacks = [...dayPlan.snacks];
-          updatedSnacks.splice(index, 1);
-          return {
-            mealPlan: {
-              ...state.mealPlan,
-              [date]: {
-                ...dayPlan,
-                snacks: updatedSnacks,
-              },
             },
           };
         });
@@ -134,16 +93,14 @@ export const useMealPlanStore = create<MealPlanState>()(
           if (dayPlan.breakfast?.recipeId) usedRecipeIds.add(dayPlan.breakfast.recipeId);
           if (dayPlan.lunch?.recipeId) usedRecipeIds.add(dayPlan.lunch.recipeId);
           if (dayPlan.dinner?.recipeId) usedRecipeIds.add(dayPlan.dinner.recipeId);
-          
-          // Check snacks
-          if (dayPlan.snacks && dayPlan.snacks.length > 0) {
-            dayPlan.snacks.forEach(snack => {
-              if (snack.recipeId) usedRecipeIds.add(snack.recipeId);
-            });
-          }
         });
         
         return usedRecipeIds;
+      },
+      
+      isRecipeUsedInMealPlan: (recipeId: string) => {
+        const usedRecipeIds = get().getUsedRecipeIds();
+        return usedRecipeIds.has(recipeId);
       },
       
       validateDailyMealPlan: (dailyMeals, calorieGoal) => {
@@ -173,25 +130,6 @@ export const useMealPlanStore = create<MealPlanState>()(
           issues.push("Dinner is missing calorie data");
         } else {
           totalCalories += dailyMeals.dinner.calories;
-        }
-        
-        // Check if snacks are present
-        if (!dailyMeals.snacks || dailyMeals.snacks.length === 0) {
-          issues.push("No snacks included");
-        } else {
-          // Check if snacks have valid calorie data
-          dailyMeals.snacks.forEach((snack, index) => {
-            if (snack.calories === undefined || snack.calories === null) {
-              issues.push(`Snack ${index + 1} is missing calorie data`);
-            } else {
-              totalCalories += snack.calories;
-            }
-          });
-          
-          // Check if we have the right number of snacks (1-2)
-          if (dailyMeals.snacks.length > 2) {
-            issues.push(`Too many snacks (${dailyMeals.snacks.length}), maximum is 2`);
-          }
         }
         
         // Calculate deviation from calorie goal
@@ -278,17 +216,15 @@ export const useMealPlanStore = create<MealPlanState>()(
         
         // Define meal split percentages for calorie distribution
         const mealSplit = {
-          breakfast: 0.25, // 25% of daily calories
-          lunch: 0.35,     // 35% of daily calories
-          dinner: 0.3,     // 30% of daily calories
-          snacks: 0.1      // 10% of daily calories
+          breakfast: 0.3, // 30% of daily calories
+          lunch: 0.35,    // 35% of daily calories
+          dinner: 0.35,   // 35% of daily calories
         };
         
         // Calculate target calories per meal
         const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
         const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
-        const snackCalories = Math.round(calorieGoal * mealSplit.snacks);
         
         // Validate recipe data before using
         const validRecipes = recipes.filter(recipe => {
@@ -451,7 +387,6 @@ export const useMealPlanStore = create<MealPlanState>()(
         let breakfast = currentDayPlan.breakfast;
         let lunch = currentDayPlan.lunch;
         let dinner = currentDayPlan.dinner;
-        let snacks = currentDayPlan.snacks || [];
         
         // If a specific meal type is provided, only generate that meal
         if (specificMealType) {
@@ -495,7 +430,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           }
         } else {
           // Generate all missing meals
-          if (!breakfast || Array.isArray(breakfast)) {
+          if (!breakfast) {
             const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
             if (breakfastRecipe) {
               breakfast = {
@@ -509,7 +444,7 @@ export const useMealPlanStore = create<MealPlanState>()(
             }
           }
           
-          if (!lunch || Array.isArray(lunch)) {
+          if (!lunch) {
             const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
             if (lunchRecipe) {
               lunch = {
@@ -523,7 +458,7 @@ export const useMealPlanStore = create<MealPlanState>()(
             }
           }
           
-          if (!dinner || Array.isArray(dinner)) {
+          if (!dinner) {
             const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
             if (dinnerRecipe) {
               dinner = {
@@ -534,45 +469,6 @@ export const useMealPlanStore = create<MealPlanState>()(
                 carbs: dinnerRecipe.carbs,
                 fat: dinnerRecipe.fat
               };
-            }
-          }
-          
-          // Calculate actual calories from main meals
-          let actualMainMealCalories = 0;
-          if (breakfast && !Array.isArray(breakfast) && breakfast.calories) actualMainMealCalories += breakfast.calories;
-          if (lunch && !Array.isArray(lunch) && lunch.calories) actualMainMealCalories += lunch.calories;
-          if (dinner && !Array.isArray(dinner) && dinner.calories) actualMainMealCalories += dinner.calories;
-          
-          // Calculate remaining calories for snacks, adjusting for any deviation in main meals
-          const remainingCalories = calorieGoal - actualMainMealCalories;
-          
-          // Determine how many snacks to add based on remaining calories
-          // Aim for 100-300 calories per snack, with 1-2 snacks total
-          const minSnackCalories = 100;
-          const maxSnackCalories = 300;
-          const avgSnackCalories = 200;
-          
-          // Calculate how many snacks we can fit
-          const maxSnacks = Math.min(2, Math.floor(remainingCalories / minSnackCalories));
-          const targetSnackCount = Math.max(1, Math.min(maxSnacks, Math.round(remainingCalories / avgSnackCalories)));
-          
-          // Generate snacks if they don't already exist
-          if (snacks.length < targetSnackCount && availableRecipes.length > 0) {
-            const additionalSnacksNeeded = targetSnackCount - snacks.length;
-            
-            for (let i = 0; i < additionalSnacksNeeded && availableRecipes.length > 0; i++) {
-              const selectedSnackRecipe = availableRecipes.shift(); // gets first recipe and removes it
-    
-              if (selectedSnackRecipe) {
-                snacks.push({
-                  recipeId: selectedSnackRecipe.id,
-                  name: selectedSnackRecipe.name,
-                  calories: selectedSnackRecipe.calories || 0,
-                  protein: selectedSnackRecipe.protein || 0,
-                  carbs: selectedSnackRecipe.carbs || 0,
-                  fat: selectedSnackRecipe.fat || 0
-                });
-              }
             }
           }
         }
@@ -592,10 +488,6 @@ export const useMealPlanStore = create<MealPlanState>()(
         
         if (dinner) {
           newDayPlan.dinner = dinner;
-        }
-        
-        if (snacks.length > 0) {
-          newDayPlan.snacks = snacks;
         }
         
         // Validate the generated meal plan if we're generating a full day

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, CalendarClock, BookOpen, ShoppingCart, User } from 'lucide-react-native';
+import { Home, CalendarClock, BookOpen, ShoppingCart, User, Cookie } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -28,6 +28,13 @@ export default function TabLayout() {
         options={{
           title: 'Meal Plan',
           tabBarIcon: ({ color, size }) => <CalendarClock size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="snacks"
+        options={{
+          title: 'Snacks',
+          tabBarIcon: ({ color, size }) => <Cookie size={size} color={color} />,
         }}
       />
       <Tabs.Screen

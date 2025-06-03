@@ -43,19 +43,15 @@ export interface MealItem {
   fat?: number;
 }
 
-export interface DayMealPlan {
+export interface DailyMeals {
   breakfast?: MealItem;
   lunch?: MealItem;
   dinner?: MealItem;
-  snacks?: MealItem[];
 }
 
 export interface MealPlan {
-  [date: string]: DayMealPlan;
+  [date: string]: DailyMeals;
 }
-
-// Alias for DayMealPlan to match usage in mealPlanStore
-export type DailyMeals = DayMealPlan;
 
 // Food log types
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -88,4 +84,19 @@ export interface GroceryItem {
   name: string;
   category: string;
   checked: boolean;
+}
+
+// Snack types
+export interface SnackItem {
+  id: string;
+  name: string;
+  image?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  tags: string[];
+  ingredients?: string[];
+  description?: string;
+  isFavorite?: boolean;
 }
