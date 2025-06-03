@@ -46,8 +46,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     try {
       setGeneratingMeal({ date, mealType, loading: true });
       
-      // Generate a meal plan for the specific date
-      await generateMealPlan(date, recipes);
+      // Generate a meal plan for the specific date and meal type
+      await generateMealPlan(date, recipes, mealType);
       
       // Success message
       Alert.alert(
@@ -56,6 +56,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         [{ text: "OK" }]
       );
     } catch (error) {
+      console.error("Error generating meal:", error);
       Alert.alert(
         "Generation Failed",
         "Could not generate a meal. Please try again or select a recipe manually.",

@@ -12,7 +12,7 @@ interface MealPlanState {
   addSnack: (date: string, snack: MealItem) => void;
   removeSnack: (date: string, index: number) => void;
   clearDay: (date: string) => void;
-  generateMealPlan: (date: string, recipes: Recipe[]) => Promise<void>;
+  generateMealPlan: (date: string, recipes: Recipe[], specificMealType?: 'breakfast' | 'lunch' | 'dinner') => Promise<void>;
   isRecipeSuitable: (recipe: Recipe, dietType?: DietType, allergies?: string[], excludedIngredients?: string[]) => boolean;
   getUsedRecipeIds: () => Set<string>;
   validateDailyMealPlan: (dailyMeals: DailyMeals, calorieGoal: number) => { 
@@ -258,7 +258,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         return true;
       },
       
-      generateMealPlan: async (date, recipes) => {
+      generateMealPlan: async (date, recipes, specificMealType) => {
         if (recipes.length < 3) {
           throw new Error("Not enough recipes available");
         }
@@ -440,91 +440,132 @@ export const useMealPlanStore = create<MealPlanState>()(
         const currentDayPlan = get().mealPlan[date] || {};
         
         // Generate meals for each type with target calories
-        // Only generate meals that don't already exist
+        // Only generate meals that don't already exist or if specifically requested
         let breakfast = currentDayPlan.breakfast;
         let lunch = currentDayPlan.lunch;
         let dinner = currentDayPlan.dinner;
-        
-        // If we're generating for a specific meal type, only update that one
-        if (!breakfast || Array.isArray(breakfast)) {
-          const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
-          if (breakfastRecipe) {
-            breakfast = {
-              recipeId: breakfastRecipe.id,
-              name: breakfastRecipe.name,
-              calories: breakfastRecipe.calories,
-              protein: breakfastRecipe.protein,
-              carbs: breakfastRecipe.carbs,
-              fat: breakfastRecipe.fat
-            };
-          }
-        }
-        
-        if (!lunch || Array.isArray(lunch)) {
-          const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
-          if (lunchRecipe) {
-            lunch = {
-              recipeId: lunchRecipe.id,
-              name: lunchRecipe.name,
-              calories: lunchRecipe.calories,
-              protein: lunchRecipe.protein,
-              carbs: lunchRecipe.carbs,
-              fat: lunchRecipe.fat
-            };
-          }
-        }
-        
-        if (!dinner || Array.isArray(dinner)) {
-          const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
-          if (dinnerRecipe) {
-            dinner = {
-              recipeId: dinnerRecipe.id,
-              name: dinnerRecipe.name,
-              calories: dinnerRecipe.calories,
-              protein: dinnerRecipe.protein,
-              carbs: dinnerRecipe.carbs,
-              fat: dinnerRecipe.fat
-            };
-          }
-        }
-        
-        // Calculate actual calories from main meals
-        let actualMainMealCalories = 0;
-        if (breakfast && !Array.isArray(breakfast) && breakfast.calories) actualMainMealCalories += breakfast.calories;
-        if (lunch && !Array.isArray(lunch) && lunch.calories) actualMainMealCalories += lunch.calories;
-        if (dinner && !Array.isArray(dinner) && dinner.calories) actualMainMealCalories += dinner.calories;
-        
-        // Calculate remaining calories for snacks, adjusting for any deviation in main meals
-        const remainingCalories = calorieGoal - actualMainMealCalories;
-        
-        // Determine how many snacks to add based on remaining calories
-        // Aim for 100-300 calories per snack, with 1-2 snacks total
-        const minSnackCalories = 100;
-        const maxSnackCalories = 300;
-        const avgSnackCalories = 200;
-        
-        // Calculate how many snacks we can fit
-        const maxSnacks = Math.min(2, Math.floor(remainingCalories / minSnackCalories));
-        const targetSnackCount = Math.max(1, Math.min(maxSnacks, Math.round(remainingCalories / avgSnackCalories)));
-        
-        // Generate snacks if they don't already exist
         let snacks = currentDayPlan.snacks || [];
         
-        if (snacks.length < targetSnackCount && availableRecipes.length > 0) {
-          const additionalSnacksNeeded = targetSnackCount - snacks.length;
+        // If a specific meal type is provided, only generate that meal
+        if (specificMealType) {
+          // Generate only the specified meal type
+          if (specificMealType === 'breakfast') {
+            const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
+            if (breakfastRecipe) {
+              breakfast = {
+                recipeId: breakfastRecipe.id,
+                name: breakfastRecipe.name,
+                calories: breakfastRecipe.calories,
+                protein: breakfastRecipe.protein,
+                carbs: breakfastRecipe.carbs,
+                fat: breakfastRecipe.fat
+              };
+            }
+          } else if (specificMealType === 'lunch') {
+            const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
+            if (lunchRecipe) {
+              lunch = {
+                recipeId: lunchRecipe.id,
+                name: lunchRecipe.name,
+                calories: lunchRecipe.calories,
+                protein: lunchRecipe.protein,
+                carbs: lunchRecipe.carbs,
+                fat: lunchRecipe.fat
+              };
+            }
+          } else if (specificMealType === 'dinner') {
+            const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
+            if (dinnerRecipe) {
+              dinner = {
+                recipeId: dinnerRecipe.id,
+                name: dinnerRecipe.name,
+                calories: dinnerRecipe.calories,
+                protein: dinnerRecipe.protein,
+                carbs: dinnerRecipe.carbs,
+                fat: dinnerRecipe.fat
+              };
+            }
+          }
+        } else {
+          // Generate all missing meals
+          if (!breakfast || Array.isArray(breakfast)) {
+            const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
+            if (breakfastRecipe) {
+              breakfast = {
+                recipeId: breakfastRecipe.id,
+                name: breakfastRecipe.name,
+                calories: breakfastRecipe.calories,
+                protein: breakfastRecipe.protein,
+                carbs: breakfastRecipe.carbs,
+                fat: breakfastRecipe.fat
+              };
+            }
+          }
           
-          for (let i = 0; i < additionalSnacksNeeded && availableRecipes.length > 0; i++) {
-            const selectedSnackRecipe = availableRecipes.shift(); // gets first recipe and removes it
-  
-            if (selectedSnackRecipe) {
-              snacks.push({
-                recipeId: selectedSnackRecipe.id,
-                name: selectedSnackRecipe.name,
-                calories: selectedSnackRecipe.calories || 0,
-                protein: selectedSnackRecipe.protein || 0,
-                carbs: selectedSnackRecipe.carbs || 0,
-                fat: selectedSnackRecipe.fat || 0
-              });
+          if (!lunch || Array.isArray(lunch)) {
+            const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
+            if (lunchRecipe) {
+              lunch = {
+                recipeId: lunchRecipe.id,
+                name: lunchRecipe.name,
+                calories: lunchRecipe.calories,
+                protein: lunchRecipe.protein,
+                carbs: lunchRecipe.carbs,
+                fat: lunchRecipe.fat
+              };
+            }
+          }
+          
+          if (!dinner || Array.isArray(dinner)) {
+            const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
+            if (dinnerRecipe) {
+              dinner = {
+                recipeId: dinnerRecipe.id,
+                name: dinnerRecipe.name,
+                calories: dinnerRecipe.calories,
+                protein: dinnerRecipe.protein,
+                carbs: dinnerRecipe.carbs,
+                fat: dinnerRecipe.fat
+              };
+            }
+          }
+          
+          // Calculate actual calories from main meals
+          let actualMainMealCalories = 0;
+          if (breakfast && !Array.isArray(breakfast) && breakfast.calories) actualMainMealCalories += breakfast.calories;
+          if (lunch && !Array.isArray(lunch) && lunch.calories) actualMainMealCalories += lunch.calories;
+          if (dinner && !Array.isArray(dinner) && dinner.calories) actualMainMealCalories += dinner.calories;
+          
+          // Calculate remaining calories for snacks, adjusting for any deviation in main meals
+          const remainingCalories = calorieGoal - actualMainMealCalories;
+          
+          // Determine how many snacks to add based on remaining calories
+          // Aim for 100-300 calories per snack, with 1-2 snacks total
+          const minSnackCalories = 100;
+          const maxSnackCalories = 300;
+          const avgSnackCalories = 200;
+          
+          // Calculate how many snacks we can fit
+          const maxSnacks = Math.min(2, Math.floor(remainingCalories / minSnackCalories));
+          const targetSnackCount = Math.max(1, Math.min(maxSnacks, Math.round(remainingCalories / avgSnackCalories)));
+          
+          // Generate snacks if they don't already exist
+          if (snacks.length < targetSnackCount && availableRecipes.length > 0) {
+            const additionalSnacksNeeded = targetSnackCount - snacks.length;
+            
+            for (let i = 0; i < additionalSnacksNeeded && availableRecipes.length > 0; i++) {
+              const selectedSnackRecipe = availableRecipes.shift(); // gets first recipe and removes it
+    
+              if (selectedSnackRecipe) {
+                snacks.push({
+                  recipeId: selectedSnackRecipe.id,
+                  name: selectedSnackRecipe.name,
+                  calories: selectedSnackRecipe.calories || 0,
+                  protein: selectedSnackRecipe.protein || 0,
+                  carbs: selectedSnackRecipe.carbs || 0,
+                  fat: selectedSnackRecipe.fat || 0
+                });
+              }
             }
           }
         }
@@ -550,18 +591,19 @@ export const useMealPlanStore = create<MealPlanState>()(
           newDayPlan.snacks = snacks;
         }
         
-        // Validate the generated meal plan
-        const validation = get().validateDailyMealPlan(newDayPlan, calorieGoal);
-        
-        if (!validation.isValid) {
-          console.warn(`Generated meal plan has issues: ${validation.issues.join(', ')}`);
-          console.log(`Total calories: ${validation.totalCalories} (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
-        } else {
-          console.log(`Successfully generated meal plan with ${validation.totalCalories} calories (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
+        // Validate the generated meal plan if we're generating a full day
+        if (!specificMealType) {
+          const validation = get().validateDailyMealPlan(newDayPlan, calorieGoal);
+          
+          if (!validation.isValid) {
+            console.warn(`Generated meal plan has issues: ${validation.issues.join(', ')}`);
+            console.log(`Total calories: ${validation.totalCalories} (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
+          } else {
+            console.log(`Successfully generated meal plan with ${validation.totalCalories} calories (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
+          }
         }
         
-        // Update the meal plan even if there are issues
-        // The user can manually adjust if needed
+        // Update the meal plan
         set((state) => ({
           mealPlan: {
             ...state.mealPlan,

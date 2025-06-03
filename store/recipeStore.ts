@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recipe } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
-import { loadInitialRecipesFromAllSources, searchRecipesFromAllSources, getRecipeByIdFromSource } from '@/services/recipeApiService';
+import * as recipeApiService from '@/services/recipeApiService';
 
 interface RecipeState {
   recipes: Recipe[];
@@ -101,7 +101,7 @@ export const useRecipeStore = create<RecipeState>()(
               }
             }));
             
-            const apiRecipes = await loadInitialRecipesFromAllSources(50, {
+            const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(50, {
               useMealDB: true,
               useSpoonacular: false,
               useEdamam: false
@@ -114,7 +114,7 @@ export const useRecipeStore = create<RecipeState>()(
               }));
             }
           } else {
-            const apiRecipes = await loadInitialRecipesFromAllSources(50, apiSources);
+            const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(50, apiSources);
             
             if (apiRecipes.length > 0) {
               set((state) => ({
@@ -140,13 +140,13 @@ export const useRecipeStore = create<RecipeState>()(
           const useDefaultSource = !Object.values(apiSources).some(Boolean);
           
           if (useDefaultSource) {
-            return await searchRecipesFromAllSources(query, 20, {
+            return await recipeApiService.searchRecipesFromAllSources(query, 20, {
               useMealDB: true,
               useSpoonacular: false,
               useEdamam: false
             });
           } else {
-            return await searchRecipesFromAllSources(query, 20, apiSources);
+            return await recipeApiService.searchRecipesFromAllSources(query, 20, apiSources);
           }
         } catch (error) {
           console.error('Error searching recipes:', error);
@@ -161,7 +161,7 @@ export const useRecipeStore = create<RecipeState>()(
         
         try {
           // If not, fetch it from the appropriate API
-          const recipe = await getRecipeByIdFromSource(id);
+          const recipe = await recipeApiService.getRecipeByIdFromSource(id);
           
           // If found, add it to our store
           if (recipe) {

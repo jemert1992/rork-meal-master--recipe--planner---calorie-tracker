@@ -1,111 +1,170 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, FlatList, Pressable, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Check, Plus, ShoppingBag, Trash2 } from 'lucide-react-native';
+import { Plus, Trash2, Filter, Check } from 'lucide-react-native';
 import { useGroceryStore } from '@/store/groceryStore';
 import GroceryItem from '@/components/GroceryItem';
 import Colors from '@/constants/colors';
 
+const CATEGORIES = [
+  'Produce',
+  'Dairy',
+  'Meat',
+  'Bakery',
+  'Frozen',
+  'Canned Goods',
+  'Dry Goods',
+  'Snacks',
+  'Beverages',
+  'Condiments',
+  'Oils & Vinegars',
+  'Baking',
+  'Other'
+];
+
 export default function GroceryListScreen() {
-  const { groceryItems, addItem, removeItem, toggleChecked, clearCheckedItems } = useGroceryStore();
+  const { groceryItems, addItem, removeItem, toggleChecked, clearCheckedItems, sortByCategory } = useGroceryStore();
   const [newItemName, setNewItemName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Produce');
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [sortedByCategory, setSortedByCategory] = useState(false);
+  const [displayItems, setDisplayItems] = useState(groceryItems);
   
-  // Group items by category
-  const groupedItems = groceryItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
+  useEffect(() => {
+    if (sortedByCategory) {
+      setDisplayItems(sortByCategory());
+    } else {
+      setDisplayItems(groceryItems);
     }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, typeof groceryItems>);
-  
-  // Convert grouped items to array for FlatList
-  const sections = Object.entries(groupedItems)
-    .map(([category, items]) => ({ category, items }))
-    .sort((a, b) => a.category.localeCompare(b.category));
+  }, [groceryItems, sortedByCategory]);
   
   const handleAddItem = () => {
-    if (newItemName.trim()) {
-      addItem({
-        name: newItemName.trim(),
-        category: 'Other',
-        checked: false
-      });
-      setNewItemName('');
+    if (newItemName.trim() === '') {
+      Alert.alert('Error', 'Please enter an item name');
+      return;
     }
+    
+    addItem({
+      name: newItemName.trim(),
+      category: selectedCategory,
+      checked: false,
+    });
+    
+    setNewItemName('');
   };
   
-  const handleClearList = () => {
-    clearCheckedItems();
+  const handleClearChecked = () => {
+    Alert.alert(
+      'Clear Checked Items',
+      'Are you sure you want to remove all checked items?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: clearCheckedItems }
+      ]
+    );
   };
   
-  const completedCount = groceryItems.filter(item => item.checked).length;
-  const progress = groceryItems.length > 0 
-    ? Math.round((completedCount / groceryItems.length) * 100) 
-    : 0;
+  const toggleSort = () => {
+    setSortedByCategory(!sortedByCategory);
+  };
   
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Grocery List</Text>
-        {groceryItems.length > 0 && (
-          <Text style={styles.subtitle}>
-            {completedCount} of {groceryItems.length} items checked ({progress}%)
-          </Text>
+        {groceryItems.some(item => item.checked) && (
+          <Pressable style={styles.clearButton} onPress={handleClearChecked}>
+            <Trash2 size={20} color={Colors.danger} />
+          </Pressable>
         )}
       </View>
       
-      <View style={styles.inputContainer}>
+      <View style={styles.addItemContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Add an item..."
           value={newItemName}
           onChangeText={setNewItemName}
-          onSubmitEditing={handleAddItem}
+          placeholder="Add an item..."
           returnKeyType="done"
+          onSubmitEditing={handleAddItem}
         />
+        
+        <Pressable 
+          style={styles.categoryButton} 
+          onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+        >
+          <Text style={styles.categoryButtonText}>{selectedCategory}</Text>
+          <Filter size={16} color={Colors.textLight} />
+        </Pressable>
+        
         <Pressable style={styles.addButton} onPress={handleAddItem}>
-          <Plus size={20} color={Colors.white} />
+          <Plus size={24} color={Colors.white} />
         </Pressable>
       </View>
       
-      {groceryItems.length > 0 ? (
-        <>
-          <FlatList
-            data={sections}
-            keyExtractor={(item) => item.category}
-            renderItem={({ item }) => (
-              <View style={styles.section}>
-                <Text style={styles.sectionHeader}>{item.category}</Text>
-                {item.items.map((groceryItem) => (
-                  <GroceryItem 
-                    key={groceryItem.id} 
-                    item={groceryItem} 
-                    onToggle={() => toggleChecked(groceryItem.id)}
-                    onRemove={() => removeItem(groceryItem.id)}
-                  />
-                ))}
-              </View>
-            )}
-            contentContainerStyle={styles.listContent}
-          />
-          
-          <View style={styles.footer}>
-            <Pressable style={styles.clearButton} onPress={handleClearList}>
-              <Trash2 size={20} color={Colors.white} />
-              <Text style={styles.clearButtonText}>Clear Checked Items</Text>
-            </Pressable>
-          </View>
-        </>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <ShoppingBag size={64} color={Colors.textLight} />
-          <Text style={styles.emptyText}>Your grocery list is empty</Text>
-          <Text style={styles.emptySubtext}>
-            Add items manually or generate a list from your meal plan
-          </Text>
+      {showCategoryPicker && (
+        <View style={styles.categoryPickerContainer}>
+          <ScrollView style={styles.categoryScroll} contentContainerStyle={styles.categoryScrollContent}>
+            {CATEGORIES.map((category) => (
+              <Pressable
+                key={category}
+                style={[
+                  styles.categoryOption,
+                  selectedCategory === category && styles.selectedCategoryOption
+                ]}
+                onPress={() => {
+                  setSelectedCategory(category);
+                  setShowCategoryPicker(false);
+                }}
+              >
+                <Text 
+                  style={[
+                    styles.categoryOptionText,
+                    selectedCategory === category && styles.selectedCategoryOptionText
+                  ]}
+                >
+                  {category}
+                </Text>
+                {selectedCategory === category && (
+                  <Check size={16} color={Colors.white} />
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       )}
+      
+      <View style={styles.sortContainer}>
+        <Pressable 
+          style={[styles.sortButton, sortedByCategory && styles.sortButtonActive]} 
+          onPress={toggleSort}
+        >
+          <Filter size={16} color={sortedByCategory ? Colors.white : Colors.text} />
+          <Text 
+            style={[styles.sortButtonText, sortedByCategory && styles.sortButtonTextActive]}
+          >
+            Sort by Category
+          </Text>
+        </Pressable>
+      </View>
+      
+      <ScrollView style={styles.listContainer}>
+        {displayItems.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Your grocery list is empty</Text>
+            <Text style={styles.emptyStateSubtext}>Add items using the field above</Text>
+          </View>
+        ) : (
+          displayItems.map((item) => (
+            <GroceryItem
+              key={item.id}
+              item={item}
+              onToggle={() => toggleChecked(item.id)}
+              onRemove={() => removeItem(item.id)}
+            />
+          ))
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -116,102 +175,138 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingVertical: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.textLight,
+  clearButton: {
+    padding: 8,
   },
-  inputContainer: {
+  addItemContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 16,
-    alignItems: 'center',
+    paddingBottom: 16,
+    gap: 8,
   },
   input: {
     flex: 1,
+    height: 48,
     backgroundColor: Colors.white,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  categoryButton: {
+    height: 48,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  categoryButtonText: {
+    fontSize: 14,
     color: Colors.text,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
   },
   addButton: {
-    marginLeft: 12,
+    width: 48,
+    height: 48,
     backgroundColor: Colors.primary,
-    width: 44,
-    height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
   },
-  listContent: {
-    padding: 20,
-    paddingTop: 0,
+  categoryPickerContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  emptyContainer: {
+  categoryScroll: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
   },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  categoryScrollContent: {
+    padding: 12,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  selectedCategoryOption: {
+    backgroundColor: Colors.primary,
+  },
+  categoryOptionText: {
+    fontSize: 16,
     color: Colors.text,
-    marginTop: 16,
+  },
+  selectedCategoryOptionText: {
+    color: Colors.white,
+    fontWeight: '500',
+  },
+  sortContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 6,
+  },
+  sortButtonActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  sortButtonTextActive: {
+    color: Colors.white,
+  },
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: Colors.text,
     marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: 16,
+  emptyStateSubtext: {
+    fontSize: 14,
     color: Colors.textLight,
-    textAlign: 'center',
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  clearButton: {
-    flexDirection: 'row',
-    backgroundColor: Colors.danger,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearButtonText: {
-    color: Colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
   },
 });

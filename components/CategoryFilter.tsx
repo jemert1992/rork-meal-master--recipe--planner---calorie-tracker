@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import Colors from '@/constants/colors';
 
-// Main recipe categories for filtering
+// Main recipe categories for filtering - reduced to most important ones
 const MAIN_CATEGORIES = [
   'breakfast',
   'lunch',
@@ -12,8 +12,7 @@ const MAIN_CATEGORIES = [
   'vegan',
   'high-protein',
   'low-carb',
-  'quick',
-  'meal-prep'
+  'quick'
 ];
 
 type CategoryFilterProps = {
@@ -27,9 +26,9 @@ export default function CategoryFilter({
   selectedCategory, 
   onSelectCategory 
 }: CategoryFilterProps) {
-  // Filter to only show main categories or those that have multiple recipes
-  const filteredCategories = categories.filter(
-    category => MAIN_CATEGORIES.includes(category)
+  // Filter to only show main categories
+  const filteredCategories = MAIN_CATEGORIES.filter(
+    category => categories.includes(category)
   );
   
   return (
