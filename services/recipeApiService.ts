@@ -250,7 +250,7 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   }
   
   // Add default tags based on meal type
-  if (!tags.some(tag => ['breakfast', 'lunch', 'dinner', 'snack'].includes(tag))) {
+  if (!tags.some((tag: string) => ['breakfast', 'lunch', 'dinner', 'snack'].includes(tag))) {
     // Default to dinner if no meal type is specified
     tags.push('dinner');
   }
