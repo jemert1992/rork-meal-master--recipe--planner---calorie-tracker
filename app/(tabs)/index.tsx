@@ -130,7 +130,6 @@ export default function RecipesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Discover Recipes</Text>
         <Text style={styles.subtitle}>Find and save your favorite meals</Text>
-        <Text style={styles.recipeCount}>{recipes.length} recipes available</Text>
       </View>
 
       <View style={styles.searchContainer}>
@@ -215,13 +214,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: Colors.textLight,
-    marginBottom: 4,
-  },
-  recipeCount: {
-    fontSize: 14,
-    color: Colors.primary,
     marginBottom: 16,
-    fontWeight: '500',
   },
   searchContainer: {
     flexDirection: 'row',
