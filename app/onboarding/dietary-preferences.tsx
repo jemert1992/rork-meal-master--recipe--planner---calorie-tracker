@@ -5,37 +5,55 @@ import { StatusBar } from 'expo-status-bar';
 import { ArrowRight, Check } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+import { DietType } from '@/types';
+
+// Common food allergies
+const COMMON_ALLERGIES = [
+  'Dairy',
+  'Eggs',
+  'Peanuts',
+  'Tree nuts',
+  'Shellfish',
+  'Fish',
+  'Wheat',
+  'Gluten',
+  'Soy',
+  'Sesame',
+  'Corn',
+  'Mustard'
+];
+
+// Diet types from our type definition
+const DIET_TYPES: { id: DietType; label: string; description: string }[] = [
+  { id: 'any', label: 'Any', description: 'No specific diet restrictions' },
+  { id: 'vegetarian', label: 'Vegetarian', description: 'No meat, fish, or poultry' },
+  { id: 'vegan', label: 'Vegan', description: 'No animal products' },
+  { id: 'keto', label: 'Keto', description: 'High-fat, low-carb diet' },
+  { id: 'paleo', label: 'Paleo', description: 'Based on foods presumed to be available to paleolithic humans' },
+  { id: 'gluten-free', label: 'Gluten-Free', description: 'No wheat, barley, or rye' },
+  { id: 'dairy-free', label: 'Dairy-Free', description: 'No milk, cheese, or dairy products' },
+  { id: 'low-carb', label: 'Low-Carb', description: 'Reduced carbohydrate consumption' },
+];
 
 export default function DietaryPreferencesScreen() {
   const router = useRouter();
   const { updateProfile } = useUserStore();
   
-  const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const [selectedDietType, setSelectedDietType] = useState<DietType>('any');
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   
-  const dietaryOptions = [
-    { id: 'vegetarian', label: 'Vegetarian', description: 'No meat, fish, or poultry' },
-    { id: 'vegan', label: 'Vegan', description: 'No animal products' },
-    { id: 'pescatarian', label: 'Pescatarian', description: 'No meat or poultry, but includes fish' },
-    { id: 'gluten-free', label: 'Gluten-Free', description: 'No wheat, barley, or rye' },
-    { id: 'dairy-free', label: 'Dairy-Free', description: 'No milk, cheese, or dairy products' },
-    { id: 'keto', label: 'Keto', description: 'High-fat, low-carb diet' },
-    { id: 'paleo', label: 'Paleo', description: 'Based on foods presumed to be available to paleolithic humans' },
-    { id: 'low-carb', label: 'Low-Carb', description: 'Reduced carbohydrate consumption' },
-    { id: 'low-fat', label: 'Low-Fat', description: 'Reduced fat consumption' },
-    { id: 'mediterranean', label: 'Mediterranean', description: 'Based on the traditional foods of Mediterranean countries' },
-  ];
-  
-  const togglePreference = (id: string) => {
-    if (selectedPreferences.includes(id)) {
-      setSelectedPreferences(selectedPreferences.filter(p => p !== id));
+  const toggleAllergy = (allergy: string) => {
+    if (selectedAllergies.includes(allergy)) {
+      setSelectedAllergies(selectedAllergies.filter(a => a !== allergy));
     } else {
-      setSelectedPreferences([...selectedPreferences, id]);
+      setSelectedAllergies([...selectedAllergies, allergy]);
     }
   };
   
   const handleNext = () => {
     updateProfile({
-      dietaryPreferences: selectedPreferences,
+      dietType: selectedDietType,
+      allergies: selectedAllergies,
     });
     
     router.push('/onboarding/nutrition-goals');
@@ -48,36 +66,72 @@ export default function DietaryPreferencesScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.title}>Dietary Preferences</Text>
-          <Text style={styles.subtitle}>Select any dietary preferences or restrictions you have</Text>
+          <Text style={styles.subtitle}>Select your diet type and any allergies you have</Text>
         </View>
         
-        <View style={styles.preferencesContainer}>
-          {dietaryOptions.map((option) => (
-            <Pressable
-              key={option.id}
-              style={[
-                styles.preferenceOption,
-                selectedPreferences.includes(option.id) && styles.preferenceSelected
-              ]}
-              onPress={() => togglePreference(option.id)}
-            >
-              <View style={styles.preferenceContent}>
-                <Text style={[
-                  styles.preferenceLabel,
-                  selectedPreferences.includes(option.id) && styles.preferenceLabelSelected
-                ]}>
-                  {option.label}
-                </Text>
-                <Text style={styles.preferenceDescription}>{option.description}</Text>
-              </View>
-              
-              {selectedPreferences.includes(option.id) && (
-                <View style={styles.checkmark}>
-                  <Check size={20} color={Colors.white} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Diet Type</Text>
+          <Text style={styles.sectionSubtitle}>Select the diet that best describes your eating habits</Text>
+          
+          <View style={styles.dietTypesContainer}>
+            {DIET_TYPES.map((option) => (
+              <Pressable
+                key={option.id}
+                style={[
+                  styles.dietOption,
+                  selectedDietType === option.id && styles.dietOptionSelected
+                ]}
+                onPress={() => setSelectedDietType(option.id)}
+              >
+                <View style={styles.dietOptionContent}>
+                  <Text style={[
+                    styles.dietOptionLabel,
+                    selectedDietType === option.id && styles.dietOptionLabelSelected
+                  ]}>
+                    {option.label}
+                  </Text>
+                  <Text style={styles.dietOptionDescription}>{option.description}</Text>
                 </View>
-              )}
-            </Pressable>
-          ))}
+                
+                {selectedDietType === option.id && (
+                  <View style={styles.checkmark}>
+                    <Check size={20} color={Colors.white} />
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+        
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Allergies</Text>
+          <Text style={styles.sectionSubtitle}>Select any food allergies or intolerances you have</Text>
+          
+          <View style={styles.allergiesContainer}>
+            {COMMON_ALLERGIES.map((allergy) => (
+              <Pressable
+                key={allergy}
+                style={[
+                  styles.allergyChip,
+                  selectedAllergies.includes(allergy) && styles.allergyChipSelected
+                ]}
+                onPress={() => toggleAllergy(allergy)}
+              >
+                <Text style={[
+                  styles.allergyChipText,
+                  selectedAllergies.includes(allergy) && styles.allergyChipTextSelected
+                ]}>
+                  {allergy}
+                </Text>
+                
+                {selectedAllergies.includes(allergy) && (
+                  <View style={styles.allergyCheckmark}>
+                    <Check size={14} color={Colors.white} />
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </View>
         </View>
       </ScrollView>
       
@@ -116,40 +170,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textLight,
   },
-  preferencesContainer: {
-    marginBottom: 24,
+  section: {
+    marginBottom: 32,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  preferenceOption: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginBottom: 16,
+  },
+  dietTypesContainer: {
+    gap: 12,
+  },
+  dietOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    justifyContent: 'space-between',
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  preferenceSelected: {
-    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  dietOptionSelected: {
+    backgroundColor: Colors.primaryLight,
     borderColor: Colors.primary,
   },
-  preferenceContent: {
+  dietOptionContent: {
     flex: 1,
   },
-  preferenceLabel: {
+  dietOptionLabel: {
     fontSize: 16,
     fontWeight: '500',
     color: Colors.text,
     marginBottom: 4,
   },
-  preferenceLabelSelected: {
+  dietOptionLabelSelected: {
     color: Colors.primary,
   },
-  preferenceDescription: {
+  dietOptionDescription: {
     fontSize: 14,
     color: Colors.textLight,
   },
@@ -160,6 +232,44 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 8,
+  },
+  allergiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  allergyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 4,
+  },
+  allergyChipSelected: {
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
+  },
+  allergyChipText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  allergyChipTextSelected: {
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  allergyCheckmark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
   },
   footer: {
     position: 'absolute',
