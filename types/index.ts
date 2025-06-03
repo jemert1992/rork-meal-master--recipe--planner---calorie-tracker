@@ -7,12 +7,14 @@ export interface UserProfile {
   allergies?: string[];
   calorieGoal?: number;
   proteinGoal?: number;
-  carbGoal?: number;
+  carbsGoal?: number;
   fatGoal?: number;
   waterGoal?: number;
   height?: number;
   weight?: number;
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
+  dietaryPreferences?: string[];
+  excludedIngredients?: string[];
 }
 
 // Recipe types
@@ -31,6 +33,7 @@ export interface Recipe {
   instructions: string[];
   tags: string[];
   source?: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner';
 }
 
 // Meal plan types

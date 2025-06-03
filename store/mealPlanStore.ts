@@ -282,43 +282,52 @@ export const useMealPlanStore = create<MealPlanState>()(
         
         // Define tags that match each meal type
         const mealTypeTags: Record<string, string[]> = {
-          breakfast: ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg'],
-          lunch: ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl'],
-          dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta']
+          breakfast: ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg', 'toast', 'smoothie', 'yogurt'],
+          lunch: ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 'taco', 'quesadilla', 'burger'],
+          dinner: ['dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole']
         };
         
-        // Improved recipe matching function with calorie targeting
+        // Define excluded tags for each meal type
+        const excludedTags: Record<string, string[]> = {
+          breakfast: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy'],
+          lunch: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'breakfast'],
+          dinner: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'breakfast']
+        };
+        
+        // Improved recipe matching function with calorie targeting and meal type appropriateness
         const getRecipeForMeal = (mealType: string, targetCalories: number): Recipe | null => {
-          // Find recipes with matching tags and close to target calories
-          const matchingRecipes = availableRecipes.filter(recipe => {
-            // Normalize tags by converting to lowercase
-            const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
+          // First, check if any recipes have the explicit meal type tag or are categorized for this meal
+          const typeSpecificRecipes = availableRecipes.filter(recipe => {
+            // Check if recipe has the meal type tag
+            const hasTypeTag = recipe.tags.some(tag => 
+              tag.toLowerCase() === mealType.toLowerCase()
+            );
             
-            // Check if any tag matches the meal type or related tags
-            const tagMatches = 
-              recipeTags.includes(mealType.toLowerCase()) || 
-              recipeTags.some(tag => mealTypeTags[mealType]?.some(mealTag => 
-                tag.includes(mealTag) || mealTag.includes(tag)
-              ));
+            // Check if recipe is explicitly categorized for this meal type
+            const isExplicitlyTyped = recipe.mealType === mealType;
             
-            // Check if calories are within 20% of target
-            const calorieMatches = recipe.calories !== undefined && 
-              recipe.calories >= targetCalories * 0.8 &&
-              recipe.calories <= targetCalories * 1.2;
+            // Check if recipe has any excluded tags for this meal type
+            const hasExcludedTag = recipe.tags.some(tag => 
+              excludedTags[mealType].some(excludedTag => 
+                tag.toLowerCase().includes(excludedTag.toLowerCase())
+              )
+            );
             
-            return tagMatches && calorieMatches;
+            // Only include if it has the right type and doesn't have excluded tags
+            return (hasTypeTag || isExplicitlyTyped) && !hasExcludedTag;
           });
           
-          if (matchingRecipes.length > 0) {
+          // If we have type-specific recipes, prioritize those that are close to target calories
+          if (typeSpecificRecipes.length > 0) {
             // Sort by how close they are to the target calories
-            matchingRecipes.sort((a, b) => {
+            typeSpecificRecipes.sort((a, b) => {
               const aCalories = a.calories || 0;
               const bCalories = b.calories || 0;
               return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
             });
             
             // Get the closest match
-            const selectedRecipe = matchingRecipes[0];
+            const selectedRecipe = typeSpecificRecipes[0];
             
             // Remove the selected recipe from available recipes
             const index = availableRecipes.findIndex(r => r.id === selectedRecipe.id);
@@ -329,16 +338,25 @@ export const useMealPlanStore = create<MealPlanState>()(
             return selectedRecipe;
           }
           
-          // If no matching recipe with target calories, just find one with matching tags
+          // If no explicit meal type recipes, look for recipes with related tags
           const tagMatchingRecipes = availableRecipes.filter(recipe => {
-            // Normalize tags by converting to lowercase
-            const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
+            // Check if any tag matches the related tags for this meal type
+            const hasRelatedTag = recipe.tags.some(tag => 
+              mealTypeTags[mealType].some(mealTag => 
+                tag.toLowerCase().includes(mealTag.toLowerCase()) || 
+                mealTag.toLowerCase().includes(tag.toLowerCase())
+              )
+            );
             
-            // Check if any tag matches the meal type or related tags
-            return recipeTags.includes(mealType.toLowerCase()) || 
-                   recipeTags.some(tag => mealTypeTags[mealType]?.some(mealTag => 
-                     tag.includes(mealTag) || mealTag.includes(tag)
-                   ));
+            // Check if recipe has any excluded tags for this meal type
+            const hasExcludedTag = recipe.tags.some(tag => 
+              excludedTags[mealType].some(excludedTag => 
+                tag.toLowerCase().includes(excludedTag.toLowerCase())
+              )
+            );
+            
+            // Only include if it has related tags and doesn't have excluded tags
+            return hasRelatedTag && !hasExcludedTag;
           });
           
           if (tagMatchingRecipes.length > 0) {
@@ -361,7 +379,36 @@ export const useMealPlanStore = create<MealPlanState>()(
             return selectedRecipe;
           }
           
-          // If no matching recipe found, just use the first available recipe
+          // If no matching recipe found, filter out recipes with excluded tags
+          const appropriateRecipes = availableRecipes.filter(recipe => 
+            !recipe.tags.some(tag => 
+              excludedTags[mealType].some(excludedTag => 
+                tag.toLowerCase().includes(excludedTag.toLowerCase())
+              )
+            )
+          );
+          
+          // If we have appropriate recipes, use those
+          if (appropriateRecipes.length > 0) {
+            // Sort by how close they are to the target calories
+            appropriateRecipes.sort((a, b) => {
+              const aCalories = a.calories || 0;
+              const bCalories = b.calories || 0;
+              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
+            });
+            
+            const selectedRecipe = appropriateRecipes[0];
+            
+            // Remove the selected recipe from available recipes
+            const index = availableRecipes.findIndex(r => r.id === selectedRecipe.id);
+            if (index !== -1) {
+              availableRecipes.splice(index, 1);
+            }
+            
+            return selectedRecipe;
+          }
+          
+          // If no appropriate recipes found, just use the first available recipe
           // that's closest to the target calories
           if (availableRecipes.length > 0) {
             // Sort by how close they are to the target calories

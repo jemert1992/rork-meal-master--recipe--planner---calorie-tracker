@@ -26,6 +26,7 @@ export const mockRecipes = [
       'Sprinkle with additional salt, pepper, and red pepper flakes if desired.',
     ],
     tags: ['breakfast', 'vegetarian', 'quick'],
+    mealType: 'breakfast'
   },
   {
     id: '2',
@@ -57,6 +58,7 @@ export const mockRecipes = [
       'Serve immediately or refrigerate for up to 1 hour before serving.',
     ],
     tags: ['lunch', 'vegetarian', 'salad'],
+    mealType: 'lunch'
   },
   {
     id: '3',
@@ -92,6 +94,7 @@ export const mockRecipes = [
       'Drizzle with sesame oil, season with salt and pepper, and serve hot.',
     ],
     tags: ['dinner', 'high-protein', 'asian'],
+    mealType: 'dinner'
   },
   {
     id: '4',
@@ -120,6 +123,7 @@ export const mockRecipes = [
       'Before serving, top with mixed berries and sliced almonds.',
     ],
     tags: ['breakfast', 'vegetarian', 'meal-prep', 'no-cook'],
+    mealType: 'breakfast'
   },
   {
     id: '5',
@@ -156,6 +160,7 @@ export const mockRecipes = [
       'Drizzle with tahini dressing before serving.',
     ],
     tags: ['lunch', 'vegan', 'bowl', 'healthy'],
+    mealType: 'lunch'
   },
   {
     id: '6',
@@ -189,6 +194,7 @@ export const mockRecipes = [
       'Serve hot, garnished with additional fresh dill if desired.',
     ],
     tags: ['dinner', 'high-protein', 'seafood', 'low-carb'],
+    mealType: 'dinner'
   },
   {
     id: '7',
@@ -228,6 +234,7 @@ export const mockRecipes = [
       'Serve hot with your choice of toppings.',
     ],
     tags: ['dinner', 'vegetarian', 'vegan', 'meal-prep', 'high-fiber'],
+    mealType: 'dinner'
   },
   {
     id: '8',
@@ -255,6 +262,7 @@ export const mockRecipes = [
       'Pour into a glass and serve immediately.',
     ],
     tags: ['breakfast', 'snack', 'high-protein', 'quick', 'no-cook'],
+    mealType: 'breakfast'
   },
   {
     id: '9',
@@ -293,6 +301,7 @@ export const mockRecipes = [
       'Serve hot, garnished with additional parsley if desired.',
     ],
     tags: ['dinner', 'vegetarian', 'mediterranean', 'meal-prep'],
+    mealType: 'dinner'
   },
   {
     id: '10',
@@ -328,6 +337,7 @@ export const mockRecipes = [
       'Serve immediately, garnished with additional Parmesan and parsley if desired.',
     ],
     tags: ['dinner', 'seafood', 'pasta', 'quick'],
+    mealType: 'dinner'
   },
   {
     id: '11',
@@ -357,6 +367,7 @@ export const mockRecipes = [
       'Serve warm or refrigerate for a quick breakfast option throughout the week.',
     ],
     tags: ['breakfast', 'keto', 'low-carb', 'high-protein', 'meal-prep'],
+    mealType: 'breakfast'
   },
   {
     id: '12',
@@ -395,6 +406,7 @@ export const mockRecipes = [
       'Serve hot, garnished with additional parsley if desired.',
     ],
     tags: ['lunch', 'dinner', 'vegan', 'high-fiber', 'meal-prep'],
+    mealType: 'lunch'
   },
   {
     id: '13',
@@ -429,6 +441,7 @@ export const mockRecipes = [
       'Drizzle with balsamic glaze before serving.',
     ],
     tags: ['dinner', 'high-protein', 'low-carb', 'italian'],
+    mealType: 'dinner'
   },
   {
     id: '14',
@@ -470,6 +483,7 @@ export const mockRecipes = [
       'Drizzle with dressing and serve with lime wedges.',
     ],
     tags: ['lunch', 'dinner', 'vegetarian', 'vegan', 'bowl', 'meal-prep'],
+    mealType: 'lunch'
   },
   {
     id: '15',
@@ -503,6 +517,7 @@ export const mockRecipes = [
       'Serve warm with your choice of toppings.',
     ],
     tags: ['breakfast', 'gluten-free', 'low-carb', 'keto'],
+    mealType: 'breakfast'
   },
   {
     id: '16',
@@ -541,6 +556,7 @@ export const mockRecipes = [
       'Serve hot over rice or cauliflower rice.',
     ],
     tags: ['dinner', 'high-protein', 'asian', 'quick'],
+    mealType: 'dinner'
   },
   {
     id: '17',
@@ -577,6 +593,7 @@ export const mockRecipes = [
       'Serve chilled as a main dish or side salad.',
     ],
     tags: ['lunch', 'vegetarian', 'mediterranean', 'no-cook', 'meal-prep'],
+    mealType: 'lunch'
   },
   {
     id: '18',
@@ -614,6 +631,7 @@ export const mockRecipes = [
       'Garnish with green onions and cilantro before serving.',
     ],
     tags: ['dinner', 'low-carb', 'keto', 'asian', 'vegetarian'],
+    mealType: 'dinner'
   },
   {
     id: '19',
@@ -646,6 +664,7 @@ export const mockRecipes = [
       'Serve immediately.',
     ],
     tags: ['breakfast', 'vegetarian', 'no-cook', 'high-fiber'],
+    mealType: 'breakfast'
   },
   {
     id: '20',
@@ -678,6 +697,7 @@ export const mockRecipes = [
       'Serve hot with additional lemon wedges if desired.',
     ],
     tags: ['dinner', 'seafood', 'high-protein', 'low-carb', 'gluten-free'],
+    mealType: 'dinner'
   },
   {
     id: '21',
@@ -715,6 +735,7 @@ export const mockRecipes = [
       'Let rest for 5 minutes before serving.',
     ],
     tags: ['dinner', 'high-protein', 'low-carb', 'gluten-free'],
+    mealType: 'dinner'
   },
   {
     id: '22',
@@ -755,6 +776,7 @@ export const mockRecipes = [
       'Let cool for 5 minutes before slicing and serving.',
     ],
     tags: ['breakfast', 'brunch', 'vegetarian', 'low-carb', 'high-protein', 'meal-prep'],
+    mealType: 'breakfast'
   },
   {
     id: '23',
@@ -798,6 +820,7 @@ export const mockRecipes = [
       'Serve hot over rice or noodles.',
     ],
     tags: ['dinner', 'vegan', 'vegetarian', 'asian', 'high-protein'],
+    mealType: 'dinner'
   },
   {
     id: '24',
@@ -836,6 +859,7 @@ export const mockRecipes = [
       'Serve topped with toasted pine nuts and additional Parmesan cheese.',
     ],
     tags: ['dinner', 'vegetarian', 'low-carb', 'keto', 'quick'],
+    mealType: 'dinner'
   },
   {
     id: '25',
@@ -865,6 +889,7 @@ export const mockRecipes = [
       'Serve immediately or refrigerate for up to 24 hours (add granola just before serving to keep it crunchy).',
     ],
     tags: ['breakfast', 'snack', 'vegetarian', 'high-protein', 'no-cook'],
+    mealType: 'breakfast'
   },
   {
     id: '26',
@@ -902,6 +927,7 @@ export const mockRecipes = [
       'Serve with marinara sauce, on top of zucchini noodles, or in a wrap.',
     ],
     tags: ['dinner', 'high-protein', 'low-carb', 'meal-prep'],
+    mealType: 'dinner'
   },
   {
     id: '27',
@@ -943,6 +969,7 @@ export const mockRecipes = [
       'Serve hot, garnished with cilantro.',
     ],
     tags: ['lunch', 'dinner', 'vegan', 'vegetarian', 'high-fiber', 'meal-prep'],
+    mealType: 'lunch'
   },
   {
     id: '28',
@@ -983,6 +1010,7 @@ export const mockRecipes = [
       'Spread aioli on buns, then assemble burgers with mushrooms, avocado, tomato, and greens.',
     ],
     tags: ['dinner', 'vegetarian', 'vegan-option', 'burger'],
+    mealType: 'dinner'
   },
   {
     id: '29',
@@ -1017,6 +1045,7 @@ export const mockRecipes = [
       'Serve chilled with tortilla chips.',
     ],
     tags: ['appetizer', 'seafood', 'no-cook', 'low-carb', 'high-protein'],
+    mealType: 'lunch'
   },
   {
     id: '30',
@@ -1047,6 +1076,7 @@ export const mockRecipes = [
       'Store in an airtight container in the refrigerator for up to 1 week.',
     ],
     tags: ['snack', 'vegetarian', 'high-protein', 'no-cook', 'meal-prep'],
+    mealType: 'snack'
   },
 ];
 
@@ -1054,20 +1084,17 @@ export const mockMealPlan = {
   '2025-06-02': {
     breakfast: { recipeId: '1', name: 'Avocado Toast' },
     lunch: { recipeId: '2', name: 'Greek Salad' },
-    dinner: { recipeId: '3', name: 'Chicken Stir Fry' },
-    snacks: [{ name: 'Apple', calories: 95 }, { name: 'Greek Yogurt', calories: 150 }]
+    dinner: { recipeId: '3', name: 'Chicken Stir Fry' }
   },
   '2025-06-03': {
     breakfast: { name: 'Oatmeal with Berries', calories: 280 },
     lunch: { recipeId: '2', name: 'Greek Salad' },
-    dinner: { name: 'Grilled Salmon', calories: 420 },
-    snacks: [{ name: 'Mixed Nuts', calories: 170 }]
+    dinner: { name: 'Grilled Salmon', calories: 420 }
   },
   '2025-06-04': {
     breakfast: { name: 'Smoothie Bowl', calories: 310 },
     lunch: { name: 'Quinoa Bowl', calories: 380 },
-    dinner: { recipeId: '3', name: 'Chicken Stir Fry' },
-    snacks: [{ name: 'Protein Bar', calories: 200 }]
+    dinner: { recipeId: '3', name: 'Chicken Stir Fry' }
   }
 };
 
