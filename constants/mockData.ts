@@ -1076,7 +1076,7 @@ export const mockRecipes = [
       'Store in an airtight container in the refrigerator for up to 1 week.',
     ],
     tags: ['snack', 'vegetarian', 'high-protein', 'no-cook', 'meal-prep'],
-    mealType: 'snack'
+    mealType: undefined
   },
 ];
 

@@ -93,7 +93,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
   // Extract instructions
   const instructionsText = meal.strInstructions || '';
   const instructions = instructionsText
-    .split('\\r\\n')
+    .split('\\r\n')
     .join('\n')
     .split('\r\n')
     .join('\n')
@@ -117,6 +117,35 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
     tags.push(meal.strArea.toLowerCase());
   }
 
+  // Determine meal type based on tags and category
+  let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
+  
+  // Check for breakfast-related tags
+  if (tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag)) || 
+      meal.strCategory?.toLowerCase() === 'breakfast') {
+    mealType = 'breakfast';
+  }
+  // Check for lunch-related tags
+  else if (tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) {
+    mealType = 'lunch';
+  }
+  // Check for dinner-related tags
+  else if (tags.some(tag => ['dinner', 'supper', 'main course', 'entree'].includes(tag))) {
+    mealType = 'dinner';
+  }
+  // Default to dinner for most recipes if no specific meal type is identified
+  else {
+    // Avoid categorizing desserts as dinner
+    const isDessert = tags.some(tag => 
+      ['dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'chocolate', 'candy'].includes(tag)
+    ) || meal.strCategory?.toLowerCase() === 'dessert';
+    
+    if (!isDessert) {
+      mealType = 'dinner';
+    }
+    // For desserts, don't assign a meal type
+  }
+
   // Generate random nutrition info since MealDB doesn't provide it
   const calories = Math.floor(Math.random() * 400) + 200; // 200-600 calories
   const protein = Math.floor(Math.random() * 30) + 10; // 10-40g protein
@@ -137,6 +166,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
     ingredients,
     instructions,
     tags,
+    mealType,
   };
 };
 

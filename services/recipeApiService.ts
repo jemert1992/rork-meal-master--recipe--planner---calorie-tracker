@@ -249,10 +249,33 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     tags.push(meal.strArea.toLowerCase());
   }
   
-  // Add default tags based on meal type
-  if (!tags.some((tag: string) => ['breakfast', 'lunch', 'dinner', 'snack'].includes(tag))) {
-    // Default to dinner if no meal type is specified
-    tags.push('dinner');
+  // Determine meal type based on tags and category
+  let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
+  
+  // Check for breakfast-related tags
+  if (tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag)) || 
+      meal.strCategory?.toLowerCase() === 'breakfast') {
+    mealType = 'breakfast';
+  }
+  // Check for lunch-related tags
+  else if (tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) {
+    mealType = 'lunch';
+  }
+  // Check for dinner-related tags
+  else if (tags.some(tag => ['dinner', 'supper', 'main course', 'entree'].includes(tag))) {
+    mealType = 'dinner';
+  }
+  // Default to dinner for most recipes if no specific meal type is identified
+  else {
+    // Avoid categorizing desserts as dinner
+    const isDessert = tags.some(tag => 
+      ['dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'chocolate', 'candy'].includes(tag)
+    ) || meal.strCategory?.toLowerCase() === 'dessert';
+    
+    if (!isDessert) {
+      mealType = 'dinner';
+    }
+    // For desserts, don't assign a meal type
   }
   
   // Estimate nutrition data (MealDB doesn't provide this)
@@ -276,5 +299,6 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     ingredients,
     instructions,
     tags,
+    mealType,
   };
 };
