@@ -1,185 +1,114 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
-import { DietType } from '@/types';
-
-// Common food allergies
-const COMMON_ALLERGIES = [
-  'Dairy',
-  'Eggs',
-  'Peanuts',
-  'Tree nuts',
-  'Shellfish',
-  'Fish',
-  'Wheat',
-  'Gluten',
-  'Soy',
-  'Sesame',
-  'Corn',
-  'Mustard'
-];
-
-// Diet types from our type definition
-const DIET_TYPES: { id: DietType; label: string; description: string }[] = [
-  { id: 'any', label: 'Any', description: 'No specific diet restrictions' },
-  { id: 'vegetarian', label: 'Vegetarian', description: 'No meat, fish, or poultry' },
-  { id: 'vegan', label: 'Vegan', description: 'No animal products' },
-  { id: 'keto', label: 'Keto', description: 'High-fat, low-carb diet' },
-  { id: 'paleo', label: 'Paleo', description: 'Based on foods presumed to be available to paleolithic humans' },
-  { id: 'gluten-free', label: 'Gluten-Free', description: 'No wheat, barley, or rye' },
-  { id: 'dairy-free', label: 'Dairy-Free', description: 'No milk, cheese, or dairy products' },
-  { id: 'low-carb', label: 'Low-Carb', description: 'Reduced carbohydrate consumption' },
-];
+import { dietTypes } from '@/constants/dietTypes';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useUserStore();
   
-  // Local state for form fields
-  const [name, setName] = useState(profile.name);
-  const [dietType, setDietType] = useState<DietType>(profile.dietType || 'any');
+  const [name, setName] = useState(profile.name || '');
+  const [dietType, setDietType] = useState(profile.dietType || 'any');
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
-  const [allergies, setAllergies] = useState<string[]>(profile.allergies || []);
-  const [showDietSelector, setShowDietSelector] = useState(false);
-  
-  const toggleAllergy = (allergy: string) => {
-    if (allergies.includes(allergy)) {
-      setAllergies(allergies.filter(a => a !== allergy));
-    } else {
-      setAllergies([...allergies, allergy]);
-    }
-  };
+  const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
   
   const handleSave = () => {
-    // Update user profile
+    // Validate calorie goal
+    const parsedCalorieGoal = parseInt(calorieGoal);
+    if (calorieGoal && (isNaN(parsedCalorieGoal) || parsedCalorieGoal <= 0)) {
+      Alert.alert('Invalid Calorie Goal', 'Please enter a valid number for your daily calorie goal.');
+      return;
+    }
+    
+    // Parse allergies
+    const allergyList = allergies
+      .split(',')
+      .map(item => item.trim())
+      .filter(item => item.length > 0);
+    
+    // Update profile
     updateProfile({
       name,
       dietType,
-      calorieGoal: parseInt(calorieGoal) || 2000,
-      allergies,
+      calorieGoal: parsedCalorieGoal || undefined,
+      allergies: allergyList,
     });
     
+    // Navigate back
     router.back();
   };
   
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color={Colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Edit Profile</Text>
-        <Pressable onPress={handleSave} style={styles.saveButton}>
+        <Pressable style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </View>
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>User Profile</Text>
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-            />
-          </View>
+          <Text style={styles.inputLabel}>Name</Text>
+          <TextInput
+            style={styles.textInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+          />
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Diet Type</Text>
-            <Pressable 
-              style={styles.dietSelector}
-              onPress={() => setShowDietSelector(!showDietSelector)}
-            >
-              <Text style={styles.dietSelectorText}>
-                {DIET_TYPES.find(dt => dt.id === dietType)?.label || 'Select a diet type'}
-              </Text>
-            </Pressable>
-            
-            {showDietSelector && (
-              <View style={styles.dietOptions}>
-                {DIET_TYPES.map((option) => (
-                  <Pressable
-                    key={option.id}
-                    style={[
-                      styles.dietOption,
-                      dietType === option.id && styles.dietOptionSelected
-                    ]}
-                    onPress={() => {
-                      setDietType(option.id);
-                      setShowDietSelector(false);
-                    }}
-                  >
-                    <View style={styles.dietOptionContent}>
-                      <Text style={[
-                        styles.dietOptionLabel,
-                        dietType === option.id && styles.dietOptionLabelSelected
-                      ]}>
-                        {option.label}
-                      </Text>
-                      <Text style={styles.dietOptionDescription}>{option.description}</Text>
-                    </View>
-                    
-                    {dietType === option.id && (
-                      <View style={styles.checkmark}>
-                        <Check size={16} color={Colors.white} />
-                      </View>
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Daily Calorie Goal</Text>
-            <TextInput
-              style={styles.input}
-              value={calorieGoal}
-              onChangeText={setCalorieGoal}
-              keyboardType="numeric"
-              placeholder="e.g., 2000"
-            />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Allergies</Text>
-            <Text style={styles.helperText}>Select all that apply</Text>
-            
-            <View style={styles.allergyGrid}>
-              {COMMON_ALLERGIES.map((allergy) => (
-                <TouchableOpacity
-                  key={allergy}
+          <Text style={styles.inputLabel}>Diet Type</Text>
+          <View style={styles.dietTypeContainer}>
+            {dietTypes.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.dietTypeOption,
+                  dietType === option.value && styles.selectedDietType
+                ]}
+                onPress={() => setDietType(option.value)}
+              >
+                <Text 
                   style={[
-                    styles.allergyChip,
-                    allergies.includes(allergy) && styles.allergyChipSelected
+                    styles.dietTypeText,
+                    dietType === option.value && styles.selectedDietTypeText
                   ]}
-                  onPress={() => toggleAllergy(allergy)}
                 >
-                  <Text 
-                    style={[
-                      styles.allergyChipText,
-                      allergies.includes(allergy) && styles.allergyChipTextSelected
-                    ]}
-                  >
-                    {allergy}
-                  </Text>
-                  {allergies.includes(allergy) && (
-                    <View style={styles.allergyCheckmark}>
-                      <Check size={12} color={Colors.white} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {option.label}
+                </Text>
+                {dietType === option.value && (
+                  <Check size={16} color={Colors.white} style={styles.checkIcon} />
+                )}
+              </Pressable>
+            ))}
           </View>
+          
+          <Text style={styles.inputLabel}>Daily Calorie Goal</Text>
+          <TextInput
+            style={styles.textInput}
+            value={calorieGoal}
+            onChangeText={setCalorieGoal}
+            placeholder="e.g., 2000"
+            keyboardType="number-pad"
+          />
+          
+          <Text style={styles.inputLabel}>Allergies</Text>
+          <TextInput
+            style={styles.textInput}
+            value={allergies}
+            onChangeText={setAllergies}
+            placeholder="e.g., nuts, dairy, gluten"
+          />
+          <Text style={styles.helperText}>Separate with commas</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -199,7 +128,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    backgroundColor: Colors.white,
   },
   backButton: {
     padding: 8,
@@ -210,9 +138,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   saveButton: {
+    backgroundColor: Colors.primary,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: Colors.primary,
     borderRadius: 8,
   },
   saveButtonText: {
@@ -221,141 +149,65 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
   },
   section: {
-    marginBottom: 24,
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 24,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 16,
+    marginBottom: 24,
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
+  inputLabel: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.text,
     marginBottom: 8,
   },
-  input: {
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  textInput: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
-    color: Colors.text,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   helperText: {
     fontSize: 14,
     color: Colors.textLight,
-    marginBottom: 8,
+    marginBottom: 24,
   },
-  dietSelector: {
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  dietSelectorText: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  dietOptions: {
-    marginTop: 8,
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
-  dietOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  dietOptionSelected: {
-    backgroundColor: Colors.primaryLight,
-  },
-  dietOptionContent: {
-    flex: 1,
-  },
-  dietOptionLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  dietOptionLabelSelected: {
-    color: Colors.primary,
-  },
-  dietOptionDescription: {
-    fontSize: 14,
-    color: Colors.textLight,
-  },
-  checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  allergyGrid: {
+  dietTypeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
-    gap: 8,
+    gap: 12,
+    marginBottom: 24,
   },
-  allergyChip: {
+  dietTypeOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.white,
     borderRadius: 20,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 8,
   },
-  allergyChipSelected: {
-    backgroundColor: Colors.primaryLight,
+  selectedDietType: {
+    backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  allergyChipText: {
+  dietTypeText: {
     fontSize: 14,
     color: Colors.text,
   },
-  allergyChipTextSelected: {
-    color: Colors.primary,
-    fontWeight: '500',
+  selectedDietTypeText: {
+    color: Colors.white,
   },
-  allergyCheckmark: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  checkIcon: {
     marginLeft: 6,
   },
 });

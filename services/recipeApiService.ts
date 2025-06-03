@@ -1,5 +1,6 @@
 import { Recipe } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
+import { loadInitialRecipes, searchMealsByName } from '@/services/mealDbService';
 
 // Simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -113,4 +114,149 @@ export const getRandomRecipes = async (count: number = 5): Promise<Recipe[]> => 
   
   // Get first n elements
   return shuffled.slice(0, count);
+};
+
+/**
+ * Load initial recipes from all sources
+ * This combines recipes from different APIs based on enabled sources
+ */
+export const loadInitialRecipesFromAllSources = async (
+  count: number = 20,
+  sources: { useMealDB: boolean; useSpoonacular: boolean; useEdamam: boolean }
+): Promise<Recipe[]> => {
+  try {
+    let recipes: Recipe[] = [];
+    
+    // Load from MealDB if enabled
+    if (sources.useMealDB) {
+      const mealDbRecipes = await loadInitialRecipes(Math.ceil(count / 2));
+      recipes = [...recipes, ...mealDbRecipes];
+    }
+    
+    // Load from Spoonacular if enabled (mock implementation)
+    if (sources.useSpoonacular) {
+      // Simulate API delay
+      await delay(800);
+      
+      // Get random recipes from mock data to simulate Spoonacular
+      const spoonacularRecipes = mockRecipes
+        .slice(0, Math.ceil(count / 3))
+        .map(recipe => ({
+          ...recipe,
+          id: `spoonacular_${recipe.id}`, // Add prefix to avoid ID conflicts
+        }));
+      
+      recipes = [...recipes, ...spoonacularRecipes];
+    }
+    
+    // Load from Edamam if enabled (mock implementation)
+    if (sources.useEdamam) {
+      // Simulate API delay
+      await delay(600);
+      
+      // Get random recipes from mock data to simulate Edamam
+      const edamamRecipes = mockRecipes
+        .slice(0, Math.ceil(count / 4))
+        .map(recipe => ({
+          ...recipe,
+          id: `edamam_${recipe.id}`, // Add prefix to avoid ID conflicts
+        }));
+      
+      recipes = [...recipes, ...edamamRecipes];
+    }
+    
+    // If no sources were enabled or no recipes were found, return some mock recipes
+    if (recipes.length === 0) {
+      return mockRecipes.slice(0, count);
+    }
+    
+    // Shuffle and limit to requested count
+    const shuffled = recipes.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  } catch (error) {
+    console.error('Error loading recipes from all sources:', error);
+    return mockRecipes.slice(0, count); // Fallback to mock data
+  }
+};
+
+/**
+ * Search recipes from all sources
+ */
+export const searchRecipesFromAllSources = async (
+  query: string,
+  count: number = 20,
+  sources: { useMealDB: boolean; useSpoonacular: boolean; useEdamam: boolean }
+): Promise<Recipe[]> => {
+  try {
+    let results: Recipe[] = [];
+    
+    // Search from MealDB if enabled
+    if (sources.useMealDB) {
+      const mealDbResults = await searchMealsByName(query);
+      results = [...results, ...mealDbResults];
+    }
+    
+    // Search from Spoonacular if enabled (mock implementation)
+    if (sources.useSpoonacular) {
+      // Simulate API delay
+      await delay(600);
+      
+      // Search in mock data to simulate Spoonacular
+      const normalizedQuery = query.toLowerCase().trim();
+      const spoonacularResults = mockRecipes
+        .filter(recipe => 
+          recipe.name.toLowerCase().includes(normalizedQuery) ||
+          recipe.tags.some(tag => tag.toLowerCase().includes(normalizedQuery)) ||
+          recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(normalizedQuery))
+        )
+        .map(recipe => ({
+          ...recipe,
+          id: `spoonacular_${recipe.id}`, // Add prefix to avoid ID conflicts
+        }));
+      
+      results = [...results, ...spoonacularResults];
+    }
+    
+    // Search from Edamam if enabled (mock implementation)
+    if (sources.useEdamam) {
+      // Simulate API delay
+      await delay(500);
+      
+      // Search in mock data to simulate Edamam
+      const normalizedQuery = query.toLowerCase().trim();
+      const edamamResults = mockRecipes
+        .filter(recipe => 
+          recipe.name.toLowerCase().includes(normalizedQuery) ||
+          recipe.tags.some(tag => tag.toLowerCase().includes(normalizedQuery))
+        )
+        .map(recipe => ({
+          ...recipe,
+          id: `edamam_${recipe.id}`, // Add prefix to avoid ID conflicts
+        }));
+      
+      results = [...results, ...edamamResults];
+    }
+    
+    // If no sources were enabled or no results were found, return empty array
+    if (results.length === 0) {
+      return [];
+    }
+    
+    // Remove duplicates (based on name)
+    const uniqueResults: Recipe[] = [];
+    const seenNames = new Set<string>();
+    
+    for (const recipe of results) {
+      if (!seenNames.has(recipe.name.toLowerCase())) {
+        seenNames.add(recipe.name.toLowerCase());
+        uniqueResults.push(recipe);
+      }
+    }
+    
+    // Limit to requested count
+    return uniqueResults.slice(0, count);
+  } catch (error) {
+    console.error('Error searching recipes from all sources:', error);
+    return []; // Return empty array on error
+  }
 };

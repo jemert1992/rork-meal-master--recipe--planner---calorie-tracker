@@ -12,6 +12,9 @@ interface GroceryState {
   clearCheckedItems: () => void;
   sortByCategory: () => GroceryItem[];
   setGroceryItems: (items: GroceryItem[]) => void;
+  // Add missing methods
+  addGroceryItem: (item: Omit<GroceryItem, 'id'>) => void;
+  clearGroceryList: () => void;
 }
 
 export const useGroceryStore = create<GroceryState>()(
@@ -57,6 +60,22 @@ export const useGroceryStore = create<GroceryState>()(
       
       setGroceryItems: (items) => {
         set({ groceryItems: items });
+      },
+      
+      // Added missing methods
+      addGroceryItem: (item) => {
+        const newItem = {
+          ...item,
+          id: Date.now().toString(),
+        };
+        
+        set((state) => ({
+          groceryItems: [...state.groceryItems, newItem],
+        }));
+      },
+      
+      clearGroceryList: () => {
+        set({ groceryItems: [] });
       },
     }),
     {
