@@ -6,6 +6,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
+import { DietType } from '@/types';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function EditProfileScreen() {
   
   // Local state for form fields
   const [name, setName] = useState(profile.name);
-  const [dietType, setDietType] = useState(profile.dietType);
+  const [dietType, setDietType] = useState<DietType | undefined>(profile.dietType);
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
   
@@ -23,6 +24,23 @@ export default function EditProfileScreen() {
   const [useMealDB, setUseMealDB] = useState(apiSources.useMealDB);
   const [useSpoonacular, setUseSpoonacular] = useState(apiSources.useSpoonacular);
   const [useEdamam, setUseEdamam] = useState(apiSources.useEdamam);
+  
+  // Custom handler for diet type input
+  const handleDietTypeChange = (text: string) => {
+    // Validate if the input is a valid diet type
+    const validDietTypes: DietType[] = [
+      'any', 'vegetarian', 'vegan', 'keto', 'paleo', 
+      'gluten-free', 'dairy-free', 'low-carb'
+    ];
+    
+    if (validDietTypes.includes(text as DietType)) {
+      setDietType(text as DietType);
+    } else if (text === '') {
+      // Allow empty input
+      setDietType(undefined);
+    }
+    // Ignore invalid inputs
+  };
   
   const handleSave = () => {
     // Update user profile
@@ -86,9 +104,12 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               value={dietType}
-              onChangeText={setDietType}
-              placeholder="e.g., Vegetarian, Keto, etc."
+              onChangeText={handleDietTypeChange}
+              placeholder="e.g., vegetarian, keto, etc."
             />
+            <Text style={styles.helperText}>
+              Valid options: any, vegetarian, vegan, keto, paleo, gluten-free, dairy-free, low-carb
+            </Text>
           </View>
           
           <View style={styles.inputGroup}>
