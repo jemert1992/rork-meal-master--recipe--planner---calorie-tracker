@@ -90,7 +90,7 @@ export const searchRecipesFromAllSources = async (
       console.warn('No recipes found from APIs, searching mock data');
       const mockSearchResults = mockRecipes.filter(recipe => 
         recipe.name.toLowerCase().includes(query.toLowerCase()) ||
-        recipe.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
+        recipe.tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())) ||
         recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(query.toLowerCase()))
       );
       return mockSearchResults.slice(0, limit);
