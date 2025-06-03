@@ -156,7 +156,7 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
       // Skip if meal is undefined or is an array
       if (!meal || Array.isArray(meal)) return;
       
-      // Skip if no recipeId
+      // Skip if no recipeId - add type guard
       if (!meal.recipeId) return;
       
       const recipe = recipes.find(r => r.id === meal.recipeId);
@@ -223,7 +223,7 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
     // Process snacks
     if (day.snacks && Array.isArray(day.snacks) && day.snacks.length > 0) {
       day.snacks.forEach(snack => {
-        // Skip if no recipeId
+        // Skip if no recipeId - add type guard
         if (!snack || !snack.recipeId) return;
         
         const recipe = recipes.find(r => r.id === snack.recipeId);

@@ -79,9 +79,12 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const countPlannedMeals = () => {
     let count = 0;
     Object.values(mealPlan).forEach(day => {
-      if (day.breakfast && !Array.isArray(day.breakfast)) count++;
-      if (day.lunch && !Array.isArray(day.lunch)) count++;
-      if (day.dinner && !Array.isArray(day.dinner)) count++;
+      // Type guard to check if breakfast is a single meal item and not an array
+      if (day.breakfast && !Array.isArray(day.breakfast) && day.breakfast.recipeId) count++;
+      // Type guard to check if lunch is a single meal item and not an array
+      if (day.lunch && !Array.isArray(day.lunch) && day.lunch.recipeId) count++;
+      // Type guard to check if dinner is a single meal item and not an array
+      if (day.dinner && !Array.isArray(day.dinner) && day.dinner.recipeId) count++;
     });
     return count;
   };
@@ -159,7 +162,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                       const dayPlan = mealPlan[day.dateString] || {};
                       const meal = dayPlan[mealType as keyof typeof dayPlan];
                       
-                      // Check if meal is defined and is not an array before accessing recipeId
+                      // Type guard to check if meal is a single item and not an array
                       const recipeId = meal && !Array.isArray(meal) ? meal.recipeId : undefined;
                       const { name, image } = getRecipeDetails(recipeId);
                       

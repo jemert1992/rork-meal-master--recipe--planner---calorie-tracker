@@ -11,6 +11,7 @@ export default {
   border: '#E0E0E0',
   success: '#66BB6A',
   error: '#EF5350',
+  danger: '#EF5350', // Added danger color (same as error)
   warning: '#FFC107',
   warningBg: '#FFF3CD',
   white: '#FFFFFF',

@@ -7,7 +7,7 @@ import GroceryItem from '@/components/GroceryItem';
 import Colors from '@/constants/colors';
 
 export default function GroceryListScreen() {
-  const { groceryItems, addGroceryItem, clearGroceryList } = useGroceryStore();
+  const { groceryItems, addItem, removeItem, toggleChecked, clearCheckedItems } = useGroceryStore();
   const [newItemName, setNewItemName] = useState('');
   
   // Group items by category
@@ -26,8 +26,7 @@ export default function GroceryListScreen() {
   
   const handleAddItem = () => {
     if (newItemName.trim()) {
-      addGroceryItem({
-        id: Date.now().toString(),
+      addItem({
         name: newItemName.trim(),
         category: 'Other',
         checked: false
@@ -37,7 +36,7 @@ export default function GroceryListScreen() {
   };
   
   const handleClearList = () => {
-    clearGroceryList();
+    clearCheckedItems();
   };
   
   const completedCount = groceryItems.filter(item => item.checked).length;
@@ -79,7 +78,12 @@ export default function GroceryListScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionHeader}>{item.category}</Text>
                 {item.items.map((groceryItem) => (
-                  <GroceryItem key={groceryItem.id} item={groceryItem} />
+                  <GroceryItem 
+                    key={groceryItem.id} 
+                    item={groceryItem} 
+                    onToggle={() => toggleChecked(groceryItem.id)}
+                    onRemove={() => removeItem(groceryItem.id)}
+                  />
                 ))}
               </View>
             )}
@@ -89,7 +93,7 @@ export default function GroceryListScreen() {
           <View style={styles.footer}>
             <Pressable style={styles.clearButton} onPress={handleClearList}>
               <Trash2 size={20} color={Colors.white} />
-              <Text style={styles.clearButtonText}>Clear List</Text>
+              <Text style={styles.clearButtonText}>Clear Checked Items</Text>
             </Pressable>
           </View>
         </>
