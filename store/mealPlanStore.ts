@@ -15,6 +15,12 @@ interface MealPlanState {
   generateMealPlan: (date: string, recipes: Recipe[]) => Promise<void>;
   isRecipeSuitable: (recipe: Recipe, dietType?: DietType, allergies?: string[], excludedIngredients?: string[]) => boolean;
   getUsedRecipeIds: () => Set<string>;
+  validateDailyMealPlan: (dailyMeals: DailyMeals, calorieGoal: number) => { 
+    isValid: boolean; 
+    issues: string[]; 
+    totalCalories: number;
+    calorieDeviation: number;
+  };
 }
 
 export const useMealPlanStore = create<MealPlanState>()(
@@ -140,7 +146,77 @@ export const useMealPlanStore = create<MealPlanState>()(
         return usedRecipeIds;
       },
       
+      validateDailyMealPlan: (dailyMeals, calorieGoal) => {
+        const issues: string[] = [];
+        let totalCalories = 0;
+        
+        // Check if all required meals are present
+        if (!dailyMeals.breakfast) {
+          issues.push("Missing breakfast");
+        } else if (dailyMeals.breakfast.calories === undefined || dailyMeals.breakfast.calories === null) {
+          issues.push("Breakfast is missing calorie data");
+        } else {
+          totalCalories += dailyMeals.breakfast.calories;
+        }
+        
+        if (!dailyMeals.lunch) {
+          issues.push("Missing lunch");
+        } else if (dailyMeals.lunch.calories === undefined || dailyMeals.lunch.calories === null) {
+          issues.push("Lunch is missing calorie data");
+        } else {
+          totalCalories += dailyMeals.lunch.calories;
+        }
+        
+        if (!dailyMeals.dinner) {
+          issues.push("Missing dinner");
+        } else if (dailyMeals.dinner.calories === undefined || dailyMeals.dinner.calories === null) {
+          issues.push("Dinner is missing calorie data");
+        } else {
+          totalCalories += dailyMeals.dinner.calories;
+        }
+        
+        // Check if snacks are present
+        if (!dailyMeals.snacks || dailyMeals.snacks.length === 0) {
+          issues.push("No snacks included");
+        } else {
+          // Check if snacks have valid calorie data
+          dailyMeals.snacks.forEach((snack, index) => {
+            if (snack.calories === undefined || snack.calories === null) {
+              issues.push(`Snack ${index + 1} is missing calorie data`);
+            } else {
+              totalCalories += snack.calories;
+            }
+          });
+          
+          // Check if we have the right number of snacks (1-2)
+          if (dailyMeals.snacks.length > 2) {
+            issues.push(`Too many snacks (${dailyMeals.snacks.length}), maximum is 2`);
+          }
+        }
+        
+        // Calculate deviation from calorie goal
+        const calorieDeviation = ((totalCalories - calorieGoal) / calorieGoal) * 100;
+        
+        // Check if total calories are within ±10% of goal
+        if (Math.abs(calorieDeviation) > 10) {
+          issues.push(`Total calories (${totalCalories}) deviate by ${calorieDeviation.toFixed(1)}% from goal (${calorieGoal})`);
+        }
+        
+        return {
+          isValid: issues.length === 0,
+          issues,
+          totalCalories,
+          calorieDeviation
+        };
+      },
+      
       isRecipeSuitable: (recipe, dietType = 'any', allergies = [], excludedIngredients = []) => {
+        // Validate recipe has required nutrition data
+        if (recipe.calories === undefined || recipe.calories === null) {
+          console.warn(`Recipe "${recipe.name}" (${recipe.id}) is missing calorie data`);
+          return false;
+        }
+        
         // Check if recipe matches diet type
         if (dietType !== 'any') {
           const dietTags: Record<DietType, string[]> = {
@@ -213,8 +289,29 @@ export const useMealPlanStore = create<MealPlanState>()(
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
         const snackCalories = Math.round(calorieGoal * mealSplit.snacks);
         
+        // Validate recipe data before using
+        const validRecipes = recipes.filter(recipe => {
+          // Check if recipe has valid calorie data
+          if (recipe.calories === undefined || recipe.calories === null) {
+            console.warn(`Recipe "${recipe.name}" (${recipe.id}) is missing calorie data and will be excluded`);
+            return false;
+          }
+          
+          // Check if recipe has valid macronutrient data
+          if (recipe.protein === undefined || recipe.carbs === undefined || recipe.fat === undefined) {
+            console.warn(`Recipe "${recipe.name}" (${recipe.id}) is missing macronutrient data`);
+            // Still include it, but log the warning
+          }
+          
+          return true;
+        });
+        
+        if (validRecipes.length < 3) {
+          throw new Error("Not enough valid recipes with calorie data available");
+        }
+        
         // Create a copy of recipes to avoid modifying the original
-        let availableRecipes = [...recipes];
+        let availableRecipes = [...validRecipes];
         
         // Get already used recipe IDs to avoid duplicates across all days
         const usedRecipeIds = get().getUsedRecipeIds();
@@ -237,8 +334,13 @@ export const useMealPlanStore = create<MealPlanState>()(
         
         // If we don't have enough suitable recipes, use all recipes
         if (availableRecipes.length < 3) {
-          availableRecipes = [...recipes];
           console.warn("Not enough recipes matching dietary preferences. Using all available recipes.");
+          availableRecipes = [...validRecipes];
+          
+          // If still not enough, throw error
+          if (availableRecipes.length < 3) {
+            throw new Error("Not enough valid recipes available after filtering");
+          }
         }
         
         // Define tags that match each meal type
@@ -339,16 +441,27 @@ export const useMealPlanStore = create<MealPlanState>()(
         const lunch = getRecipeForMeal('lunch', lunchCalories);
         const dinner = getRecipeForMeal('dinner', dinnerCalories);
         
-        // Calculate remaining calories for snacks
-        let remainingCalories = snackCalories;
-        if (breakfast) remainingCalories += (breakfastCalories - breakfast.calories);
-        if (lunch) remainingCalories += (lunchCalories - lunch.calories);
-        if (dinner) remainingCalories += (dinnerCalories - dinner.calories);
+        // Calculate actual calories from main meals
+        let actualMainMealCalories = 0;
+        if (breakfast) actualMainMealCalories += breakfast.calories;
+        if (lunch) actualMainMealCalories += lunch.calories;
+        if (dinner) actualMainMealCalories += dinner.calories;
+        
+        // Calculate target main meal calories
+        const targetMainMealCalories = breakfastCalories + lunchCalories + dinnerCalories;
+        
+        // Calculate remaining calories for snacks, adjusting for any deviation in main meals
+        const remainingCalories = calorieGoal - actualMainMealCalories;
         
         // Determine how many snacks to add based on remaining calories
-        // Aim for 100-300 calories per snack
+        // Aim for 100-300 calories per snack, with 1-2 snacks total
+        const minSnackCalories = 100;
+        const maxSnackCalories = 300;
         const avgSnackCalories = 200;
-        const targetSnackCount = Math.max(1, Math.min(3, Math.round(remainingCalories / avgSnackCalories)));
+        
+        // Calculate how many snacks we can fit
+        const maxSnacks = Math.min(2, Math.floor(remainingCalories / minSnackCalories));
+        const targetSnackCount = Math.max(1, Math.min(maxSnacks, Math.round(remainingCalories / avgSnackCalories)));
         
         // Generate snacks
         const snacks: MealItem[] = [];
@@ -360,9 +473,11 @@ export const useMealPlanStore = create<MealPlanState>()(
             // Normalize tags by converting to lowercase
             const recipeTags = recipe.tags.map(tag => tag.toLowerCase());
             
-            return Math.abs(recipe.calories - snackCaloriesPerItem) < snackCaloriesPerItem * 0.3 &&
-              (recipeTags.includes('snack') || recipeTags.includes('dessert') || 
-               recipeTags.includes('appetizer'));
+            // Look for snack-appropriate recipes within calorie range
+            return recipe.calories >= minSnackCalories && 
+                   recipe.calories <= maxSnackCalories &&
+                   (recipeTags.includes('snack') || recipeTags.includes('dessert') || 
+                    recipeTags.includes('appetizer') || recipeTags.includes('side'));
           });
           
           let selectedSnackRecipe: Recipe | undefined;
@@ -443,7 +558,18 @@ export const useMealPlanStore = create<MealPlanState>()(
           newDayPlan.snacks = snacks;
         }
         
-        // Update the meal plan
+        // Validate the generated meal plan
+        const validation = get().validateDailyMealPlan(newDayPlan, calorieGoal);
+        
+        if (!validation.isValid) {
+          console.warn(`Generated meal plan has issues: ${validation.issues.join(', ')}`);
+          console.log(`Total calories: ${validation.totalCalories} (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
+        } else {
+          console.log(`Successfully generated meal plan with ${validation.totalCalories} calories (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
+        }
+        
+        // Update the meal plan even if there are issues
+        // The user can manually adjust if needed
         set((state) => ({
           mealPlan: {
             ...state.mealPlan,
