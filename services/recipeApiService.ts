@@ -249,9 +249,6 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     tags.push(meal.strArea.toLowerCase());
   }
   
-  // Determine meal type based on tags and category
-  let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
-  
   // Dessert-related tags and categories
   const dessertTags = [
     'dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 
@@ -264,6 +261,9 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     tags.some((tag: string) => dessertTags.includes(tag)) || 
     meal.strCategory?.toLowerCase() === 'dessert' ||
     meal.strCategory?.toLowerCase() === 'sweets';
+  
+  // Determine meal type based on tags and category
+  let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
   
   // If it's a dessert, don't assign a meal type
   if (isDessert) {
