@@ -2,6 +2,20 @@ import React from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import Colors from '@/constants/colors';
 
+// Main recipe categories for filtering
+const MAIN_CATEGORIES = [
+  'breakfast',
+  'lunch',
+  'dinner',
+  'snack',
+  'vegetarian',
+  'vegan',
+  'high-protein',
+  'low-carb',
+  'quick',
+  'meal-prep'
+];
+
 type CategoryFilterProps = {
   categories: string[];
   selectedCategory: string | null;
@@ -13,6 +27,11 @@ export default function CategoryFilter({
   selectedCategory, 
   onSelectCategory 
 }: CategoryFilterProps) {
+  // Filter to only show main categories or those that have multiple recipes
+  const filteredCategories = categories.filter(
+    category => MAIN_CATEGORIES.includes(category)
+  );
+  
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -37,7 +56,7 @@ export default function CategoryFilter({
           </Text>
         </Pressable>
         
-        {categories.map((category) => (
+        {filteredCategories.map((category) => (
           <Pressable
             key={category}
             style={[
@@ -52,7 +71,7 @@ export default function CategoryFilter({
                 selectedCategory === category && styles.categoryTextActive
               ]}
             >
-              {category}
+              {category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
             </Text>
           </Pressable>
         ))}

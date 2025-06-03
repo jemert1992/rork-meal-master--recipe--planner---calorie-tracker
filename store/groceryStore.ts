@@ -12,7 +12,6 @@ interface GroceryState {
   clearCheckedItems: () => void;
   sortByCategory: () => GroceryItem[];
   setGroceryItems: (items: GroceryItem[]) => void;
-  // Add missing methods
   addGroceryItem: (item: Omit<GroceryItem, 'id'>) => void;
   clearGroceryList: () => void;
 }
@@ -62,7 +61,7 @@ export const useGroceryStore = create<GroceryState>()(
         set({ groceryItems: items });
       },
       
-      // Added missing methods
+      // Implementation for the missing methods
       addGroceryItem: (item) => {
         const newItem = {
           ...item,

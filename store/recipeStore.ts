@@ -3,8 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recipe } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
-import { loadInitialRecipes, searchMealsByName, getMealById } from '@/services/mealDbService';
-import { loadInitialRecipesFromAllSources, searchRecipesFromAllSources } from '@/services/recipeApiService';
+import { loadInitialRecipesFromAllSources, searchRecipesFromAllSources, getRecipeByIdFromSource } from '@/services/recipeApiService';
 
 interface RecipeState {
   recipes: Recipe[];
@@ -36,7 +35,7 @@ export const useRecipeStore = create<RecipeState>()(
       hasLoadedFromApi: false,
       apiSources: {
         useMealDB: true,
-        useSpoonacular: true, // Enable Spoonacular by default
+        useSpoonacular: false, // Disabled Spoonacular by default until implemented
         useEdamam: false,
       },
       
@@ -86,13 +85,12 @@ export const useRecipeStore = create<RecipeState>()(
       },
       
       loadRecipesFromApi: async () => {
-        // Always load from API to get fresh recipes
         set({ isLoading: true });
         
         try {
           const { apiSources } = get();
           
-          // If no API sources are enabled, default to MealDB and Spoonacular
+          // If no API sources are enabled, default to MealDB
           const useDefaultSource = !Object.values(apiSources).some(Boolean);
           
           if (useDefaultSource) {
@@ -100,14 +98,12 @@ export const useRecipeStore = create<RecipeState>()(
               apiSources: {
                 ...state.apiSources,
                 useMealDB: true,
-                useSpoonacular: true,
               }
             }));
             
-            // Increased count to 200 to get more recipes
-            const apiRecipes = await loadInitialRecipesFromAllSources(200, {
+            const apiRecipes = await loadInitialRecipesFromAllSources(50, {
               useMealDB: true,
-              useSpoonacular: true,
+              useSpoonacular: false,
               useEdamam: false
             });
             
@@ -118,8 +114,7 @@ export const useRecipeStore = create<RecipeState>()(
               }));
             }
           } else {
-            // Increased count to 200 to get more recipes
-            const apiRecipes = await loadInitialRecipesFromAllSources(200, apiSources);
+            const apiRecipes = await loadInitialRecipesFromAllSources(50, apiSources);
             
             if (apiRecipes.length > 0) {
               set((state) => ({
@@ -141,19 +136,17 @@ export const useRecipeStore = create<RecipeState>()(
         try {
           const { apiSources } = get();
           
-          // If no API sources are enabled, default to MealDB and Spoonacular
+          // If no API sources are enabled, default to MealDB
           const useDefaultSource = !Object.values(apiSources).some(Boolean);
           
           if (useDefaultSource) {
-            // Search from both MealDB and Spoonacular
-            return await searchRecipesFromAllSources(query, 50, {
+            return await searchRecipesFromAllSources(query, 20, {
               useMealDB: true,
-              useSpoonacular: true,
+              useSpoonacular: false,
               useEdamam: false
             });
           } else {
-            // Increased count to 50 to get more search results
-            return await searchRecipesFromAllSources(query, 50, apiSources);
+            return await searchRecipesFromAllSources(query, 20, apiSources);
           }
         } catch (error) {
           console.error('Error searching recipes:', error);
@@ -166,38 +159,20 @@ export const useRecipeStore = create<RecipeState>()(
         const existingRecipe = get().recipes.find(r => r.id === id);
         if (existingRecipe) return existingRecipe;
         
-        // If not, fetch it from the API
-        // Check if it's a MealDB ID (doesn't have a prefix)
-        if (!id.includes('_')) {
-          try {
-            const recipe = await getMealById(id);
-            
-            // If found, add it to our store
-            if (recipe) {
-              get().addRecipe(recipe);
-            }
-            
-            return recipe;
-          } catch (error) {
-            console.error('Error getting recipe by ID:', error);
-            return null;
+        try {
+          // If not, fetch it from the appropriate API
+          const recipe = await getRecipeByIdFromSource(id);
+          
+          // If found, add it to our store
+          if (recipe) {
+            get().addRecipe(recipe);
           }
+          
+          return recipe;
+        } catch (error) {
+          console.error('Error getting recipe by ID:', error);
+          return null;
         }
-        
-        // For Spoonacular IDs
-        if (id.startsWith('spoonacular_')) {
-          const spoonacularId = id.replace('spoonacular_', '');
-          // We would need to implement a function to fetch a recipe by ID from Spoonacular
-          console.warn(`Fetching recipe details for Spoonacular ID ${spoonacularId} not implemented yet`);
-        }
-        
-        // For Edamam IDs
-        if (id.startsWith('edamam_')) {
-          // We would need to implement a function to fetch a recipe by ID from Edamam
-          console.warn(`Fetching recipe details for Edamam ID ${id} not implemented yet`);
-        }
-        
-        return null;
       },
     }),
     {

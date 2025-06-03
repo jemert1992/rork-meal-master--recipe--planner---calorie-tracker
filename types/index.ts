@@ -1,74 +1,85 @@
-// Define the DietType type if it doesn't exist
-export type DietType = 'any' | 'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb';
+// User profile types
+export type DietType = 'any' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free';
 
-// Add other types as needed
 export interface UserProfile {
   name?: string;
   dietType?: DietType;
-  calorieGoal?: number;
   allergies?: string[];
-  // Add other profile fields as needed
+  calorieGoal?: number;
+  proteinGoal?: number;
+  carbGoal?: number;
+  fatGoal?: number;
+  waterGoal?: number;
+  height?: number;
+  weight?: number;
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
 }
 
+// Recipe types
 export interface Recipe {
   id: string;
-  title: string;
-  image: string;
-  readyInMinutes?: number;
+  name: string;
+  image?: string;
+  prepTime?: string;
+  cookTime?: string;
   servings?: number;
-  sourceUrl?: string;
-  summary?: string;
-  instructions?: string;
-  extendedIngredients?: Ingredient[];
-  // Add other recipe fields as needed
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  ingredients: string[];
+  instructions: string[];
+  tags: string[];
+  source?: string;
 }
 
-export interface Ingredient {
-  id: number;
+// Meal plan types
+export interface MealItem {
+  recipeId?: string;
   name: string;
-  amount: number;
-  unit: string;
-  // Add other ingredient fields as needed
+  calories?: number;
+}
+
+export interface DayMealPlan {
+  breakfast?: MealItem;
+  lunch?: MealItem;
+  dinner?: MealItem;
+  snacks?: MealItem[];
 }
 
 export interface MealPlan {
-  date: string;
-  meals: Meal[];
-  // Add other meal plan fields as needed
+  [date: string]: DayMealPlan;
 }
 
-export interface Meal {
-  id: string;
-  type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  recipe: Recipe;
-  // Add other meal fields as needed
+// Food log types
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface FoodLogItem {
+  name: string;
+  calories: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  time: string;
+  mealType: MealType;
+}
+
+export interface DayFoodLog {
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  meals: FoodLogItem[];
 }
 
 export interface FoodLog {
-  id: string;
-  date: string;
-  name: string;
-  calories: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  // Add other food log fields as needed
+  [date: string]: DayFoodLog;
 }
 
+// Grocery list types
 export interface GroceryItem {
   id: string;
   name: string;
-  quantity: number;
-  unit: string;
+  category: string;
   checked: boolean;
-  // Add other grocery item fields as needed
-}
-
-export interface NutritionGoals {
-  calories: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  // Add other nutrition goal fields as needed
 }
