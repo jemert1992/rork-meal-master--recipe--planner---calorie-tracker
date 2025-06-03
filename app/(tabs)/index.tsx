@@ -9,9 +9,11 @@ import CategoryFilter from '@/components/CategoryFilter';
 import WeeklyMealPlanner from '@/components/WeeklyMealPlanner';
 import { generateGroceryList } from '@/utils/generateGroceryList';
 import { useMealPlanStore } from '@/store/mealPlanStore';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 
 export default function RecipesScreen() {
+  const router = useRouter();
   const { 
     recipes, 
     favoriteRecipeIds, 
@@ -115,8 +117,7 @@ export default function RecipesScreen() {
           text: "View List", 
           onPress: () => {
             // Navigate to the grocery list tab
-            // This is a simple way to navigate between tabs
-            // A more robust solution would use a proper navigation method
+            router.push('/grocery-list');
           }
         },
         { text: "OK" }

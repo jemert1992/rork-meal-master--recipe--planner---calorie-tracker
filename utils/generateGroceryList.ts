@@ -153,7 +153,7 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
     ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
       const meal = day[mealType as keyof typeof day];
       
-      // Skip if meal is undefined or is an array (which shouldn't happen for main meals)
+      // Skip if meal is undefined or is an array
       if (!meal || Array.isArray(meal)) return;
       
       // Skip if no recipeId
