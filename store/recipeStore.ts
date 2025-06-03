@@ -104,7 +104,8 @@ export const useRecipeStore = create<RecipeState>()(
               }
             }));
             
-            const apiRecipes = await loadInitialRecipesFromAllSources(100, {
+            // Increased count to 200 to get more recipes
+            const apiRecipes = await loadInitialRecipesFromAllSources(200, {
               useMealDB: true,
               useSpoonacular: true,
               useEdamam: false
@@ -117,8 +118,8 @@ export const useRecipeStore = create<RecipeState>()(
               }));
             }
           } else {
-            // Increased count to 100 to get more recipes
-            const apiRecipes = await loadInitialRecipesFromAllSources(100, apiSources);
+            // Increased count to 200 to get more recipes
+            const apiRecipes = await loadInitialRecipesFromAllSources(200, apiSources);
             
             if (apiRecipes.length > 0) {
               set((state) => ({
@@ -145,14 +146,14 @@ export const useRecipeStore = create<RecipeState>()(
           
           if (useDefaultSource) {
             // Search from both MealDB and Spoonacular
-            return await searchRecipesFromAllSources(query, 30, {
+            return await searchRecipesFromAllSources(query, 50, {
               useMealDB: true,
               useSpoonacular: true,
               useEdamam: false
             });
           } else {
-            // Increased count to 30 to get more search results
-            return await searchRecipesFromAllSources(query, 30, apiSources);
+            // Increased count to 50 to get more search results
+            return await searchRecipesFromAllSources(query, 50, apiSources);
           }
         } catch (error) {
           console.error('Error searching recipes:', error);

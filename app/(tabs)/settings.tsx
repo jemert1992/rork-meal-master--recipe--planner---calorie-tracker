@@ -1,160 +1,132 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, Switch, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RefreshCw, Info, HelpCircle, ExternalLink } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
-import { useMealPlanStore } from '@/store/mealPlanStore';
-import { useUserStore } from '@/store/userStore';
-import { Stack } from 'expo-router';
-import { Settings, RefreshCw, Database, AlertCircle } from 'lucide-react-native';
+import Colors from '@/constants/colors';
 
 export default function SettingsScreen() {
-  const { apiSources, setApiSource, loadRecipesFromApi, isLoading } = useRecipeStore();
+  const { 
+    apiSources, 
+    setApiSource, 
+    loadRecipesFromApi, 
+    isLoading,
+    recipes
+  } = useRecipeStore();
+  
   const [refreshing, setRefreshing] = useState(false);
-  const userProfile = useUserStore((state) => state.profile);
+  
+  const handleToggleSource = (source: string, value: boolean) => {
+    setApiSource(source, value);
+  };
   
   const handleRefreshRecipes = async () => {
     setRefreshing(true);
     try {
       await loadRecipesFromApi();
-      Alert.alert('Success', 'Recipe database refreshed successfully!');
+      Alert.alert('Success', `Loaded ${recipes.length} recipes successfully!`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to refresh recipes. Please try again later.');
-      console.error(error);
+      Alert.alert('Error', 'Failed to refresh recipes. Please try again.');
     } finally {
       setRefreshing(false);
     }
   };
   
-  const handleToggleApiSource = (source: string, value: boolean) => {
-    // For Spoonacular and Edamam, show a message about API keys
-    if ((source === 'useSpoonacular' || source === 'useEdamam') && value) {
-      Alert.alert(
-        'API Key Required',
-        `To use the ${source === 'useSpoonacular' ? 'Spoonacular' : 'Edamam'} API, you need to add your API key in the recipeApiService.ts file.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Enable Anyway', 
-            onPress: () => setApiSource(source, value) 
-          }
-        ]
-      );
-    } else {
-      setApiSource(source, value);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Stack.Screen 
-        options={{
-          title: 'Settings',
-          headerRight: () => <Settings size={24} color="#007AFF" />,
-        }}
-      />
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.subtitle}>Configure app preferences</Text>
+      </View>
       
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipe Data Sources</Text>
-          <Text style={styles.sectionDescription}>
+          <Text style={styles.sectionSubtitle}>
             Choose which recipe APIs to use for searching and generating meal plans.
           </Text>
           
           <View style={styles.settingItem}>
-            <View style={styles.settingTextContainer}>
+            <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>TheMealDB</Text>
-              <Text style={styles.settingDescription}>Free recipe database with images and instructions</Text>
+              <Text style={styles.settingDescription}>
+                Free recipe database with images and instructions
+              </Text>
             </View>
             <Switch
               value={apiSources.useMealDB}
-              onValueChange={(value) => handleToggleApiSource('useMealDB', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={apiSources.useMealDB ? '#007AFF' : '#f4f3f4'}
+              onValueChange={(value) => handleToggleSource('useMealDB', value)}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
             />
           </View>
           
           <View style={styles.settingItem}>
-            <View style={styles.settingTextContainer}>
+            <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Spoonacular</Text>
-              <Text style={styles.settingDescription}>Comprehensive recipe API with nutrition data (requires API key)</Text>
+              <Text style={styles.settingDescription}>
+                Comprehensive recipe API with nutrition data
+              </Text>
             </View>
             <Switch
               value={apiSources.useSpoonacular}
-              onValueChange={(value) => handleToggleApiSource('useSpoonacular', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={apiSources.useSpoonacular ? '#007AFF' : '#f4f3f4'}
+              onValueChange={(value) => handleToggleSource('useSpoonacular', value)}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
             />
           </View>
           
           <View style={styles.settingItem}>
-            <View style={styles.settingTextContainer}>
+            <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Edamam</Text>
-              <Text style={styles.settingDescription}>Recipe API with detailed nutrition analysis (requires API key)</Text>
+              <Text style={styles.settingDescription}>
+                Recipe API with detailed nutrition analysis
+              </Text>
             </View>
             <Switch
               value={apiSources.useEdamam}
-              onValueChange={(value) => handleToggleApiSource('useEdamam', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={apiSources.useEdamam ? '#007AFF' : '#f4f3f4'}
+              onValueChange={(value) => handleToggleSource('useEdamam', value)}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
             />
           </View>
           
-          <View style={styles.refreshContainer}>
-            <Text style={styles.refreshText}>Refresh recipe database</Text>
-            {refreshing || isLoading ? (
-              <ActivityIndicator size="small" color="#007AFF" />
-            ) : (
-              <RefreshCw 
-                size={24} 
-                color="#007AFF" 
-                onPress={handleRefreshRecipes}
-                style={styles.refreshIcon}
-              />
-            )}
-          </View>
+          <Pressable 
+            style={styles.refreshButton} 
+            onPress={handleRefreshRecipes}
+            disabled={isLoading || refreshing}
+          >
+            <RefreshCw size={16} color={Colors.white} />
+            <Text style={styles.refreshButtonText}>
+              {refreshing ? 'Refreshing...' : 'Refresh Recipe Database'}
+            </Text>
+          </Pressable>
+          
+          <Text style={styles.recipeCount}>
+            {recipes.length} recipes available
+          </Text>
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>User Profile</Text>
+          <Text style={styles.sectionTitle}>About</Text>
           
-          <View style={styles.profileInfoItem}>
-            <Text style={styles.profileLabel}>Diet Type:</Text>
-            <Text style={styles.profileValue}>{userProfile.dietType || 'Not set'}</Text>
+          <View style={styles.aboutItem}>
+            <Info size={20} color={Colors.primary} style={styles.aboutIcon} />
+            <View style={styles.aboutContent}>
+              <Text style={styles.aboutTitle}>App Version</Text>
+              <Text style={styles.aboutDescription}>1.0.0</Text>
+            </View>
           </View>
           
-          <View style={styles.profileInfoItem}>
-            <Text style={styles.profileLabel}>Calorie Goal:</Text>
-            <Text style={styles.profileValue}>{userProfile.calorieGoal || 'Not set'} kcal</Text>
-          </View>
-          
-          <View style={styles.profileInfoItem}>
-            <Text style={styles.profileLabel}>Allergies:</Text>
-            <Text style={styles.profileValue}>
-              {userProfile.allergies && userProfile.allergies.length > 0 
-                ? userProfile.allergies.join(', ') 
-                : 'None'}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About Recipe APIs</Text>
-          
-          <View style={styles.infoBox}>
-            <AlertCircle size={20} color="#007AFF" style={styles.infoIcon} />
-            <Text style={styles.infoText}>
-              To use Spoonacular or Edamam APIs, you need to register for an API key on their websites:
-            </Text>
-          </View>
-          
-          <Text style={styles.apiInfo}>• Spoonacular: spoonacular.com/food-api</Text>
-          <Text style={styles.apiInfo}>• Edamam: developer.edamam.com/edamam-recipe-api</Text>
-          
-          <View style={styles.infoBox}>
-            <Database size={20} color="#007AFF" style={styles.infoIcon} />
-            <Text style={styles.infoText}>
-              After getting your API keys, add them to the recipeApiService.ts file.
-            </Text>
+          <View style={styles.aboutItem}>
+            <HelpCircle size={20} color={Colors.primary} style={styles.aboutIcon} />
+            <View style={styles.aboutContent}>
+              <Text style={styles.aboutTitle}>Help & Support</Text>
+              <Text style={styles.aboutDescription}>
+                Need help with the app? Contact our support team.
+              </Text>
+            </View>
+            <ExternalLink size={16} color={Colors.textLight} />
           </View>
         </View>
       </ScrollView>
@@ -165,32 +137,48 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: Colors.background,
   },
-  scrollView: {
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: Colors.textLight,
+    marginBottom: 16,
+  },
+  content: {
     flex: 1,
+    paddingHorizontal: 20,
   },
   section: {
-    backgroundColor: 'white',
-    marginVertical: 10,
-    marginHorizontal: 16,
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginBottom: 20,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: Colors.text,
     marginBottom: 8,
-    color: '#333',
   },
-  sectionDescription: {
+  sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.textLight,
     marginBottom: 16,
   },
   settingItem: {
@@ -199,75 +187,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: Colors.border,
   },
-  settingTextContainer: {
+  settingInfo: {
     flex: 1,
     marginRight: 16,
   },
   settingTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: Colors.text,
+    marginBottom: 4,
   },
   settingDescription: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 14,
+    color: Colors.textLight,
   },
-  refreshContainer: {
+  refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 16,
   },
-  refreshText: {
+  refreshButtonText: {
+    color: Colors.white,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  recipeCount: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: Colors.textLight,
+    marginTop: 8,
+  },
+  aboutItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  aboutIcon: {
+    marginRight: 12,
+  },
+  aboutContent: {
+    flex: 1,
+  },
+  aboutTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: Colors.text,
+    marginBottom: 4,
   },
-  refreshIcon: {
-    padding: 4,
-  },
-  profileInfoItem: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  profileLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
-    width: 100,
-  },
-  profileValue: {
-    fontSize: 15,
-    color: '#666',
-    flex: 1,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: '#F0F7FF',
-    padding: 12,
-    borderRadius: 8,
-    marginVertical: 8,
-    alignItems: 'flex-start',
-  },
-  infoIcon: {
-    marginRight: 8,
-    marginTop: 2,
-  },
-  infoText: {
+  aboutDescription: {
     fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  apiInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 28,
-    marginVertical: 4,
+    color: Colors.textLight,
   },
 });
