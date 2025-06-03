@@ -261,7 +261,7 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   
   // Check if it's a dessert
   const isDessert = 
-    tags.some(tag => dessertTags.includes(tag)) || 
+    tags.some((tag: string) => dessertTags.includes(tag)) || 
     meal.strCategory?.toLowerCase() === 'dessert' ||
     meal.strCategory?.toLowerCase() === 'sweets';
   
@@ -270,16 +270,16 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     mealType = undefined;
   } else {
     // Check for breakfast-related tags
-    if (tags.some(tag => ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg', 'toast', 'smoothie', 'yogurt'].includes(tag)) || 
+    if (tags.some((tag: string) => ['breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 'waffle', 'egg', 'toast', 'smoothie', 'yogurt'].includes(tag)) || 
         meal.strCategory?.toLowerCase() === 'breakfast') {
       mealType = 'breakfast';
     }
     // Check for lunch-related tags
-    else if (tags.some(tag => ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 'taco', 'quesadilla', 'burger'].includes(tag))) {
+    else if (tags.some((tag: string) => ['lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 'taco', 'quesadilla', 'burger'].includes(tag))) {
       mealType = 'lunch';
     }
     // Check for dinner-related tags
-    else if (tags.some(tag => ['dinner', 'supper', 'main course', 'entree', 'roast', 'stew', 'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole'].includes(tag))) {
+    else if (tags.some((tag: string) => ['dinner', 'supper', 'main course', 'entree', 'roast', 'stew', 'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole'].includes(tag))) {
       mealType = 'dinner';
     }
     // Default to dinner for most recipes if no specific meal type is identified
