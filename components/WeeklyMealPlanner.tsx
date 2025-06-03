@@ -103,7 +103,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             {['breakfast', 'lunch', 'dinner'].map((mealType) => {
               const dayPlan = mealPlan[day.dateString] || {};
               const meal = dayPlan[mealType as keyof typeof dayPlan];
-              const { name, image } = getRecipeDetails(meal?.recipeId);
+              
+              // Check if meal is defined and is not an array before accessing recipeId
+              const recipeId = meal && !Array.isArray(meal) ? meal.recipeId : undefined;
+              const { name, image } = getRecipeDetails(recipeId);
 
               return (
                 <MealSlot

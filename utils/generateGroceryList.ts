@@ -152,95 +152,101 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
     // Process main meals (breakfast, lunch, dinner)
     ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
       const meal = day[mealType as keyof typeof day];
-      if (meal?.recipeId) {
-        const recipe = recipes.find(r => r.id === meal.recipeId);
-        if (recipe) {
-          // Process each ingredient in the recipe
-          recipe.ingredients.forEach(ingredientStr => {
-            const { quantity, unit, name } = parseIngredient(ingredientStr);
-            const normalizedName = normalizeIngredientName(name);
-            
-            // Determine category based on ingredient name
-            let category = 'Other';
-            
-            if (/\b(apple|banana|berry|berries|orange|fruit|grape|melon|pear|peach|plum|mango)\b/i.test(name)) {
-              category = 'Fruits';
-            } else if (/\b(vegetable|carrot|onion|potato|tomato|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|garlic|ginger)\b/i.test(name)) {
-              category = 'Vegetables';
-            } else if (/\b(beef|chicken|pork|turkey|lamb|meat|steak|ground|sausage|bacon)\b/i.test(name)) {
-              category = 'Meat';
-            } else if (/\b(fish|salmon|tuna|shrimp|seafood|cod|tilapia)\b/i.test(name)) {
-              category = 'Seafood';
-            } else if (/\b(milk|cheese|yogurt|cream|butter|dairy)\b/i.test(name)) {
-              category = 'Dairy';
-            } else if (/\b(bread|bagel|roll|bun|tortilla|pita|naan|bakery)\b/i.test(name)) {
-              category = 'Bakery';
-            } else if (/\b(rice|pasta|noodle|grain|quinoa|couscous|cereal|oat|flour)\b/i.test(name)) {
-              category = 'Grains';
-            } else if (/\b(bean|lentil|chickpea|legume|tofu|tempeh)\b/i.test(name)) {
-              category = 'Legumes';
-            } else if (/\b(oil|vinegar|sauce|condiment|ketchup|mustard|mayo|dressing)\b/i.test(name)) {
-              category = 'Condiments';
-            } else if (/\b(spice|herb|salt|pepper|oregano|basil|thyme|cumin|paprika|cinnamon)\b/i.test(name)) {
-              category = 'Spices';
-            } else if (/\b(sugar|honey|syrup|sweetener)\b/i.test(name)) {
-              category = 'Baking';
-            } else if (/\b(nut|seed|almond|walnut|peanut|cashew)\b/i.test(name)) {
-              category = 'Nuts & Seeds';
-            } else if (/\b(can|canned|jar|preserved)\b/i.test(name)) {
-              category = 'Canned Goods';
-            } else if (/\b(frozen)\b/i.test(name)) {
-              category = 'Frozen';
-            } else if (/\b(snack|chip|cracker|pretzel)\b/i.test(name)) {
-              category = 'Snacks';
-            } else if (/\b(juice|soda|beverage|drink|water|coffee|tea)\b/i.test(name)) {
-              category = 'Beverages';
-            }
-            
-            // Add or update the ingredient in our map
-            if (ingredientMap[normalizedName]) {
-              // If the ingredient already exists, add to its quantity
-              ingredientMap[normalizedName].quantity += quantity;
-            } else {
-              // Otherwise, add it as a new ingredient
-              ingredientMap[normalizedName] = {
-                quantity,
-                unit,
-                originalName: name,
-                category
-              };
-            }
-          });
-        }
+      
+      // Skip if meal is undefined or is an array (which shouldn't happen for main meals)
+      if (!meal || Array.isArray(meal)) return;
+      
+      // Skip if no recipeId
+      if (!meal.recipeId) return;
+      
+      const recipe = recipes.find(r => r.id === meal.recipeId);
+      if (recipe) {
+        // Process each ingredient in the recipe
+        recipe.ingredients.forEach(ingredientStr => {
+          const { quantity, unit, name } = parseIngredient(ingredientStr);
+          const normalizedName = normalizeIngredientName(name);
+          
+          // Determine category based on ingredient name
+          let category = 'Other';
+          
+          if (/\b(apple|banana|berry|berries|orange|fruit|grape|melon|pear|peach|plum|mango)\b/i.test(name)) {
+            category = 'Fruits';
+          } else if (/\b(vegetable|carrot|onion|potato|tomato|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|garlic|ginger)\b/i.test(name)) {
+            category = 'Vegetables';
+          } else if (/\b(beef|chicken|pork|turkey|lamb|meat|steak|ground|sausage|bacon)\b/i.test(name)) {
+            category = 'Meat';
+          } else if (/\b(fish|salmon|tuna|shrimp|seafood|cod|tilapia)\b/i.test(name)) {
+            category = 'Seafood';
+          } else if (/\b(milk|cheese|yogurt|cream|butter|dairy)\b/i.test(name)) {
+            category = 'Dairy';
+          } else if (/\b(bread|bagel|roll|bun|tortilla|pita|naan|bakery)\b/i.test(name)) {
+            category = 'Bakery';
+          } else if (/\b(rice|pasta|noodle|grain|quinoa|couscous|cereal|oat|flour)\b/i.test(name)) {
+            category = 'Grains';
+          } else if (/\b(bean|lentil|chickpea|legume|tofu|tempeh)\b/i.test(name)) {
+            category = 'Legumes';
+          } else if (/\b(oil|vinegar|sauce|condiment|ketchup|mustard|mayo|dressing)\b/i.test(name)) {
+            category = 'Condiments';
+          } else if (/\b(spice|herb|salt|pepper|oregano|basil|thyme|cumin|paprika|cinnamon)\b/i.test(name)) {
+            category = 'Spices';
+          } else if (/\b(sugar|honey|syrup|sweetener)\b/i.test(name)) {
+            category = 'Baking';
+          } else if (/\b(nut|seed|almond|walnut|peanut|cashew)\b/i.test(name)) {
+            category = 'Nuts & Seeds';
+          } else if (/\b(can|canned|jar|preserved)\b/i.test(name)) {
+            category = 'Canned Goods';
+          } else if (/\b(frozen)\b/i.test(name)) {
+            category = 'Frozen';
+          } else if (/\b(snack|chip|cracker|pretzel)\b/i.test(name)) {
+            category = 'Snacks';
+          } else if (/\b(juice|soda|beverage|drink|water|coffee|tea)\b/i.test(name)) {
+            category = 'Beverages';
+          }
+          
+          // Add or update the ingredient in our map
+          if (ingredientMap[normalizedName]) {
+            // If the ingredient already exists, add to its quantity
+            ingredientMap[normalizedName].quantity += quantity;
+          } else {
+            // Otherwise, add it as a new ingredient
+            ingredientMap[normalizedName] = {
+              quantity,
+              unit,
+              originalName: name,
+              category
+            };
+          }
+        });
       }
     });
     
     // Process snacks
-    if (day.snacks && day.snacks.length > 0) {
+    if (day.snacks && Array.isArray(day.snacks) && day.snacks.length > 0) {
       day.snacks.forEach(snack => {
-        if (snack.recipeId) {
-          const recipe = recipes.find(r => r.id === snack.recipeId);
-          if (recipe) {
-            recipe.ingredients.forEach(ingredientStr => {
-              const { quantity, unit, name } = parseIngredient(ingredientStr);
-              const normalizedName = normalizeIngredientName(name);
-              
-              // Determine category (same logic as above)
-              let category = 'Other';
-              // ... (same category determination logic)
-              
-              if (ingredientMap[normalizedName]) {
-                ingredientMap[normalizedName].quantity += quantity;
-              } else {
-                ingredientMap[normalizedName] = {
-                  quantity,
-                  unit,
-                  originalName: name,
-                  category: 'Other' // Default category
-                };
-              }
-            });
-          }
+        // Skip if no recipeId
+        if (!snack || !snack.recipeId) return;
+        
+        const recipe = recipes.find(r => r.id === snack.recipeId);
+        if (recipe) {
+          recipe.ingredients.forEach(ingredientStr => {
+            const { quantity, unit, name } = parseIngredient(ingredientStr);
+            const normalizedName = normalizeIngredientName(name);
+            
+            // Determine category (same logic as above)
+            let category = 'Other';
+            // ... (same category determination logic)
+            
+            if (ingredientMap[normalizedName]) {
+              ingredientMap[normalizedName].quantity += quantity;
+            } else {
+              ingredientMap[normalizedName] = {
+                quantity,
+                unit,
+                originalName: name,
+                category: 'Other' // Default category
+              };
+            }
+          });
         }
       });
     }
