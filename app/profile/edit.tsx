@@ -1,29 +1,21 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, Switch, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
-import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 import { DietType } from '@/types';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useUserStore();
-  const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Local state for form fields
   const [name, setName] = useState(profile.name);
   const [dietType, setDietType] = useState<DietType | undefined>(profile.dietType);
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
-  
-  // Local state for API toggles
-  const [useMealDB, setUseMealDB] = useState(apiSources.useMealDB);
-  const [useSpoonacular, setUseSpoonacular] = useState(apiSources.useSpoonacular);
-  const [useEdamam, setUseEdamam] = useState(apiSources.useEdamam);
   
   // Custom handler for diet type input
   const handleDietTypeChange = (text: string) => {
@@ -51,26 +43,7 @@ export default function EditProfileScreen() {
       allergies: allergies.split(',').map((item: string) => item.trim()).filter((item: string) => item),
     });
     
-    // Update API sources
-    setApiSource('useMealDB', useMealDB);
-    setApiSource('useSpoonacular', useSpoonacular);
-    setApiSource('useEdamam', useEdamam);
-    
     router.back();
-  };
-  
-  const handleRefreshRecipes = async () => {
-    setIsRefreshing(true);
-    
-    // Update API sources first
-    setApiSource('useMealDB', useMealDB);
-    setApiSource('useSpoonacular', useSpoonacular);
-    setApiSource('useEdamam', useEdamam);
-    
-    // Then load recipes
-    await loadRecipesFromApi();
-    
-    setIsRefreshing(false);
   };
   
   return (
@@ -134,78 +107,6 @@ export default function EditProfileScreen() {
             <Text style={styles.helperText}>Separate with commas</Text>
           </View>
         </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recipe Data Sources</Text>
-          <Text style={styles.sectionSubtitle}>Choose which recipe APIs to use for searching and generating meal plans.</Text>
-          
-          <View style={styles.toggleGroup}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>TheMealDB</Text>
-              <Text style={styles.toggleDescription}>Free recipe database with images and instructions</Text>
-            </View>
-            <Switch
-              value={useMealDB}
-              onValueChange={setUseMealDB}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={useMealDB ? Colors.primary : Colors.white}
-            />
-          </View>
-          
-          <View style={styles.toggleGroup}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Spoonacular</Text>
-              <Text style={styles.toggleDescription}>Comprehensive recipe API with nutrition data</Text>
-            </View>
-            <Switch
-              value={useSpoonacular}
-              onValueChange={setUseSpoonacular}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={useSpoonacular ? Colors.primary : Colors.white}
-            />
-          </View>
-          
-          <View style={styles.toggleGroup}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Edamam</Text>
-              <Text style={styles.toggleDescription}>Recipe API with detailed nutrition analysis (requires API key)</Text>
-            </View>
-            <Switch
-              value={useEdamam}
-              onValueChange={setUseEdamam}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={useEdamam ? Colors.primary : Colors.white}
-            />
-          </View>
-          
-          <Pressable 
-            style={[styles.refreshButton, isRefreshing && styles.refreshingButton]} 
-            onPress={handleRefreshRecipes}
-            disabled={isRefreshing}
-          >
-            <RefreshCw size={18} color={Colors.white} style={isRefreshing && styles.rotating} />
-            <Text style={styles.refreshButtonText}>
-              {isRefreshing ? 'Refreshing Recipes...' : 'Refresh Recipe Database'}
-            </Text>
-          </Pressable>
-          
-          <Text style={styles.helperText}>
-            This will fetch new recipes from the selected sources. It may take a moment.
-          </Text>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About Recipe APIs</Text>
-          <Text style={styles.aboutText}>
-            TheMealDB is a free, community-maintained database of recipes from around the world.
-          </Text>
-          <Text style={styles.aboutText}>
-            Spoonacular provides detailed recipe information including nutrition facts, ingredients, and cooking instructions.
-          </Text>
-          <Text style={styles.aboutText}>
-            Edamam offers comprehensive nutrition analysis and diet-specific recipe recommendations.
-          </Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -265,11 +166,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 8,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: Colors.textLight,
-    marginBottom: 16,
-  },
   inputGroup: {
     marginBottom: 16,
   },
@@ -293,53 +189,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textLight,
     marginTop: 4,
-  },
-  toggleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  toggleInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  toggleDescription: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 16,
-  },
-  refreshingButton: {
-    backgroundColor: Colors.primaryLight,
-  },
-  refreshButtonText: {
-    color: Colors.white,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  rotating: {
-    // We would add animation here in a real app
-  },
-  aboutText: {
-    fontSize: 14,
-    color: Colors.textLight,
-    marginBottom: 8,
-    lineHeight: 20,
   },
 });

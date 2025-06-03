@@ -1,20 +1,14 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable, ScrollView, Switch } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Edit, RefreshCw, Info } from 'lucide-react-native';
+import { User, Edit } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
-import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
-  const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
-  
-  const handleRefreshRecipes = async () => {
-    await loadRecipesFromApi();
-  };
   
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -61,66 +55,6 @@ export default function ProfileScreen() {
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recipe Data Sources</Text>
-          <Text style={styles.sectionSubtitle}>Choose which recipe APIs to use</Text>
-          
-          <View style={styles.toggleGroup}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>TheMealDB</Text>
-              <Text style={styles.toggleDescription}>Free recipe database</Text>
-            </View>
-            <Switch
-              value={apiSources.useMealDB}
-              onValueChange={(value) => setApiSource('useMealDB', value)}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={apiSources.useMealDB ? Colors.primary : Colors.white}
-            />
-          </View>
-          
-          <View style={styles.toggleGroup}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Spoonacular</Text>
-              <Text style={styles.toggleDescription}>Comprehensive recipe API</Text>
-            </View>
-            <Switch
-              value={apiSources.useSpoonacular}
-              onValueChange={(value) => setApiSource('useSpoonacular', value)}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={apiSources.useSpoonacular ? Colors.primary : Colors.white}
-            />
-          </View>
-          
-          <View style={styles.toggleGroup}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Edamam</Text>
-              <Text style={styles.toggleDescription}>Nutrition-focused API</Text>
-            </View>
-            <Switch
-              value={apiSources.useEdamam}
-              onValueChange={(value) => setApiSource('useEdamam', value)}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={apiSources.useEdamam ? Colors.primary : Colors.white}
-            />
-          </View>
-          
-          <Pressable 
-            style={styles.refreshButton} 
-            onPress={handleRefreshRecipes}
-          >
-            <RefreshCw size={16} color={Colors.white} />
-            <Text style={styles.refreshButtonText}>Refresh Recipe Database</Text>
-          </Pressable>
-        </View>
-        
-        <View style={styles.section}>
-          <View style={styles.infoBox}>
-            <Info size={20} color={Colors.primary} style={styles.infoIcon} />
-            <Text style={styles.infoText}>
-              This app uses TheMealDB and Spoonacular APIs to provide recipe data. 
-              You can enable or disable each source above.
-            </Text>
-          </View>
-          
           <Text style={styles.versionText}>App Version 1.0.0</Text>
         </View>
       </ScrollView>
@@ -238,67 +172,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: Colors.textLight,
-    marginBottom: 16,
-  },
-  toggleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  toggleInfo: {
-    flex: 1,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  toggleDescription: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  refreshButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 16,
-  },
-  refreshButtonText: {
-    color: Colors.white,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  infoIcon: {
-    marginRight: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.text,
-    lineHeight: 20,
   },
   versionText: {
     textAlign: 'center',
