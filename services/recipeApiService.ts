@@ -331,7 +331,7 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   }
   
   // Ensure mealType is one of the valid types
-  if (mealType && !isValidMealType(mealType)) {
+  if (!isValidMealType(mealType)) {
     mealType = undefined;
   }
   
