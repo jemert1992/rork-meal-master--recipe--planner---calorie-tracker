@@ -338,10 +338,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     }
   }
   
-  // Ensure mealType is one of the valid types
-  if (!isValidMealType(mealType)) {
-    mealType = undefined;
-  }
+  // Ensure mealType is one of the valid types using our helper function
+  mealType = toValidMealType(mealType);
   
   // Estimate nutrition data (MealDB doesn't provide this)
   // These are very rough estimates and should be replaced with actual data if available

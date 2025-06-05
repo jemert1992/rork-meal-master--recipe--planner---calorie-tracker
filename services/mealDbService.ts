@@ -78,6 +78,14 @@ function isValidMealType(type: string | undefined): type is 'breakfast' | 'lunch
   return type === undefined || type === 'breakfast' || type === 'lunch' || type === 'dinner';
 }
 
+// Function to convert string to valid meal type
+function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'dinner' | undefined {
+  if (isValidMealType(value)) {
+    return value;
+  }
+  return undefined;
+}
+
 /**
  * Convert a MealDB meal to our app's Recipe format
  */
@@ -199,9 +207,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
   }
 
   // Ensure mealType is one of the valid types
-  if (!isValidMealType(mealType)) {
-    mealType = undefined;
-  }
+  mealType = toValidMealType(mealType);
 
   // Generate random nutrition info since MealDB doesn't provide it
   const calories = Math.floor(Math.random() * 400) + 200; // 200-600 calories
