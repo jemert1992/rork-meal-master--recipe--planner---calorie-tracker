@@ -16,4 +16,6 @@ export default {
   warningBg: '#FFF3CD',
   white: '#FFFFFF',
   black: '#000000',
+  gray: '#9E9E9E',     // Added gray color
+  lightGray: '#E0E0E0', // Added lightGray color (same as border)
 };
