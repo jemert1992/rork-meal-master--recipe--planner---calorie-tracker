@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Image, Modal, ScrollView, Animated } from 'react-native';
 import { ChevronRight, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { SnackItem } from '@/types';
@@ -176,15 +176,17 @@ const SnacksBanner = () => {
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 16,
+    backgroundColor: Colors.white,
+    borderRadius: 24,
     marginBottom: 20,
+    marginHorizontal: 4,
     overflow: 'hidden',
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    transform: [{ scale: 0.98 }],
   },
   bannerContent: {
     flexDirection: 'row',
@@ -192,9 +194,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   bannerImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     marginRight: 16,
   },
   bannerTextContainer: {
