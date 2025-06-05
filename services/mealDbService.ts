@@ -216,7 +216,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
   const fat = Math.floor(Math.random() * 20) + 5; // 5-25g fat
 
   return {
-    id: meal.idMeal,
+    id: `mealdb-${meal.idMeal}`,
     name: meal.strMeal,
     image: meal.strMealThumb,
     prepTime: `${Math.floor(Math.random() * 20) + 5} min`, // Random prep time

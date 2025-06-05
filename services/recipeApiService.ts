@@ -24,6 +24,14 @@ function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'di
   return undefined;
 }
 
+// Function to validate a Recipe object
+function validateRecipe(recipe: any): Recipe {
+  return {
+    ...recipe,
+    mealType: toValidMealType(recipe.mealType)
+  };
+}
+
 // Function to load initial recipes from all enabled API sources
 export const loadInitialRecipesFromAllSources = async (
   limit: number = 20,
@@ -57,13 +65,13 @@ export const loadInitialRecipesFromAllSources = async (
     // If no recipes were loaded from APIs, return mock data
     if (recipes.length === 0) {
       console.warn('No recipes loaded from APIs, using mock data');
-      return [...mockRecipes];
+      return mockRecipes.map(validateRecipe);
     }
     
     return recipes;
   } catch (error) {
     console.error('Error loading recipes from APIs:', error);
-    return [...mockRecipes];
+    return mockRecipes.map(validateRecipe);
   }
 };
 
@@ -106,7 +114,7 @@ export const searchRecipesFromAllSources = async (
         recipe.tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())) ||
         recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(query.toLowerCase()))
       );
-      return mockSearchResults.slice(0, limit);
+      return mockSearchResults.slice(0, limit).map(validateRecipe);
     }
     
     return recipes.slice(0, limit);
@@ -143,7 +151,7 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
     // If it's not from an API, check mock data
     const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
     if (mockRecipe) {
-      return mockRecipe;
+      return validateRecipe(mockRecipe);
     }
     
     return null;

@@ -5,6 +5,19 @@ import { Recipe } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
 import * as recipeApiService from '@/services/recipeApiService';
 
+// Helper function to validate recipe mealType
+function validateRecipe(recipe: any): Recipe {
+  const validMealTypes = ['breakfast', 'lunch', 'dinner'] as const;
+  const mealType = recipe.mealType && validMealTypes.includes(recipe.mealType) 
+    ? recipe.mealType 
+    : undefined;
+  
+  return {
+    ...recipe,
+    mealType
+  };
+}
+
 interface RecipeState {
   recipes: Recipe[];
   favoriteRecipeIds: string[];
@@ -29,7 +42,7 @@ interface RecipeState {
 export const useRecipeStore = create<RecipeState>()(
   persist(
     (set, get) => ({
-      recipes: mockRecipes,
+      recipes: mockRecipes.map(validateRecipe),
       favoriteRecipeIds: [],
       isLoading: false,
       hasLoadedFromApi: false,
@@ -41,13 +54,13 @@ export const useRecipeStore = create<RecipeState>()(
       
       addRecipe: (recipe) => {
         set((state) => ({
-          recipes: [...state.recipes, recipe],
+          recipes: [...state.recipes, validateRecipe(recipe)],
         }));
       },
       
       updateRecipe: (recipe) => {
         set((state) => ({
-          recipes: state.recipes.map((r) => (r.id === recipe.id ? recipe : r)),
+          recipes: state.recipes.map((r) => (r.id === recipe.id ? validateRecipe(recipe) : r)),
         }));
       },
       
@@ -109,7 +122,7 @@ export const useRecipeStore = create<RecipeState>()(
             
             if (apiRecipes.length > 0) {
               set((state) => ({
-                recipes: [...apiRecipes, ...mockRecipes],
+                recipes: [...apiRecipes, ...state.recipes.filter(r => !apiRecipes.some(ar => ar.id === r.id))],
                 hasLoadedFromApi: true,
               }));
             }
@@ -118,7 +131,7 @@ export const useRecipeStore = create<RecipeState>()(
             
             if (apiRecipes.length > 0) {
               set((state) => ({
-                recipes: [...apiRecipes, ...mockRecipes],
+                recipes: [...apiRecipes, ...state.recipes.filter(r => !apiRecipes.some(ar => ar.id === r.id))],
                 hasLoadedFromApi: true,
               }));
             }
