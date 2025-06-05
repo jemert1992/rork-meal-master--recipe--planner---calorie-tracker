@@ -16,6 +16,14 @@ function isValidMealType(type: string | undefined): type is 'breakfast' | 'lunch
   return type === undefined || type === 'breakfast' || type === 'lunch' || type === 'dinner';
 }
 
+// Function to convert string to valid meal type
+function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'dinner' | undefined {
+  if (isValidMealType(value)) {
+    return value;
+  }
+  return undefined;
+}
+
 // Function to load initial recipes from all enabled API sources
 export const loadInitialRecipesFromAllSources = async (
   limit: number = 20,
