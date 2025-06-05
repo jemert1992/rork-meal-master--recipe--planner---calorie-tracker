@@ -11,6 +11,11 @@ interface ApiSourcesConfig {
   useEdamam: boolean;
 }
 
+// Type guard for meal type
+function isValidMealType(type: string | undefined): type is 'breakfast' | 'lunch' | 'dinner' | undefined {
+  return type === undefined || type === 'breakfast' || type === 'lunch' || type === 'dinner';
+}
+
 // Function to load initial recipes from all enabled API sources
 export const loadInitialRecipesFromAllSources = async (
   limit: number = 20,
@@ -323,6 +328,11 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
         mealType = hasProtein ? 'dinner' : 'lunch';
       }
     }
+  }
+  
+  // Ensure mealType is one of the valid types
+  if (mealType && !isValidMealType(mealType)) {
+    mealType = undefined;
   }
   
   // Estimate nutrition data (MealDB doesn't provide this)

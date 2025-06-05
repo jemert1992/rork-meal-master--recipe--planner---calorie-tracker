@@ -73,6 +73,11 @@ type MealDBCategoriesResponse = {
   categories: MealDBCategory[];
 };
 
+// Type guard for meal type
+function isValidMealType(type: string | undefined): type is 'breakfast' | 'lunch' | 'dinner' | undefined {
+  return type === undefined || type === 'breakfast' || type === 'lunch' || type === 'dinner';
+}
+
 /**
  * Convert a MealDB meal to our app's Recipe format
  */
@@ -191,6 +196,11 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
         mealType = hasProtein ? 'dinner' : 'lunch';
       }
     }
+  }
+
+  // Ensure mealType is one of the valid types
+  if (mealType && !isValidMealType(mealType)) {
+    mealType = undefined;
   }
 
   // Generate random nutrition info since MealDB doesn't provide it
