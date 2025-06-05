@@ -207,7 +207,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
   }
 
   // Ensure mealType is one of the valid types
-  mealType = toValidMealType(mealType);
+  const validMealType = toValidMealType(mealType);
 
   // Generate random nutrition info since MealDB doesn't provide it
   const calories = Math.floor(Math.random() * 400) + 200; // 200-600 calories
@@ -229,7 +229,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
     ingredients,
     instructions,
     tags,
-    mealType,
+    mealType: validMealType,
   };
 };
 
