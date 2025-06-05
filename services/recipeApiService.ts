@@ -364,5 +364,5 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     instructions,
     tags,
     mealType: validMealType,
-  };
+  } as Recipe; // Add explicit type assertion here
 };
