@@ -122,7 +122,8 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
     // Check if it's a MealDB ID (they start with 'mealdb-')
     if (id.startsWith('mealdb-')) {
       const mealDbId = id.replace('mealdb-', '');
-      return await getRecipeFromMealDBById(mealDbId);
+      const recipe = await getRecipeFromMealDBById(mealDbId);
+      return recipe;
     }
     
     // Check if it's a Spoonacular ID (they start with 'spoon-')
@@ -339,7 +340,7 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   }
   
   // Ensure mealType is one of the valid types using our helper function
-  mealType = toValidMealType(mealType);
+  const validMealType = toValidMealType(mealType);
   
   // Estimate nutrition data (MealDB doesn't provide this)
   // These are very rough estimates and should be replaced with actual data if available
@@ -362,6 +363,6 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     ingredients,
     instructions,
     tags,
-    mealType,
+    mealType: validMealType,
   };
 };
