@@ -11,6 +11,7 @@ import { generateGroceryList } from '@/utils/generateGroceryList';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
+import SnacksBanner from '@/components/SnacksBanner';
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -125,6 +126,13 @@ export default function RecipesScreen() {
     );
   };
 
+  const renderListHeader = () => (
+    <>
+      <WeeklyMealPlanner onGenerateGroceryList={handleGenerateGroceryList} />
+      <SnacksBanner />
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
@@ -176,9 +184,7 @@ export default function RecipesScreen() {
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          ListHeaderComponent={
-            <WeeklyMealPlanner onGenerateGroceryList={handleGenerateGroceryList} />
-          }
+          ListHeaderComponent={renderListHeader}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No recipes found</Text>
