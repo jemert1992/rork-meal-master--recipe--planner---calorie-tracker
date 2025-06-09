@@ -342,7 +342,7 @@ export const importRecipesToFirestore = async (recipes: Recipe[]): Promise<{ add
 };
 
 // Function to search recipes in Firestore
-export const searchRecipesInFirestore = async (query: string, pageSize: number = 20): Promise<Recipe[]> => {
+export const searchRecipesInFirestore = async (searchTerm: string, pageSize: number = 20): Promise<Recipe[]> => {
   try {
     // Firestore doesn't support full-text search natively
     // For a simple implementation, we'll get a batch of recipes and filter client-side
@@ -358,7 +358,7 @@ export const searchRecipesInFirestore = async (query: string, pageSize: number =
     
     // Extract and filter recipes
     const recipes: Recipe[] = [];
-    const searchLower = query.toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
     
     querySnapshot.forEach(doc => {
       const data = doc.data() as DocumentData;
@@ -371,7 +371,7 @@ export const searchRecipesInFirestore = async (query: string, pageSize: number =
       // Check if recipe matches search query
       if (
         name.includes(searchLower) ||
-        ingredients.some(ing => ing.includes(searchLower)) ||
+        ingredients.some((ing: string) => ing.includes(searchLower)) ||
         tags.some(tag => tag.includes(searchLower))
       ) {
         recipes.push(convertFirestoreDataToRecipe(doc.id, data));
