@@ -306,7 +306,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         }
         
         // Check for allergies and excluded ingredients
-        if (allergies.length > 0 || excludedIngredients.length > 0) {
+        if ((allergies.length > 0) || (excludedIngredients.length > 0)) {
           const combinedExclusions = [...allergies, ...excludedIngredients];
           
           // Check if any ingredient contains an excluded term
@@ -550,7 +550,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (breakfastRecipes.length > 0) {
+              if (breakfastRecipes && breakfastRecipes.length > 0) {
                 const breakfastRecipe = breakfastRecipes[0];
                 breakfast = {
                   recipeId: breakfastRecipe.id,
@@ -571,7 +571,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                   !weeklyUsedRecipeIds.includes(recipe.id)
                 );
                 
-                if (filteredRecipes.length > 0) {
+                if (filteredRecipes && filteredRecipes.length > 0) {
                   // Sort by how close they are to the target calories
                   filteredRecipes.sort((a, b) => {
                     return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
@@ -602,7 +602,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (lunchRecipes.length > 0) {
+              if (lunchRecipes && lunchRecipes.length > 0) {
                 const lunchRecipe = lunchRecipes[0];
                 lunch = {
                   recipeId: lunchRecipe.id,
@@ -623,7 +623,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                   !weeklyUsedRecipeIds.includes(recipe.id)
                 );
                 
-                if (filteredRecipes.length > 0) {
+                if (filteredRecipes && filteredRecipes.length > 0) {
                   // Sort by how close they are to the target calories
                   filteredRecipes.sort((a, b) => {
                     return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
@@ -654,7 +654,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (dinnerRecipes.length > 0) {
+              if (dinnerRecipes && dinnerRecipes.length > 0) {
                 const dinnerRecipe = dinnerRecipes[0];
                 dinner = {
                   recipeId: dinnerRecipe.id,
@@ -675,7 +675,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                   !weeklyUsedRecipeIds.includes(recipe.id)
                 );
                 
-                if (filteredRecipes.length > 0) {
+                if (filteredRecipes && filteredRecipes.length > 0) {
                   // Sort by how close they are to the target calories
                   filteredRecipes.sort((a, b) => {
                     return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
@@ -709,7 +709,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (breakfastRecipes.length > 0) {
+              if (breakfastRecipes && breakfastRecipes.length > 0) {
                 const breakfastRecipe = breakfastRecipes[0];
                 breakfast = {
                   recipeId: breakfastRecipe.id,
@@ -730,7 +730,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                   !weeklyUsedRecipeIds.includes(recipe.id)
                 );
                 
-                if (filteredRecipes.length > 0) {
+                if (filteredRecipes && filteredRecipes.length > 0) {
                   // Sort by how close they are to the target calories
                   filteredRecipes.sort((a, b) => {
                     return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
@@ -763,7 +763,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (lunchRecipes.length > 0) {
+              if (lunchRecipes && lunchRecipes.length > 0) {
                 const lunchRecipe = lunchRecipes[0];
                 lunch = {
                   recipeId: lunchRecipe.id,
@@ -784,7 +784,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                   !weeklyUsedRecipeIds.includes(recipe.id)
                 );
                 
-                if (filteredRecipes.length > 0) {
+                if (filteredRecipes && filteredRecipes.length > 0) {
                   // Sort by how close they are to the target calories
                   filteredRecipes.sort((a, b) => {
                     return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
@@ -817,7 +817,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (dinnerRecipes.length > 0) {
+              if (dinnerRecipes && dinnerRecipes.length > 0) {
                 const dinnerRecipe = dinnerRecipes[0];
                 dinner = {
                   recipeId: dinnerRecipe.id,
@@ -838,7 +838,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                   !weeklyUsedRecipeIds.includes(recipe.id)
                 );
                 
-                if (filteredRecipes.length > 0) {
+                if (filteredRecipes && filteredRecipes.length > 0) {
                   // Sort by how close they are to the target calories
                   filteredRecipes.sort((a, b) => {
                     return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
@@ -872,7 +872,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 !weeklyUsedRecipeIds.includes(recipe.id)
               );
               
-              if (filteredRecipes.length > 0) {
+              if (filteredRecipes && filteredRecipes.length > 0) {
                 // Sort by how close they are to the target calories
                 filteredRecipes.sort((a, b) => {
                   return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
@@ -898,7 +898,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 !weeklyUsedRecipeIds.includes(recipe.id)
               );
               
-              if (filteredRecipes.length > 0) {
+              if (filteredRecipes && filteredRecipes.length > 0) {
                 // Sort by how close they are to the target calories
                 filteredRecipes.sort((a, b) => {
                   return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
@@ -924,7 +924,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 !weeklyUsedRecipeIds.includes(recipe.id)
               );
               
-              if (filteredRecipes.length > 0) {
+              if (filteredRecipes && filteredRecipes.length > 0) {
                 // Sort by how close they are to the target calories
                 filteredRecipes.sort((a, b) => {
                   return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
@@ -953,7 +953,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 !weeklyUsedRecipeIds.includes(recipe.id)
               );
               
-              if (filteredRecipes.length > 0) {
+              if (filteredRecipes && filteredRecipes.length > 0) {
                 // Sort by how close they are to the target calories
                 filteredRecipes.sort((a, b) => {
                   return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
@@ -981,7 +981,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 !weeklyUsedRecipeIds.includes(recipe.id)
               );
               
-              if (filteredRecipes.length > 0) {
+              if (filteredRecipes && filteredRecipes.length > 0) {
                 // Sort by how close they are to the target calories
                 filteredRecipes.sort((a, b) => {
                   return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
@@ -1009,7 +1009,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 !weeklyUsedRecipeIds.includes(recipe.id)
               );
               
-              if (filteredRecipes.length > 0) {
+              if (filteredRecipes && filteredRecipes.length > 0) {
                 // Sort by how close they are to the target calories
                 filteredRecipes.sort((a, b) => {
                   return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
@@ -1128,7 +1128,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: weeklyUsedRecipeIds
               }, 5);
               
-              if (breakfastRecipes.length > 0) {
+              if (breakfastRecipes && breakfastRecipes.length > 0) {
                 const breakfastRecipe = breakfastRecipes[0];
                 const breakfast = {
                   recipeId: breakfastRecipe.id,
@@ -1170,7 +1170,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: Array.from(get().weeklyUsedRecipeIds) // Get updated list
               }, 5);
               
-              if (lunchRecipes.length > 0) {
+              if (lunchRecipes && lunchRecipes.length > 0) {
                 const lunchRecipe = lunchRecipes[0];
                 const lunch = {
                   recipeId: lunchRecipe.id,
@@ -1212,7 +1212,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: Array.from(get().weeklyUsedRecipeIds) // Get updated list
               }, 5);
               
-              if (dinnerRecipes.length > 0) {
+              if (dinnerRecipes && dinnerRecipes.length > 0) {
                 const dinnerRecipe = dinnerRecipes[0];
                 const dinner = {
                   recipeId: dinnerRecipe.id,
