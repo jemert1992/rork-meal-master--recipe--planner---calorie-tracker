@@ -56,7 +56,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
     
     // Add up to 3 regular tags
     for (let i = 0; i < regularTags.length && displayTags.length < 3; i++) {
-      displayTags.push(regularTags[i] as any);
+      displayTags.push(regularTags[i]);
     }
   }
 
