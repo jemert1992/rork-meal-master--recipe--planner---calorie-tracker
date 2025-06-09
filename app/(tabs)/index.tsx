@@ -5,7 +5,6 @@ import { Search, Filter, RefreshCw } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useGroceryStore } from '@/store/groceryStore';
 import RecipeCard from '@/components/RecipeCard';
-import CategoryFilter from '@/components/CategoryFilter';
 import WeeklyMealPlanner from '@/components/WeeklyMealPlanner';
 import { generateGroceryList } from '@/utils/generateGroceryList';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -31,13 +30,6 @@ export default function RecipesScreen() {
   const [searchResults, setSearchResults] = useState<typeof recipes>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Extract unique categories from recipes
-  const categories = [...new Set(
-    recipes.flatMap(recipe => recipe.tags)
-      .filter(tag => tag.length > 0)
-  )].sort();
 
   // Load recipes from API on first render
   useEffect(() => {
@@ -75,9 +67,7 @@ export default function RecipesScreen() {
   const displayRecipes = searchQuery.trim().length >= 2 ? searchResults : recipes;
   
   const filteredRecipes = displayRecipes.filter(recipe => {
-    const matchesFavorite = filterFavorites ? favoriteRecipeIds.includes(recipe.id) : true;
-    const matchesCategory = selectedCategory ? recipe.tags.includes(selectedCategory) : true;
-    return matchesFavorite && matchesCategory;
+    return filterFavorites ? favoriteRecipeIds.includes(recipe.id) : true;
   });
 
   const handleGenerateGroceryList = () => {
@@ -161,14 +151,6 @@ export default function RecipesScreen() {
           <Filter size={20} color={filterFavorites ? Colors.white : Colors.text} />
         </Pressable>
       </View>
-
-      {categories.length > 0 && (
-        <CategoryFilter 
-          categories={categories.slice(0, 15)} // Increased to 15 categories
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
-      )}
 
       {isLoading && !refreshing ? (
         <View style={styles.loaderContainer}>
