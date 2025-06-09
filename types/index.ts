@@ -1,8 +1,42 @@
-export interface RecipeIngredient {
+// User types
+export interface UserProfile {
+  id: string;
   name: string;
-  quantity: number;
-  unit: string;
+  email: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  weight?: number;
+  height?: number;
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  dietaryPreferences?: DietaryPreference[];
+  fitnessGoals?: FitnessGoal[];
+  calorieGoal?: number;
+  proteinGoal?: number;
+  carbsGoal?: number;
+  fatGoal?: number;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// Recipe types
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | undefined;
+export type Complexity = 'simple' | 'complex' | undefined;
+export type DietaryPreference = 
+  | 'vegan' 
+  | 'vegetarian' 
+  | 'keto' 
+  | 'paleo' 
+  | 'gluten-free' 
+  | 'dairy-free' 
+  | 'low-carb';
+
+export type FitnessGoal = 
+  | 'high-protein' 
+  | 'weight-loss' 
+  | 'muscle-gain' 
+  | 'general-health' 
+  | 'heart-health' 
+  | 'energy-boost';
 
 export interface Recipe {
   id: string;
@@ -19,11 +53,17 @@ export interface Recipe {
   ingredients: string[];
   instructions: string[];
   tags: string[];
-  mealType?: 'breakfast' | 'lunch' | 'dinner';
-  complexity?: 'simple' | 'complex';
-  dietaryPreferences?: ('vegan' | 'vegetarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein')[];
-  fitnessGoals?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
+  mealType: MealType;
+  complexity: Complexity;
+  dietaryPreferences?: DietaryPreference[];
+  fitnessGoals?: FitnessGoal[];
   source?: string;
+}
+
+export interface RecipeIngredient {
+  name: string;
+  quantity: number;
+  unit: string;
 }
 
 export interface FirestoreRecipe {
@@ -35,116 +75,68 @@ export interface FirestoreRecipe {
     protein: number;
     carbs: number;
     fat: number;
-    fiber?: number;
+    fiber: number;
   };
   tags: {
-    meal_type?: 'breakfast' | 'lunch' | 'dinner';
-    complexity?: 'simple' | 'complex';
-    diet?: ('vegan' | 'vegetarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein')[];
-    goal?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
+    meal_type: MealType;
+    complexity: Complexity;
+    diet: DietaryPreference[];
+    goal: FitnessGoal[];
     prep_time: number;
     servings: number;
   };
   image_url: string;
   source?: string;
-  created_at?: any;
-  updated_at?: any;
-  needs_review?: boolean;
-  missing_fields?: string[];
+  created_at: any;
+  updated_at: any;
 }
 
+// Meal Plan types
 export interface MealPlan {
-  [date: string]: {
-    breakfast?: Recipe | null;
-    lunch?: Recipe | null;
-    dinner?: Recipe | null;
-    snacks?: SnackItem[];
-  };
-}
-
-export interface GroceryItem {
   id: string;
-  name: string;
-  quantity: string;
-  category: string;
-  checked: boolean;
+  date: string;
+  breakfast?: Recipe[];
+  lunch?: Recipe[];
+  dinner?: Recipe[];
+  snacks?: Recipe[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
 }
 
+// Food Log types
 export interface FoodLogEntry {
   id: string;
   date: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber?: number;
-  servingSize?: string;
+  mealType: MealType | 'snack';
+  recipe?: Recipe;
+  customFood?: {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    servings: number;
+  };
+  timestamp: string;
 }
 
-export type DietType = 'any' | 'vegetarian' | 'vegan' | 'keto' | 'gluten-free' | 'dairy-free' | 'low-carb';
-
-export interface UserProfile {
-  name: string;
-  age?: number;
-  weight?: number;
-  height?: number;
-  dietType?: DietType;
-  allergies?: string[];
-  calorieGoal?: number;
-  proteinGoal?: number;
-  carbsGoal?: number;
-  fatGoal?: number;
-  fitnessGoals?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
-  completedOnboarding?: boolean;
-  gender?: 'male' | 'female' | 'other';
-  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
-  dietaryPreferences?: string[];
-}
-
-export interface SnackItem {
+// Grocery List types
+export interface GroceryItem {
   id: string;
   name: string;
-  image: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber?: number;
-  tags: string[];
-  description: string;
-  complexity?: 'simple' | 'complex';
-  dietaryPreferences?: ('vegan' | 'vegetarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein')[];
-  fitnessGoals?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
+  quantity: number;
+  unit: string;
+  checked: boolean;
+  category: 'produce' | 'dairy' | 'meat' | 'pantry' | 'frozen' | 'other';
+  recipeId?: string;
 }
 
-export interface RecipeFilters {
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | null;
-  complexity?: 'simple' | 'complex' | null;
-  dietaryPreference?: string | null;
-  fitnessGoal?: string | null;
-  searchQuery?: string;
-  favorite?: boolean;
-}
-
-export interface RecipeCategory {
+export interface GroceryList {
   id: string;
   name: string;
-  count: number;
-  image: string;
-}
-
-export interface RecipeCollection {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  recipeIds: string[];
-}
-
-export interface PaginationState {
-  lastDoc: any;
-  hasMore: boolean;
-  loading: boolean;
+  items: GroceryItem[];
+  createdAt: string;
+  updatedAt: string;
 }
