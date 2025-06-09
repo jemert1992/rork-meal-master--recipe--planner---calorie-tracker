@@ -292,7 +292,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           const requiredTags = dietTags[dietType];
           // Fix for the always truthy expression
-          if (requiredTags.length > 0) {
+          if (requiredTags && requiredTags.length > 0) {
             const hasMatchingTag = requiredTags.some(tag => 
               recipe.tags.some(recipeTag => 
                 recipeTag.toLowerCase() === tag.toLowerCase()
