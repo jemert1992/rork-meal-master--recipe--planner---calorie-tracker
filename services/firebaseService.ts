@@ -366,7 +366,7 @@ export const searchRecipesInFirestore = async (query: string, pageSize: number =
       const ingredients = data.ingredients?.map((ing: RecipeIngredient) => ing.name.toLowerCase()) || [];
       const tags = Object.values(data.tags || {})
         .filter((tag): tag is string => typeof tag === 'string')
-        .map((tag: string) => tag.toLowerCase());
+        .map(tag => tag.toLowerCase());
       
       // Check if recipe matches search query
       if (
