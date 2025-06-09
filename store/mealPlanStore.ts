@@ -4,15 +4,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MealPlan, MealItem, DailyMeals, Recipe, DietType } from '@/types';
 import { mockMealPlan } from '@/constants/mockData';
 import { useUserStore } from '@/store/userStore';
+import * as firebaseService from '@/services/firebaseService';
 
 interface MealPlanState {
   mealPlan: MealPlan;
+  weeklyUsedRecipeIds: Set<string>;
   addMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', meal: MealItem) => void;
   removeMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
   clearDay: (date: string) => void;
   generateMealPlan: (date: string, recipes: Recipe[], specificMealType?: 'breakfast' | 'lunch' | 'dinner') => Promise<void>;
+  generateWeeklyMealPlan: (startDate: string, endDate: string) => Promise<void>;
   isRecipeSuitable: (recipe: Recipe, dietType?: DietType, allergies?: string[], excludedIngredients?: string[]) => boolean;
   getUsedRecipeIds: () => Set<string>;
+  getWeeklyUsedRecipeIds: () => Set<string>;
+  updateWeeklyUsedRecipeIds: (startDate: string, endDate: string) => void;
   validateDailyMealPlan: (dailyMeals: DailyMeals, calorieGoal: number) => { 
     isValid: boolean; 
     issues: string[]; 
@@ -26,6 +31,7 @@ export const useMealPlanStore = create<MealPlanState>()(
   persist(
     (set, get) => ({
       mealPlan: mockMealPlan,
+      weeklyUsedRecipeIds: new Set<string>(),
       
       addMeal: (date, mealType, meal) => {
         // Check if the recipe is already used in the meal plan
@@ -45,11 +51,17 @@ export const useMealPlanStore = create<MealPlanState>()(
             updatedDayPlan[mealType] = meal;
           }
           
+          // Update weekly used recipe IDs if this is a new recipe
+          if (meal.recipeId) {
+            state.weeklyUsedRecipeIds.add(meal.recipeId);
+          }
+          
           return {
             mealPlan: {
               ...state.mealPlan,
               [date]: updatedDayPlan,
             },
+            weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
           };
         });
       },
@@ -61,6 +73,27 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           const updatedDayPlan: DailyMeals = { ...dayPlan };
           
+          // Remove the recipe ID from weekly used IDs if it's being removed
+          const mealToRemove = updatedDayPlan[mealType];
+          if (mealToRemove?.recipeId) {
+            // Check if this recipe is used elsewhere in the meal plan before removing from weeklyUsedRecipeIds
+            let isUsedElsewhere = false;
+            Object.entries(state.mealPlan).forEach(([d, meals]) => {
+              if (d !== date) {
+                if (meals.breakfast?.recipeId === mealToRemove.recipeId ||
+                    meals.lunch?.recipeId === mealToRemove.recipeId ||
+                    meals.dinner?.recipeId === mealToRemove.recipeId) {
+                  isUsedElsewhere = true;
+                }
+              }
+            });
+            
+            // Only remove from weeklyUsedRecipeIds if not used elsewhere
+            if (!isUsedElsewhere) {
+              state.weeklyUsedRecipeIds.delete(mealToRemove.recipeId);
+            }
+          }
+          
           if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
             delete updatedDayPlan[mealType];
           }
@@ -70,15 +103,75 @@ export const useMealPlanStore = create<MealPlanState>()(
               ...state.mealPlan,
               [date]: updatedDayPlan,
             },
+            weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
           };
         });
       },
       
       clearDay: (date) => {
         set((state) => {
+          const dayPlan = state.mealPlan[date];
+          if (!dayPlan) return state;
+          
+          // Remove recipe IDs from weekly used IDs if they're being cleared
+          if (dayPlan.breakfast?.recipeId) {
+            // Check if this recipe is used elsewhere in the meal plan before removing
+            let isBreakfastUsedElsewhere = false;
+            Object.entries(state.mealPlan).forEach(([d, meals]) => {
+              if (d !== date) {
+                if (meals.breakfast?.recipeId === dayPlan.breakfast?.recipeId ||
+                    meals.lunch?.recipeId === dayPlan.breakfast?.recipeId ||
+                    meals.dinner?.recipeId === dayPlan.breakfast?.recipeId) {
+                  isBreakfastUsedElsewhere = true;
+                }
+              }
+            });
+            
+            if (!isBreakfastUsedElsewhere) {
+              state.weeklyUsedRecipeIds.delete(dayPlan.breakfast.recipeId);
+            }
+          }
+          
+          if (dayPlan.lunch?.recipeId) {
+            // Check if this recipe is used elsewhere in the meal plan before removing
+            let isLunchUsedElsewhere = false;
+            Object.entries(state.mealPlan).forEach(([d, meals]) => {
+              if (d !== date) {
+                if (meals.breakfast?.recipeId === dayPlan.lunch?.recipeId ||
+                    meals.lunch?.recipeId === dayPlan.lunch?.recipeId ||
+                    meals.dinner?.recipeId === dayPlan.lunch?.recipeId) {
+                  isLunchUsedElsewhere = true;
+                }
+              }
+            });
+            
+            if (!isLunchUsedElsewhere) {
+              state.weeklyUsedRecipeIds.delete(dayPlan.lunch.recipeId);
+            }
+          }
+          
+          if (dayPlan.dinner?.recipeId) {
+            // Check if this recipe is used elsewhere in the meal plan before removing
+            let isDinnerUsedElsewhere = false;
+            Object.entries(state.mealPlan).forEach(([d, meals]) => {
+              if (d !== date) {
+                if (meals.breakfast?.recipeId === dayPlan.dinner?.recipeId ||
+                    meals.lunch?.recipeId === dayPlan.dinner?.recipeId ||
+                    meals.dinner?.recipeId === dayPlan.dinner?.recipeId) {
+                  isDinnerUsedElsewhere = true;
+                }
+              }
+            });
+            
+            if (!isDinnerUsedElsewhere) {
+              state.weeklyUsedRecipeIds.delete(dayPlan.dinner.recipeId);
+            }
+          }
+          
           const { [date]: _, ...restOfMealPlan } = state.mealPlan;
           return {
             mealPlan: restOfMealPlan,
+            weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
           };
         });
       },
@@ -96,6 +189,27 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
         
         return usedRecipeIds;
+      },
+      
+      getWeeklyUsedRecipeIds: () => {
+        return get().weeklyUsedRecipeIds;
+      },
+      
+      updateWeeklyUsedRecipeIds: (startDate, endDate) => {
+        const state = get();
+        const weeklyUsedRecipeIds = new Set<string>();
+        
+        // Iterate through all days in the meal plan within the date range
+        Object.entries(state.mealPlan).forEach(([date, dayPlan]) => {
+          if (date >= startDate && date <= endDate) {
+            // Check main meals (breakfast, lunch, dinner)
+            if (dayPlan.breakfast?.recipeId) weeklyUsedRecipeIds.add(dayPlan.breakfast.recipeId);
+            if (dayPlan.lunch?.recipeId) weeklyUsedRecipeIds.add(dayPlan.lunch.recipeId);
+            if (dayPlan.dinner?.recipeId) weeklyUsedRecipeIds.add(dayPlan.dinner.recipeId);
+          }
+        });
+        
+        set({ weeklyUsedRecipeIds });
       },
       
       isRecipeUsedInMealPlan: (recipeId: string) => {
@@ -198,10 +312,6 @@ export const useMealPlanStore = create<MealPlanState>()(
       },
       
       generateMealPlan: async (date, recipes, specificMealType) => {
-        if (recipes.length < 3) {
-          throw new Error("Not enough recipes available");
-        }
-        
         // Get user profile for personalization
         const userProfile = useUserStore.getState().profile;
         const { 
@@ -209,9 +319,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           allergies = [], 
           excludedIngredients = [],
           calorieGoal = 2000,
-          proteinGoal,
-          carbsGoal,
-          fatGoal
+          fitnessGoals = []
         } = userProfile;
         
         // Define meal split percentages for calorie distribution
@@ -226,233 +334,11 @@ export const useMealPlanStore = create<MealPlanState>()(
         const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
         
-        // Validate recipe data before using
-        const validRecipes = recipes.filter(recipe => {
-          // Check if recipe has valid calorie data
-          if (recipe.calories === undefined || recipe.calories === null) {
-            console.warn(`Recipe "${recipe.name}" (${recipe.id}) is missing calorie data and will be excluded`);
-            return false;
-          }
-          
-          // Check if recipe has valid macronutrient data
-          if (recipe.protein === undefined || recipe.carbs === undefined || recipe.fat === undefined) {
-            console.warn(`Recipe "${recipe.name}" (${recipe.id}) is missing macronutrient data`);
-            // Still include it, but log the warning
-          }
-          
-          return true;
-        });
-        
-        if (validRecipes.length < 3) {
-          throw new Error("Not enough valid recipes with calorie data available");
-        }
-        
-        // Create a copy of recipes to avoid modifying the original
-        let availableRecipes = [...validRecipes];
-        
-        // Get already used recipe IDs to avoid duplicates across all days
-        const usedRecipeIds = get().getUsedRecipeIds();
-        
-        // Filter out already used recipes to avoid duplicates
-        const uniqueRecipes = availableRecipes.filter(recipe => !usedRecipeIds.has(recipe.id));
-        
-        // If we have enough unique recipes, use them; otherwise, use all recipes
-        if (uniqueRecipes.length >= 3) {
-          availableRecipes = uniqueRecipes;
-          console.log(`Using ${uniqueRecipes.length} unique recipes`);
-        } else {
-          console.warn("Not enough unique recipes available. Some meals may be repeated.");
-        }
-        
-        // Filter recipes based on user preferences
-        availableRecipes = availableRecipes.filter(recipe => 
-          get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients)
-        );
-        
-        // If we don't have enough suitable recipes, use all recipes
-        if (availableRecipes.length < 3) {
-          console.warn("Not enough recipes matching dietary preferences. Using all available recipes.");
-          availableRecipes = [...validRecipes];
-          
-          // If still not enough, throw error
-          if (availableRecipes.length < 3) {
-            throw new Error("Not enough valid recipes available after filtering");
-          }
-        }
-        
-        // Filter out desserts from main meal options
-        const dessertTags = [
-          'dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 
-          'chocolate', 'candy', 'pastry', 'biscuit', 'brownie', 'custard', 
-          'tart', 'cheesecake', 'mousse', 'frosting', 'icing', 'glaze'
-        ];
-        
-        const nonDessertRecipes = availableRecipes.filter(recipe => 
-          !recipe.tags.some(tag => dessertTags.includes(tag.toLowerCase()))
-        );
-        
-        // If we have enough non-dessert recipes, use them; otherwise, use all recipes
-        if (nonDessertRecipes.length >= 3) {
-          availableRecipes = nonDessertRecipes;
-        } else {
-          console.warn("Not enough non-dessert recipes available. Some desserts may be included in the meal plan.");
-        }
-        
-        // Define tags that match each meal type
-        const mealTypeTags: Record<string, string[]> = {
-          breakfast: [
-            'breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 
-            'waffle', 'egg', 'toast', 'smoothie', 'yogurt', 'muffin', 'bagel',
-            'croissant', 'granola', 'porridge'
-          ],
-          lunch: [
-            'lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 
-            'taco', 'quesadilla', 'burger', 'roll', 'pita', 'flatbread', 
-            'hummus', 'falafel'
-          ],
-          dinner: [
-            'dinner', 'main', 'supper', 'entree', 'roast', 'stew', 'curry', 
-            'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'casserole',
-            'grill', 'bake', 'hearty', 'substantial'
-          ]
-        };
-        
-        // Define excluded tags for each meal type
-        const excludedTags: Record<string, string[]> = {
-          breakfast: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'chocolate', 'pastry', 'sweet'],
-          lunch: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'chocolate', 'pastry', 'sweet', 'breakfast'],
-          dinner: ['dessert', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 'candy', 'chocolate', 'pastry', 'sweet', 'breakfast']
-        };
-        
-        // Improved recipe matching function with calorie targeting and meal type appropriateness
-        const getRecipeForMeal = (mealType: string, targetCalories: number): Recipe | null => {
-          // First, filter recipes by their explicit meal type property
-          const typeSpecificRecipes = availableRecipes.filter(recipe => {
-            // Check if recipe has the meal type property matching this meal
-            const hasExplicitMealType = recipe.mealType === mealType;
-            
-            // Check if recipe has any excluded tags for this meal type
-            const hasExcludedTag = recipe.tags.some(tag => 
-              excludedTags[mealType].some(excludedTag => 
-                tag.toLowerCase().includes(excludedTag.toLowerCase())
-              )
-            );
-            
-            // Only include if it has the right type and doesn't have excluded tags
-            return hasExplicitMealType && !hasExcludedTag;
-          });
-          
-          // If we have type-specific recipes, prioritize those that are close to target calories
-          if (typeSpecificRecipes.length > 0) {
-            // Sort by how close they are to the target calories
-            typeSpecificRecipes.sort((a, b) => {
-              const aCalories = a.calories || 0;
-              const bCalories = b.calories || 0;
-              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
-            });
-            
-            // Get the closest match
-            const selectedRecipe = typeSpecificRecipes[0];
-            
-            // Remove the selected recipe from available recipes
-            const index = availableRecipes.findIndex(r => r.id === selectedRecipe.id);
-            if (index !== -1) {
-              availableRecipes.splice(index, 1);
-            }
-            
-            return selectedRecipe;
-          }
-          
-          // If no explicit meal type recipes, look for recipes with related tags
-          const tagMatchingRecipes = availableRecipes.filter(recipe => {
-            // Check if any tag matches the related tags for this meal type
-            const hasRelatedTag = recipe.tags.some(tag => 
-              mealTypeTags[mealType].some(mealTag => 
-                tag.toLowerCase().includes(mealTag.toLowerCase()) || 
-                mealTag.toLowerCase().includes(tag.toLowerCase())
-              )
-            );
-            
-            // Check if recipe has any excluded tags for this meal type
-            const hasExcludedTag = recipe.tags.some(tag => 
-              excludedTags[mealType].some(excludedTag => 
-                tag.toLowerCase().includes(excludedTag.toLowerCase())
-              )
-            );
-            
-            // Only include if it has related tags and doesn't have excluded tags
-            return hasRelatedTag && !hasExcludedTag;
-          });
-          
-          if (tagMatchingRecipes.length > 0) {
-            // Sort by how close they are to the target calories
-            tagMatchingRecipes.sort((a, b) => {
-              const aCalories = a.calories || 0;
-              const bCalories = b.calories || 0;
-              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
-            });
-            
-            // Get the closest match
-            const selectedRecipe = tagMatchingRecipes[0];
-            
-            // Remove the selected recipe from available recipes
-            const index = availableRecipes.findIndex(r => r.id === selectedRecipe.id);
-            if (index !== -1) {
-              availableRecipes.splice(index, 1);
-            }
-            
-            return selectedRecipe;
-          }
-          
-          // If no matching recipe found, filter out recipes with excluded tags
-          const appropriateRecipes = availableRecipes.filter(recipe => 
-            !recipe.tags.some(tag => 
-              excludedTags[mealType].some(excludedTag => 
-                tag.toLowerCase().includes(excludedTag.toLowerCase())
-              )
-            )
-          );
-          
-          // If we have appropriate recipes, use those
-          if (appropriateRecipes.length > 0) {
-            // Sort by how close they are to the target calories
-            appropriateRecipes.sort((a, b) => {
-              const aCalories = a.calories || 0;
-              const bCalories = b.calories || 0;
-              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
-            });
-            
-            const selectedRecipe = appropriateRecipes[0];
-            
-            // Remove the selected recipe from available recipes
-            const index = availableRecipes.findIndex(r => r.id === selectedRecipe.id);
-            if (index !== -1) {
-              availableRecipes.splice(index, 1);
-            }
-            
-            return selectedRecipe;
-          }
-          
-          // If no appropriate recipes found, just use the first available recipe
-          // that's closest to the target calories
-          if (availableRecipes.length > 0) {
-            // Sort by how close they are to the target calories
-            availableRecipes.sort((a, b) => {
-              const aCalories = a.calories || 0;
-              const bCalories = b.calories || 0;
-              return Math.abs(aCalories - targetCalories) - Math.abs(bCalories - targetCalories);
-            });
-            
-            const selectedRecipe = availableRecipes[0];
-            availableRecipes.splice(0, 1);
-            return selectedRecipe;
-          }
-          
-          return null;
-        };
-        
         // Get the current day plan
         const currentDayPlan = get().mealPlan[date] || {};
+        
+        // Get already used recipe IDs to avoid duplicates
+        const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
         
         // Generate meals for each type with target calories
         // Only generate meals that don't already exist or if specifically requested
@@ -460,87 +346,499 @@ export const useMealPlanStore = create<MealPlanState>()(
         let lunch = currentDayPlan.lunch;
         let dinner = currentDayPlan.dinner;
         
-        // If a specific meal type is provided, only generate that meal
-        if (specificMealType) {
-          // Generate only the specified meal type
-          if (specificMealType === 'breakfast') {
-            const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
-            if (breakfastRecipe) {
-              breakfast = {
-                recipeId: breakfastRecipe.id,
-                name: breakfastRecipe.name,
-                calories: breakfastRecipe.calories,
-                protein: breakfastRecipe.protein,
-                carbs: breakfastRecipe.carbs,
-                fat: breakfastRecipe.fat
-              };
+        try {
+          // If a specific meal type is provided, only generate that meal
+          if (specificMealType) {
+            // Generate only the specified meal type
+            if (specificMealType === 'breakfast') {
+              // Use Firestore to get suitable breakfast recipes
+              const breakfastRecipes = await firebaseService.getRecipesForMealPlan('breakfast', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (breakfastRecipes.length > 0) {
+                const breakfastRecipe = breakfastRecipes[0];
+                breakfast = {
+                  recipeId: breakfastRecipe.id,
+                  name: breakfastRecipe.name,
+                  calories: breakfastRecipe.calories,
+                  protein: breakfastRecipe.protein,
+                  carbs: breakfastRecipe.carbs,
+                  fat: breakfastRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(breakfastRecipe.id);
+              } else {
+                // Fallback to local recipes if no suitable recipes found in Firestore
+                const filteredRecipes = recipes.filter(recipe => 
+                  recipe.mealType === 'breakfast' && 
+                  get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                  !weeklyUsedRecipeIds.includes(recipe.id)
+                );
+                
+                if (filteredRecipes.length > 0) {
+                  // Sort by how close they are to the target calories
+                  filteredRecipes.sort((a, b) => {
+                    return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
+                  });
+                  
+                  const breakfastRecipe = filteredRecipes[0];
+                  breakfast = {
+                    recipeId: breakfastRecipe.id,
+                    name: breakfastRecipe.name,
+                    calories: breakfastRecipe.calories,
+                    protein: breakfastRecipe.protein,
+                    carbs: breakfastRecipe.carbs,
+                    fat: breakfastRecipe.fat
+                  };
+                  
+                  // Add to weekly used recipe IDs
+                  get().weeklyUsedRecipeIds.add(breakfastRecipe.id);
+                }
+              }
+            } else if (specificMealType === 'lunch') {
+              // Use Firestore to get suitable lunch recipes
+              const lunchRecipes = await firebaseService.getRecipesForMealPlan('lunch', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (lunchRecipes.length > 0) {
+                const lunchRecipe = lunchRecipes[0];
+                lunch = {
+                  recipeId: lunchRecipe.id,
+                  name: lunchRecipe.name,
+                  calories: lunchRecipe.calories,
+                  protein: lunchRecipe.protein,
+                  carbs: lunchRecipe.carbs,
+                  fat: lunchRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(lunchRecipe.id);
+              } else {
+                // Fallback to local recipes if no suitable recipes found in Firestore
+                const filteredRecipes = recipes.filter(recipe => 
+                  recipe.mealType === 'lunch' && 
+                  get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                  !weeklyUsedRecipeIds.includes(recipe.id)
+                );
+                
+                if (filteredRecipes.length > 0) {
+                  // Sort by how close they are to the target calories
+                  filteredRecipes.sort((a, b) => {
+                    return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
+                  });
+                  
+                  const lunchRecipe = filteredRecipes[0];
+                  lunch = {
+                    recipeId: lunchRecipe.id,
+                    name: lunchRecipe.name,
+                    calories: lunchRecipe.calories,
+                    protein: lunchRecipe.protein,
+                    carbs: lunchRecipe.carbs,
+                    fat: lunchRecipe.fat
+                  };
+                  
+                  // Add to weekly used recipe IDs
+                  get().weeklyUsedRecipeIds.add(lunchRecipe.id);
+                }
+              }
+            } else if (specificMealType === 'dinner') {
+              // Use Firestore to get suitable dinner recipes
+              const dinnerRecipes = await firebaseService.getRecipesForMealPlan('dinner', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (dinnerRecipes.length > 0) {
+                const dinnerRecipe = dinnerRecipes[0];
+                dinner = {
+                  recipeId: dinnerRecipe.id,
+                  name: dinnerRecipe.name,
+                  calories: dinnerRecipe.calories,
+                  protein: dinnerRecipe.protein,
+                  carbs: dinnerRecipe.carbs,
+                  fat: dinnerRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(dinnerRecipe.id);
+              } else {
+                // Fallback to local recipes if no suitable recipes found in Firestore
+                const filteredRecipes = recipes.filter(recipe => 
+                  recipe.mealType === 'dinner' && 
+                  get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                  !weeklyUsedRecipeIds.includes(recipe.id)
+                );
+                
+                if (filteredRecipes.length > 0) {
+                  // Sort by how close they are to the target calories
+                  filteredRecipes.sort((a, b) => {
+                    return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
+                  });
+                  
+                  const dinnerRecipe = filteredRecipes[0];
+                  dinner = {
+                    recipeId: dinnerRecipe.id,
+                    name: dinnerRecipe.name,
+                    calories: dinnerRecipe.calories,
+                    protein: dinnerRecipe.protein,
+                    carbs: dinnerRecipe.carbs,
+                    fat: dinnerRecipe.fat
+                  };
+                  
+                  // Add to weekly used recipe IDs
+                  get().weeklyUsedRecipeIds.add(dinnerRecipe.id);
+                }
+              }
             }
-          } else if (specificMealType === 'lunch') {
-            const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
-            if (lunchRecipe) {
-              lunch = {
-                recipeId: lunchRecipe.id,
-                name: lunchRecipe.name,
-                calories: lunchRecipe.calories,
-                protein: lunchRecipe.protein,
-                carbs: lunchRecipe.carbs,
-                fat: lunchRecipe.fat
-              };
+          } else {
+            // Generate all missing meals
+            if (!breakfast) {
+              // Use Firestore to get suitable breakfast recipes
+              const breakfastRecipes = await firebaseService.getRecipesForMealPlan('breakfast', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (breakfastRecipes.length > 0) {
+                const breakfastRecipe = breakfastRecipes[0];
+                breakfast = {
+                  recipeId: breakfastRecipe.id,
+                  name: breakfastRecipe.name,
+                  calories: breakfastRecipe.calories,
+                  protein: breakfastRecipe.protein,
+                  carbs: breakfastRecipe.carbs,
+                  fat: breakfastRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(breakfastRecipe.id);
+              } else {
+                // Fallback to local recipes if no suitable recipes found in Firestore
+                const filteredRecipes = recipes.filter(recipe => 
+                  recipe.mealType === 'breakfast' && 
+                  get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                  !weeklyUsedRecipeIds.includes(recipe.id)
+                );
+                
+                if (filteredRecipes.length > 0) {
+                  // Sort by how close they are to the target calories
+                  filteredRecipes.sort((a, b) => {
+                    return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
+                  });
+                  
+                  const breakfastRecipe = filteredRecipes[0];
+                  breakfast = {
+                    recipeId: breakfastRecipe.id,
+                    name: breakfastRecipe.name,
+                    calories: breakfastRecipe.calories,
+                    protein: breakfastRecipe.protein,
+                    carbs: breakfastRecipe.carbs,
+                    fat: breakfastRecipe.fat
+                  };
+                  
+                  // Add to weekly used recipe IDs
+                  get().weeklyUsedRecipeIds.add(breakfastRecipe.id);
+                }
+              }
             }
-          } else if (specificMealType === 'dinner') {
-            const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
-            if (dinnerRecipe) {
-              dinner = {
-                recipeId: dinnerRecipe.id,
-                name: dinnerRecipe.name,
-                calories: dinnerRecipe.calories,
-                protein: dinnerRecipe.protein,
-                carbs: dinnerRecipe.carbs,
-                fat: dinnerRecipe.fat
-              };
+            
+            if (!lunch) {
+              // Use Firestore to get suitable lunch recipes
+              const lunchRecipes = await firebaseService.getRecipesForMealPlan('lunch', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (lunchRecipes.length > 0) {
+                const lunchRecipe = lunchRecipes[0];
+                lunch = {
+                  recipeId: lunchRecipe.id,
+                  name: lunchRecipe.name,
+                  calories: lunchRecipe.calories,
+                  protein: lunchRecipe.protein,
+                  carbs: lunchRecipe.carbs,
+                  fat: lunchRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(lunchRecipe.id);
+              } else {
+                // Fallback to local recipes if no suitable recipes found in Firestore
+                const filteredRecipes = recipes.filter(recipe => 
+                  recipe.mealType === 'lunch' && 
+                  get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                  !weeklyUsedRecipeIds.includes(recipe.id)
+                );
+                
+                if (filteredRecipes.length > 0) {
+                  // Sort by how close they are to the target calories
+                  filteredRecipes.sort((a, b) => {
+                    return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
+                  });
+                  
+                  const lunchRecipe = filteredRecipes[0];
+                  lunch = {
+                    recipeId: lunchRecipe.id,
+                    name: lunchRecipe.name,
+                    calories: lunchRecipe.calories,
+                    protein: lunchRecipe.protein,
+                    carbs: lunchRecipe.carbs,
+                    fat: lunchRecipe.fat
+                  };
+                  
+                  // Add to weekly used recipe IDs
+                  get().weeklyUsedRecipeIds.add(lunchRecipe.id);
+                }
+              }
+            }
+            
+            if (!dinner) {
+              // Use Firestore to get suitable dinner recipes
+              const dinnerRecipes = await firebaseService.getRecipesForMealPlan('dinner', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (dinnerRecipes.length > 0) {
+                const dinnerRecipe = dinnerRecipes[0];
+                dinner = {
+                  recipeId: dinnerRecipe.id,
+                  name: dinnerRecipe.name,
+                  calories: dinnerRecipe.calories,
+                  protein: dinnerRecipe.protein,
+                  carbs: dinnerRecipe.carbs,
+                  fat: dinnerRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(dinnerRecipe.id);
+              } else {
+                // Fallback to local recipes if no suitable recipes found in Firestore
+                const filteredRecipes = recipes.filter(recipe => 
+                  recipe.mealType === 'dinner' && 
+                  get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                  !weeklyUsedRecipeIds.includes(recipe.id)
+                );
+                
+                if (filteredRecipes.length > 0) {
+                  // Sort by how close they are to the target calories
+                  filteredRecipes.sort((a, b) => {
+                    return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
+                  });
+                  
+                  const dinnerRecipe = filteredRecipes[0];
+                  dinner = {
+                    recipeId: dinnerRecipe.id,
+                    name: dinnerRecipe.name,
+                    calories: dinnerRecipe.calories,
+                    protein: dinnerRecipe.protein,
+                    carbs: dinnerRecipe.carbs,
+                    fat: dinnerRecipe.fat
+                  };
+                  
+                  // Add to weekly used recipe IDs
+                  get().weeklyUsedRecipeIds.add(dinnerRecipe.id);
+                }
+              }
             }
           }
-        } else {
-          // Generate all missing meals
-          if (!breakfast) {
-            const breakfastRecipe = getRecipeForMeal('breakfast', breakfastCalories);
-            if (breakfastRecipe) {
-              breakfast = {
-                recipeId: breakfastRecipe.id,
-                name: breakfastRecipe.name,
-                calories: breakfastRecipe.calories,
-                protein: breakfastRecipe.protein,
-                carbs: breakfastRecipe.carbs,
-                fat: breakfastRecipe.fat
-              };
+        } catch (error) {
+          console.error('Error fetching recipes from Firestore:', error);
+          // Fallback to local recipes if Firestore fails
+          if (specificMealType) {
+            // Generate only the specified meal type
+            if (specificMealType === 'breakfast' && !breakfast) {
+              const filteredRecipes = recipes.filter(recipe => 
+                recipe.mealType === 'breakfast' && 
+                get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                !weeklyUsedRecipeIds.includes(recipe.id)
+              );
+              
+              if (filteredRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                filteredRecipes.sort((a, b) => {
+                  return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
+                });
+                
+                const breakfastRecipe = filteredRecipes[0];
+                breakfast = {
+                  recipeId: breakfastRecipe.id,
+                  name: breakfastRecipe.name,
+                  calories: breakfastRecipe.calories,
+                  protein: breakfastRecipe.protein,
+                  carbs: breakfastRecipe.carbs,
+                  fat: breakfastRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(breakfastRecipe.id);
+              }
+            } else if (specificMealType === 'lunch' && !lunch) {
+              const filteredRecipes = recipes.filter(recipe => 
+                recipe.mealType === 'lunch' && 
+                get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                !weeklyUsedRecipeIds.includes(recipe.id)
+              );
+              
+              if (filteredRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                filteredRecipes.sort((a, b) => {
+                  return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
+                });
+                
+                const lunchRecipe = filteredRecipes[0];
+                lunch = {
+                  recipeId: lunchRecipe.id,
+                  name: lunchRecipe.name,
+                  calories: lunchRecipe.calories,
+                  protein: lunchRecipe.protein,
+                  carbs: lunchRecipe.carbs,
+                  fat: lunchRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(lunchRecipe.id);
+              }
+            } else if (specificMealType === 'dinner' && !dinner) {
+              const filteredRecipes = recipes.filter(recipe => 
+                recipe.mealType === 'dinner' && 
+                get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                !weeklyUsedRecipeIds.includes(recipe.id)
+              );
+              
+              if (filteredRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                filteredRecipes.sort((a, b) => {
+                  return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
+                });
+                
+                const dinnerRecipe = filteredRecipes[0];
+                dinner = {
+                  recipeId: dinnerRecipe.id,
+                  name: dinnerRecipe.name,
+                  calories: dinnerRecipe.calories,
+                  protein: dinnerRecipe.protein,
+                  carbs: dinnerRecipe.carbs,
+                  fat: dinnerRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(dinnerRecipe.id);
+              }
             }
-          }
-          
-          if (!lunch) {
-            const lunchRecipe = getRecipeForMeal('lunch', lunchCalories);
-            if (lunchRecipe) {
-              lunch = {
-                recipeId: lunchRecipe.id,
-                name: lunchRecipe.name,
-                calories: lunchRecipe.calories,
-                protein: lunchRecipe.protein,
-                carbs: lunchRecipe.carbs,
-                fat: lunchRecipe.fat
-              };
+          } else {
+            // Generate all missing meals
+            if (!breakfast) {
+              const filteredRecipes = recipes.filter(recipe => 
+                recipe.mealType === 'breakfast' && 
+                get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                !weeklyUsedRecipeIds.includes(recipe.id)
+              );
+              
+              if (filteredRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                filteredRecipes.sort((a, b) => {
+                  return Math.abs(a.calories - breakfastCalories) - Math.abs(b.calories - breakfastCalories);
+                });
+                
+                const breakfastRecipe = filteredRecipes[0];
+                breakfast = {
+                  recipeId: breakfastRecipe.id,
+                  name: breakfastRecipe.name,
+                  calories: breakfastRecipe.calories,
+                  protein: breakfastRecipe.protein,
+                  carbs: breakfastRecipe.carbs,
+                  fat: breakfastRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(breakfastRecipe.id);
+              }
             }
-          }
-          
-          if (!dinner) {
-            const dinnerRecipe = getRecipeForMeal('dinner', dinnerCalories);
-            if (dinnerRecipe) {
-              dinner = {
-                recipeId: dinnerRecipe.id,
-                name: dinnerRecipe.name,
-                calories: dinnerRecipe.calories,
-                protein: dinnerRecipe.protein,
-                carbs: dinnerRecipe.carbs,
-                fat: dinnerRecipe.fat
-              };
+            
+            if (!lunch) {
+              const filteredRecipes = recipes.filter(recipe => 
+                recipe.mealType === 'lunch' && 
+                get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                !weeklyUsedRecipeIds.includes(recipe.id)
+              );
+              
+              if (filteredRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                filteredRecipes.sort((a, b) => {
+                  return Math.abs(a.calories - lunchCalories) - Math.abs(b.calories - lunchCalories);
+                });
+                
+                const lunchRecipe = filteredRecipes[0];
+                lunch = {
+                  recipeId: lunchRecipe.id,
+                  name: lunchRecipe.name,
+                  calories: lunchRecipe.calories,
+                  protein: lunchRecipe.protein,
+                  carbs: lunchRecipe.carbs,
+                  fat: lunchRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(lunchRecipe.id);
+              }
+            }
+            
+            if (!dinner) {
+              const filteredRecipes = recipes.filter(recipe => 
+                recipe.mealType === 'dinner' && 
+                get().isRecipeSuitable(recipe, dietType, allergies, excludedIngredients) &&
+                !weeklyUsedRecipeIds.includes(recipe.id)
+              );
+              
+              if (filteredRecipes.length > 0) {
+                // Sort by how close they are to the target calories
+                filteredRecipes.sort((a, b) => {
+                  return Math.abs(a.calories - dinnerCalories) - Math.abs(b.calories - dinnerCalories);
+                });
+                
+                const dinnerRecipe = filteredRecipes[0];
+                dinner = {
+                  recipeId: dinnerRecipe.id,
+                  name: dinnerRecipe.name,
+                  calories: dinnerRecipe.calories,
+                  protein: dinnerRecipe.protein,
+                  carbs: dinnerRecipe.carbs,
+                  fat: dinnerRecipe.fat
+                };
+                
+                // Add to weekly used recipe IDs
+                get().weeklyUsedRecipeIds.add(dinnerRecipe.id);
+              }
             }
           }
         }
@@ -579,8 +877,185 @@ export const useMealPlanStore = create<MealPlanState>()(
           mealPlan: {
             ...state.mealPlan,
             [date]: newDayPlan
-          }
+          },
+          weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
         }));
+      },
+      
+      generateWeeklyMealPlan: async (startDate, endDate) => {
+        // Get user profile for personalization
+        const userProfile = useUserStore.getState().profile;
+        const { 
+          dietType = 'any', 
+          allergies = [], 
+          excludedIngredients = [],
+          calorieGoal = 2000,
+          fitnessGoals = []
+        } = userProfile;
+        
+        // Reset weekly used recipe IDs
+        set({ weeklyUsedRecipeIds: new Set<string>() });
+        
+        // Generate dates between startDate and endDate (inclusive)
+        const dates: string[] = [];
+        let currentDate = new Date(startDate);
+        const lastDate = new Date(endDate);
+        
+        while (currentDate <= lastDate) {
+          dates.push(currentDate.toISOString().split('T')[0]);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // Generate meal plan for each date
+        for (const date of dates) {
+          try {
+            // Get the current day plan
+            const currentDayPlan = get().mealPlan[date] || {};
+            
+            // Define meal split percentages for calorie distribution
+            const mealSplit = {
+              breakfast: 0.3, // 30% of daily calories
+              lunch: 0.35,    // 35% of daily calories
+              dinner: 0.35,   // 35% of daily calories
+            };
+            
+            // Calculate target calories per meal
+            const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
+            const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
+            const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
+            
+            // Get already used recipe IDs to avoid duplicates
+            const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
+            
+            // Generate breakfast if missing
+            if (!currentDayPlan.breakfast) {
+              // Use Firestore to get suitable breakfast recipes
+              const breakfastRecipes = await firebaseService.getRecipesForMealPlan('breakfast', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
+                excludeIds: weeklyUsedRecipeIds
+              }, 5);
+              
+              if (breakfastRecipes.length > 0) {
+                const breakfastRecipe = breakfastRecipes[0];
+                const breakfast = {
+                  recipeId: breakfastRecipe.id,
+                  name: breakfastRecipe.name,
+                  calories: breakfastRecipe.calories,
+                  protein: breakfastRecipe.protein,
+                  carbs: breakfastRecipe.carbs,
+                  fat: breakfastRecipe.fat
+                };
+                
+                // Add to meal plan
+                set((state) => {
+                  const dayPlan = state.mealPlan[date] || {};
+                  const updatedDayPlan = { ...dayPlan, breakfast };
+                  
+                  // Add to weekly used recipe IDs
+                  state.weeklyUsedRecipeIds.add(breakfastRecipe.id);
+                  
+                  return {
+                    mealPlan: {
+                      ...state.mealPlan,
+                      [date]: updatedDayPlan
+                    },
+                    weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
+                  };
+                });
+              }
+            }
+            
+            // Generate lunch if missing
+            if (!currentDayPlan.lunch) {
+              // Use Firestore to get suitable lunch recipes
+              const lunchRecipes = await firebaseService.getRecipesForMealPlan('lunch', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
+                excludeIds: Array.from(get().weeklyUsedRecipeIds) // Get updated list
+              }, 5);
+              
+              if (lunchRecipes.length > 0) {
+                const lunchRecipe = lunchRecipes[0];
+                const lunch = {
+                  recipeId: lunchRecipe.id,
+                  name: lunchRecipe.name,
+                  calories: lunchRecipe.calories,
+                  protein: lunchRecipe.protein,
+                  carbs: lunchRecipe.carbs,
+                  fat: lunchRecipe.fat
+                };
+                
+                // Add to meal plan
+                set((state) => {
+                  const dayPlan = state.mealPlan[date] || {};
+                  const updatedDayPlan = { ...dayPlan, lunch };
+                  
+                  // Add to weekly used recipe IDs
+                  state.weeklyUsedRecipeIds.add(lunchRecipe.id);
+                  
+                  return {
+                    mealPlan: {
+                      ...state.mealPlan,
+                      [date]: updatedDayPlan
+                    },
+                    weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
+                  };
+                });
+              }
+            }
+            
+            // Generate dinner if missing
+            if (!currentDayPlan.dinner) {
+              // Use Firestore to get suitable dinner recipes
+              const dinnerRecipes = await firebaseService.getRecipesForMealPlan('dinner', {
+                dietType,
+                allergies,
+                excludedIngredients,
+                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+                calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
+                excludeIds: Array.from(get().weeklyUsedRecipeIds) // Get updated list
+              }, 5);
+              
+              if (dinnerRecipes.length > 0) {
+                const dinnerRecipe = dinnerRecipes[0];
+                const dinner = {
+                  recipeId: dinnerRecipe.id,
+                  name: dinnerRecipe.name,
+                  calories: dinnerRecipe.calories,
+                  protein: dinnerRecipe.protein,
+                  carbs: dinnerRecipe.carbs,
+                  fat: dinnerRecipe.fat
+                };
+                
+                // Add to meal plan
+                set((state) => {
+                  const dayPlan = state.mealPlan[date] || {};
+                  const updatedDayPlan = { ...dayPlan, dinner };
+                  
+                  // Add to weekly used recipe IDs
+                  state.weeklyUsedRecipeIds.add(dinnerRecipe.id);
+                  
+                  return {
+                    mealPlan: {
+                      ...state.mealPlan,
+                      [date]: updatedDayPlan
+                    },
+                    weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
+                  };
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Error generating meal plan for ${date}:`, error);
+          }
+        }
       }
     }),
     {

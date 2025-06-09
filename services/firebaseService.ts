@@ -19,7 +19,7 @@ import {
   QueryConstraint,
   DocumentData
 } from 'firebase/firestore';
-import { Recipe, RecipeIngredient, FirestoreRecipe } from '@/types';
+import { Recipe, RecipeIngredient, FirestoreRecipe, DietType, MealType } from '@/types';
 
 // Firebase configuration
 // Replace with your own Firebase config
@@ -231,11 +231,12 @@ export const getRecipeFromFirestore = async (id: string): Promise<Recipe | null>
 // Function to get recipes from Firestore with filters
 export const getRecipesFromFirestore = async (
   filters: {
-    mealType?: 'breakfast' | 'lunch' | 'dinner' | null;
-    complexity?: 'simple' | 'complex' | null;
-    dietaryPreference?: string | null;
-    fitnessGoal?: string | null;
+    mealType?: MealType;
+    complexity?: 'simple' | 'complex';
+    dietaryPreference?: string;
+    fitnessGoal?: string;
     searchQuery?: string;
+    excludeIds?: string[];
   } = {},
   pageSize: number = 20,
   lastDoc?: any
@@ -283,12 +284,17 @@ export const getRecipesFromFirestore = async (
     // Handle search query (client-side filtering)
     let filteredRecipes = recipes;
     if (filters.searchQuery && filters.searchQuery.trim() !== '') {
-      const searchQuery = filters.searchQuery.toLowerCase();
+      const searchLower = filters.searchQuery.toLowerCase();
       filteredRecipes = recipes.filter(recipe => 
-        recipe.name.toLowerCase().includes(searchQuery) ||
-        recipe.tags.some(tag => tag.toLowerCase().includes(searchQuery)) ||
-        recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchQuery))
+        recipe.name.toLowerCase().includes(searchLower) ||
+        recipe.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
+        recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchLower))
       );
+    }
+    
+    // Filter out excluded IDs if provided
+    if (filters.excludeIds && filters.excludeIds.length > 0) {
+      filteredRecipes = filteredRecipes.filter(recipe => !filters.excludeIds?.includes(recipe.id));
     }
     
     // Get last document for pagination
@@ -301,6 +307,107 @@ export const getRecipesFromFirestore = async (
   } catch (error) {
     console.error('Error getting recipes from Firestore:', error);
     return { recipes: [], lastDoc: null };
+  }
+};
+
+// Function to get recipes for meal planning with advanced filtering
+export const getRecipesForMealPlan = async (
+  mealType: MealType,
+  filters: {
+    dietType?: DietType;
+    allergies?: string[];
+    excludedIngredients?: string[];
+    fitnessGoal?: string;
+    complexity?: 'simple' | 'complex';
+    calorieRange?: { min: number; max: number };
+    excludeIds?: string[];
+  } = {},
+  limit: number = 10
+): Promise<Recipe[]> => {
+  try {
+    const constraints: QueryConstraint[] = [];
+    
+    // Filter by meal type
+    if (mealType) {
+      constraints.push(where('tags.meal_type', '==', mealType));
+    }
+    
+    // Filter by diet type if specified
+    if (filters.dietType && filters.dietType !== 'any') {
+      constraints.push(where('tags.diet', 'array-contains', filters.dietType));
+    }
+    
+    // Filter by fitness goal if specified
+    if (filters.fitnessGoal) {
+      constraints.push(where('tags.goal', 'array-contains', filters.fitnessGoal));
+    }
+    
+    // Filter by complexity if specified
+    if (filters.complexity) {
+      constraints.push(where('tags.complexity', '==', filters.complexity));
+    }
+    
+    // Add ordering and limit
+    constraints.push(orderBy('created_at', 'desc'));
+    constraints.push(limit(limit * 2)); // Get more than needed to allow for filtering
+    
+    // Create query
+    const q = query(recipesCollection, ...constraints);
+    
+    // Execute query
+    const querySnapshot = await getDocs(q);
+    
+    // Extract recipes
+    let recipes: Recipe[] = [];
+    querySnapshot.forEach(doc => {
+      recipes.push(convertFirestoreDataToRecipe(doc.id, doc.data()));
+    });
+    
+    // Client-side filtering for allergies and excluded ingredients
+    if ((filters.allergies && filters.allergies.length > 0) || 
+        (filters.excludedIngredients && filters.excludedIngredients.length > 0)) {
+      const combinedExclusions = [
+        ...(filters.allergies || []), 
+        ...(filters.excludedIngredients || [])
+      ];
+      
+      if (combinedExclusions.length > 0) {
+        recipes = recipes.filter(recipe => {
+          // Check if any ingredient contains an excluded term
+          for (const ingredient of recipe.ingredients) {
+            const lowerIngredient = ingredient.toLowerCase();
+            for (const exclusion of combinedExclusions) {
+              if (lowerIngredient.includes(exclusion.toLowerCase())) {
+                return false;
+              }
+            }
+          }
+          return true;
+        });
+      }
+    }
+    
+    // Filter by calorie range if specified
+    if (filters.calorieRange) {
+      recipes = recipes.filter(recipe => 
+        recipe.calories >= filters.calorieRange!.min && 
+        recipe.calories <= filters.calorieRange!.max
+      );
+    }
+    
+    // Filter out excluded IDs if provided
+    if (filters.excludeIds && filters.excludeIds.length > 0) {
+      recipes = recipes.filter(recipe => !filters.excludeIds?.includes(recipe.id));
+    }
+    
+    // Randomize the results to get variety
+    recipes = recipes.sort(() => 0.5 - Math.random());
+    
+    // Return limited number of recipes
+    return recipes.slice(0, limit);
+  } catch (error) {
+    console.error('Error getting recipes for meal plan:', error);
+    return [];
   }
 };
 

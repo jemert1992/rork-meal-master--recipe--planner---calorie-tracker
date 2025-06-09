@@ -1,21 +1,25 @@
 // User types
 export interface UserProfile {
-  id: string;
+  id?: string;
   name: string;
-  email: string;
+  email?: string;
   age?: number;
   gender?: 'male' | 'female' | 'other';
   weight?: number;
   height?: number;
-  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
   dietaryPreferences?: DietaryPreference[];
+  allergies?: string[];
+  excludedIngredients?: string[];
+  dietType?: DietType;
   fitnessGoals?: FitnessGoal[];
   calorieGoal?: number;
   proteinGoal?: number;
   carbsGoal?: number;
   fatGoal?: number;
-  createdAt: string;
-  updatedAt: string;
+  completedOnboarding?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Recipe types
@@ -28,6 +32,18 @@ export type DietaryPreference =
   | 'paleo' 
   | 'gluten-free' 
   | 'dairy-free' 
+  | 'low-carb'
+  | 'high-protein';
+
+export type DietType = 
+  | 'any'
+  | 'vegetarian'
+  | 'vegan'
+  | 'pescatarian'
+  | 'keto'
+  | 'paleo'
+  | 'gluten-free'
+  | 'dairy-free'
   | 'low-carb';
 
 export type FitnessGoal = 
@@ -93,16 +109,51 @@ export interface FirestoreRecipe {
 
 // Meal Plan types
 export interface MealPlan {
+  [date: string]: DailyMeals;
+}
+
+export interface DailyMeals {
+  breakfast?: MealItem;
+  lunch?: MealItem;
+  dinner?: MealItem;
+}
+
+export interface MealItem {
+  recipeId?: string;
+  name?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
+  customFood?: boolean;
+}
+
+// Recipe Filters
+export interface RecipeFilters {
+  mealType?: MealType;
+  complexity?: 'simple' | 'complex';
+  dietaryPreference?: string;
+  fitnessGoal?: string;
+  searchQuery?: string;
+  favorite?: boolean;
+  excludeIds?: string[];
+}
+
+// Pagination State
+export interface PaginationState {
+  lastDoc: any;
+  hasMore: boolean;
+  loading: boolean;
+}
+
+// Recipe Collection
+export interface RecipeCollection {
   id: string;
-  date: string;
-  breakfast?: Recipe[];
-  lunch?: Recipe[];
-  dinner?: Recipe[];
-  snacks?: Recipe[];
-  totalCalories: number;
-  totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
+  name: string;
+  description: string;
+  image: string;
+  recipeIds: string[];
 }
 
 // Food Log types

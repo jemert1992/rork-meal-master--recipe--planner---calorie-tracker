@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, Plus, ShoppingBag, X, Sparkles } from 'lucide-react-native';
-import { format, addDays, startOfWeek } from 'date-fns';
+import { Calendar, ChevronRight, Plus, ShoppingBag, X, Sparkles, RefreshCw } from 'lucide-react-native';
+import { format, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
+import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
 
 type WeeklyMealPlannerProps = {
@@ -13,17 +14,20 @@ type WeeklyMealPlannerProps = {
 
 export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealPlannerProps) {
   const router = useRouter();
-  const { mealPlan, generateMealPlan, isRecipeUsedInMealPlan } = useMealPlanStore();
+  const { mealPlan, generateMealPlan, isRecipeUsedInMealPlan, generateWeeklyMealPlan, updateWeeklyUsedRecipeIds } = useMealPlanStore();
   const { recipes } = useRecipeStore();
+  const { profile } = useUserStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [generatingMeal, setGeneratingMeal] = useState<{
     date: string;
     mealType: 'breakfast' | 'lunch' | 'dinner';
     loading: boolean;
   } | null>(null);
+  const [generatingWeeklyPlan, setGeneratingWeeklyPlan] = useState(false);
   
   // Get the current week starting from today
   const [weekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   
   // Generate an array of 7 days starting from weekStart
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -90,6 +94,66 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       );
     } finally {
       setGeneratingMeal(null);
+    }
+  };
+
+  const handleGenerateWeeklyMealPlan = async () => {
+    try {
+      setGeneratingWeeklyPlan(true);
+      
+      // Ask for confirmation before replacing existing meals
+      const hasExistingMeals = weekDays.some(day => {
+        const dayPlan = mealPlan[day.dateString];
+        return dayPlan && (dayPlan.breakfast || dayPlan.lunch || dayPlan.dinner);
+      });
+      
+      if (hasExistingMeals) {
+        Alert.alert(
+          "Replace Existing Meals?",
+          "This will replace any existing meals in your weekly plan. Continue?",
+          [
+            { text: "Cancel", style: "cancel", onPress: () => setGeneratingWeeklyPlan(false) },
+            { 
+              text: "Continue", 
+              onPress: async () => {
+                // Update weekly used recipe IDs
+                updateWeeklyUsedRecipeIds(weekDays[0].dateString, weekDays[6].dateString);
+                
+                // Generate weekly meal plan
+                await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
+                
+                Alert.alert(
+                  "Weekly Plan Generated",
+                  "Your weekly meal plan has been generated!",
+                  [{ text: "OK" }]
+                );
+                setGeneratingWeeklyPlan(false);
+              }
+            }
+          ]
+        );
+      } else {
+        // Update weekly used recipe IDs
+        updateWeeklyUsedRecipeIds(weekDays[0].dateString, weekDays[6].dateString);
+        
+        // Generate weekly meal plan
+        await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
+        
+        Alert.alert(
+          "Weekly Plan Generated",
+          "Your weekly meal plan has been generated!",
+          [{ text: "OK" }]
+        );
+        setGeneratingWeeklyPlan(false);
+      }
+    } catch (error) {
+      console.error("Error generating weekly meal plan:", error);
+      Alert.alert(
+        "Generation Failed",
+        "Could not generate a weekly meal plan. Please try again.",
+        [{ text: "OK" }]
+      );
+      setGeneratingWeeklyPlan(false);
     }
   };
 
@@ -173,6 +237,35 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
+            </View>
+
+            <View style={styles.weeklyActionContainer}>
+              <Pressable 
+                style={[styles.generateWeeklyButton, generatingWeeklyPlan && styles.generatingButton]} 
+                onPress={handleGenerateWeeklyMealPlan}
+                disabled={generatingWeeklyPlan}
+                accessibilityLabel="Generate weekly meal plan"
+                accessibilityHint="Automatically generate meals for the entire week"
+                accessibilityRole="button"
+              >
+                {generatingWeeklyPlan ? (
+                  <>
+                    <ActivityIndicator size="small" color={Colors.white} style={styles.buttonIcon} />
+                    <Text style={styles.generateWeeklyButtonText}>Generating...</Text>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={18} color={Colors.white} style={styles.buttonIcon} />
+                    <Text style={styles.generateWeeklyButtonText}>Generate Weekly Plan</Text>
+                  </>
+                )}
+              </Pressable>
+              
+              <Text style={styles.weeklyPlanInfo}>
+                {profile.dietType && profile.dietType !== 'any' 
+                  ? `Based on your ${profile.dietType} diet`
+                  : "Based on your preferences"}
+              </Text>
             </View>
 
             <ScrollView 
@@ -397,6 +490,44 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  weeklyActionContainer: {
+    padding: 16,
+    backgroundColor: Colors.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  generateWeeklyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  generatingButton: {
+    backgroundColor: Colors.primary,
+    opacity: 0.7,
+  },
+  generateWeeklyButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.white,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  weeklyPlanInfo: {
+    fontSize: 14,
+    color: Colors.textLight,
+    textAlign: 'center',
   },
   modalScroll: {
     flex: 1,

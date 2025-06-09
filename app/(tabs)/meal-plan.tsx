@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react-native';
+import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter } from 'lucide-react-native';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
@@ -10,7 +10,8 @@ import DateSelector from '@/components/DateSelector';
 import MealPlanItem from '@/components/MealPlanItem';
 import NutritionBar from '@/components/NutritionBar';
 import Colors from '@/constants/colors';
-import { DailyMeals, Recipe } from '@/types';
+import { DailyMeals, Recipe, RecipeFilters } from '@/types';
+import * as firebaseService from '@/services/firebaseService';
 
 export default function MealPlanScreen() {
   const router = useRouter();
@@ -21,9 +22,10 @@ export default function MealPlanScreen() {
     clearDay, 
     generateMealPlan,
     isRecipeSuitable,
-    isRecipeUsedInMealPlan
+    isRecipeUsedInMealPlan,
+    updateWeeklyUsedRecipeIds
   } = useMealPlanStore();
-  const { recipes, isLoading } = useRecipeStore();
+  const { recipes, isLoading, useFirestore } = useRecipeStore();
   const { profile } = useUserStore();
   
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -37,6 +39,8 @@ export default function MealPlanScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mealSuggestions, setMealSuggestions] = useState<typeof recipes>([]);
   const [showDietaryWarning, setShowDietaryWarning] = useState(false);
+  const [isLoadingFirestoreRecipes, setIsLoadingFirestoreRecipes] = useState(false);
+  const [firestoreRecipes, setFirestoreRecipes] = useState<Recipe[]>([]);
 
   const dateString = selectedDate.toISOString().split('T')[0];
   const dayPlan = mealPlan[dateString] || {};
@@ -129,15 +133,55 @@ export default function MealPlanScreen() {
     setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk));
   }, [dayPlan, profile, recipes, isRecipeSuitable]);
 
+  // Load recipes from Firestore when needed
+  useEffect(() => {
+    const loadFirestoreRecipes = async () => {
+      if (useFirestore && showSuggestions) {
+        setIsLoadingFirestoreRecipes(true);
+        try {
+          // Get weekly used recipe IDs to avoid suggesting already used recipes
+          updateWeeklyUsedRecipeIds(
+            new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 3).toISOString().split('T')[0],
+            new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 3).toISOString().split('T')[0]
+          );
+          
+          // Create filters based on user preferences
+          const filters: RecipeFilters = {};
+          
+          if (profile.dietType && profile.dietType !== 'any') {
+            filters.dietaryPreference = profile.dietType;
+          }
+          
+          if (profile.fitnessGoals && profile.fitnessGoals.length > 0) {
+            filters.fitnessGoal = profile.fitnessGoals[0];
+          }
+          
+          // Get recipes from Firestore
+          const { recipes: firestoreRecipes } = await firebaseService.getRecipesFromFirestore(filters, 20);
+          setFirestoreRecipes(firestoreRecipes);
+        } catch (error) {
+          console.error('Error loading recipes from Firestore:', error);
+        } finally {
+          setIsLoadingFirestoreRecipes(false);
+        }
+      }
+    };
+    
+    loadFirestoreRecipes();
+  }, [useFirestore, showSuggestions, selectedDate, profile, updateWeeklyUsedRecipeIds]);
+
   // Memoize the function to generate meal suggestions
   const generateMealSuggestions = useCallback(() => {
-    if (recipes.length === 0) return [];
+    // Use Firestore recipes if available, otherwise use local recipes
+    const recipesToUse = useFirestore && firestoreRecipes.length > 0 ? firestoreRecipes : recipes;
+    
+    if (recipesToUse.length === 0) return [];
     
     const suggestions = [];
     const mealTypes = ['breakfast', 'lunch', 'dinner'];
     
     // Filter recipes by dietary preferences if available
-    let availableRecipes = recipes.filter(recipe => !isRecipeUsedInMealPlan(recipe.id));
+    let availableRecipes = recipesToUse.filter(recipe => !isRecipeUsedInMealPlan(recipe.id));
     
     // Apply user dietary preferences, allergies, and excluded ingredients
     if (profile.dietType && profile.dietType !== 'any') {
@@ -169,7 +213,7 @@ export default function MealPlanScreen() {
       if (!dayPlan[mealType as keyof DailyMeals]) {
         // Filter recipes by tags that match the meal type
         const typeRecipes = availableRecipes.filter(recipe => 
-          recipe.tags.includes(mealType) || 
+          recipe.mealType === mealType ||
           (mealType === 'breakfast' && recipe.tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag))) ||
           (mealType === 'lunch' && recipe.tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) ||
           (mealType === 'dinner' && recipe.tags.some(tag => ['dinner', 'main', 'supper', 'entree'].includes(tag)))
@@ -191,15 +235,15 @@ export default function MealPlanScreen() {
     // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
-  }, [dayPlan, recipes, profile, isRecipeSuitable, isRecipeUsedInMealPlan]);
+  }, [dayPlan, recipes, firestoreRecipes, profile, isRecipeSuitable, isRecipeUsedInMealPlan, useFirestore]);
 
   // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
-    if (showSuggestions) {
+    if (showSuggestions && !isLoadingFirestoreRecipes) {
       const suggestions = generateMealSuggestions();
       setMealSuggestions(suggestions);
     }
-  }, [showSuggestions, generateMealSuggestions]);
+  }, [showSuggestions, generateMealSuggestions, isLoadingFirestoreRecipes]);
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
@@ -235,45 +279,57 @@ export default function MealPlanScreen() {
   const handleGenerateMealPlan = async () => {
     setIsGenerating(true);
     try {
-      // Filter recipes by dietary preferences if available
-      let recipesToUse = [...recipes];
+      // Update weekly used recipe IDs
+      updateWeeklyUsedRecipeIds(
+        new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 3).toISOString().split('T')[0],
+        new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 3).toISOString().split('T')[0]
+      );
       
-      // Apply user dietary preferences, allergies, and excluded ingredients
-      if (profile.dietType && profile.dietType !== 'any') {
-        const filteredRecipes = recipes.filter(recipe => 
-          isRecipeSuitable(
-            recipe, 
-            profile.dietType, 
-            profile.allergies, 
-            profile.excludedIngredients
-          )
-        );
+      if (useFirestore) {
+        // Generate meal plan using Firestore
+        await generateMealPlan(dateString, []);
+      } else {
+        // Filter recipes by dietary preferences if available
+        let recipesToUse = [...recipes];
         
-        // Only use filtered recipes if we have enough
-        if (filteredRecipes.length >= 5) {
-          recipesToUse = filteredRecipes;
-        } else {
-          Alert.alert(
-            'Limited Recipe Selection',
-            `Only ${filteredRecipes.length} recipes match your dietary preferences. Using all available recipes instead.`,
-            [{ text: 'OK' }]
+        // Apply user dietary preferences, allergies, and excluded ingredients
+        if (profile.dietType && profile.dietType !== 'any') {
+          const filteredRecipes = recipes.filter(recipe => 
+            isRecipeSuitable(
+              recipe, 
+              profile.dietType, 
+              profile.allergies, 
+              profile.excludedIngredients
+            )
           );
+          
+          // Only use filtered recipes if we have enough
+          if (filteredRecipes.length >= 5) {
+            recipesToUse = filteredRecipes;
+          } else {
+            Alert.alert(
+              'Limited Recipe Selection',
+              `Only ${filteredRecipes.length} recipes match your dietary preferences. Using all available recipes instead.`,
+              [{ text: 'OK' }]
+            );
+          }
+        } else if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
+          // Fallback to old dietary preferences if dietType is not set
+          const filteredRecipes = recipes.filter(recipe => 
+            profile.dietaryPreferences?.some(pref => 
+              recipe.tags.includes(pref)
+            )
+          );
+          
+          // Only use filtered recipes if we have enough
+          if (filteredRecipes.length >= 5) {
+            recipesToUse = filteredRecipes;
+          }
         }
-      } else if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
-        // Fallback to old dietary preferences if dietType is not set
-        const filteredRecipes = recipes.filter(recipe => 
-          profile.dietaryPreferences?.some(pref => 
-            recipe.tags.includes(pref)
-          )
-        );
         
-        // Only use filtered recipes if we have enough
-        if (filteredRecipes.length >= 5) {
-          recipesToUse = filteredRecipes;
-        }
+        await generateMealPlan(dateString, recipesToUse);
       }
       
-      await generateMealPlan(dateString, recipesToUse);
       Alert.alert('Success', 'Meal plan generated successfully!');
     } catch (error) {
       console.error('Error generating meal plan:', error);
@@ -456,27 +512,39 @@ export default function MealPlanScreen() {
 
           {showSuggestions && (
             <View style={styles.suggestionsList}>
-              {mealSuggestions.length > 0 ? (
+              {isLoadingFirestoreRecipes ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.loadingText}>Loading suggestions...</Text>
+                </View>
+              ) : mealSuggestions.length > 0 ? (
                 mealSuggestions.map((recipe) => (
                   <Pressable 
                     key={recipe.id}
                     style={styles.suggestionItem}
-                    onPress={() => handleAddSuggestion(recipe.id, recipe.name, 'any')}
+                    onPress={() => handleAddSuggestion(recipe.id, recipe.name, recipe.mealType || 'any')}
                     accessibilityLabel={`Add ${recipe.name} to meal plan`}
                     accessibilityHint={`${recipe.calories} calories, tags: ${recipe.tags.join(', ')}`}
                   >
                     <View style={styles.suggestionContent}>
                       <Text style={styles.suggestionName}>{recipe.name}</Text>
                       <Text style={styles.suggestionCalories}>{recipe.calories} calories</Text>
-                      {recipe.tags.length > 0 && (
-                        <View style={styles.tagContainer}>
-                          {recipe.tags.slice(0, 3).map((tag, index) => (
-                            <Text key={index} style={styles.tagText}>
-                              {tag}
-                            </Text>
-                          ))}
-                        </View>
-                      )}
+                      <View style={styles.suggestionDetails}>
+                        {recipe.mealType && (
+                          <Text style={styles.mealTypeTag}>
+                            {recipe.mealType.charAt(0).toUpperCase() + recipe.mealType.slice(1)}
+                          </Text>
+                        )}
+                        {recipe.tags.length > 0 && (
+                          <View style={styles.tagContainer}>
+                            {recipe.tags.slice(0, 3).map((tag, index) => (
+                              <Text key={index} style={styles.tagText}>
+                                {tag}
+                              </Text>
+                            ))}
+                          </View>
+                        )}
+                      </View>
                     </View>
                     <Plus size={16} color={Colors.primary} />
                   </Pressable>
@@ -728,16 +796,32 @@ const styles = StyleSheet.create({
   },
   suggestionName: {
     fontSize: 14,
+    fontWeight: '500',
     color: Colors.text,
     marginBottom: 2,
   },
   suggestionCalories: {
     fontSize: 12,
     color: Colors.primary,
+    marginBottom: 4,
+  },
+  suggestionDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mealTypeTag: {
+    fontSize: 10,
+    color: Colors.white,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 6,
+    overflow: 'hidden',
   },
   tagContainer: {
     flexDirection: 'row',
-    marginTop: 4,
+    flexWrap: 'wrap',
   },
   tagText: {
     fontSize: 10,
@@ -747,6 +831,17 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
     marginRight: 4,
+    marginBottom: 4,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginTop: 8,
   },
   nutritionGoalsContainer: {
     backgroundColor: Colors.white,
