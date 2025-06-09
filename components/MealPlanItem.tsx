@@ -196,12 +196,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
                 <ActivityIndicator size="large" color={Colors.primary} />
                 <Text style={styles.loadingText}>Loading alternatives...</Text>
               </View>
-            ) : alternatives.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No alternative recipes found</Text>
-                <Text style={styles.emptySubtext}>Try adjusting your dietary preferences or adding more recipes</Text>
-              </View>
-            ) : (
+            ) : alternatives.length > 0 ? (
               <FlatList
                 data={alternatives}
                 keyExtractor={(item) => item.id}
@@ -262,6 +257,11 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
                 contentContainerStyle={styles.alternativesList}
                 showsVerticalScrollIndicator={false}
               />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No alternative recipes found</Text>
+                <Text style={styles.emptySubtext}>Try adjusting your dietary preferences or adding more recipes</Text>
+              </View>
             )}
           </View>
         </View>
