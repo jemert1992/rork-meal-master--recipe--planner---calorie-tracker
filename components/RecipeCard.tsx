@@ -2,13 +2,28 @@ import React from 'react';
 import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Heart, Clock, Users } from 'lucide-react-native';
-import { Recipe } from '@/types';
+import { Recipe, DietaryPreference, FitnessGoal } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 
 type RecipeCardProps = {
   recipe: Recipe;
   compact?: boolean;
+};
+
+// Type guard functions to check if a string is a valid dietary preference or fitness goal
+const isDietaryPreference = (value: string): value is DietaryPreference => {
+  const validDietaryPreferences: DietaryPreference[] = [
+    'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 'dairy-free', 'low-carb'
+  ];
+  return validDietaryPreferences.includes(value as DietaryPreference);
+};
+
+const isFitnessGoal = (value: string): value is FitnessGoal => {
+  const validFitnessGoals: FitnessGoal[] = [
+    'high-protein', 'weight-loss', 'muscle-gain', 'general-health', 'heart-health', 'energy-boost'
+  ];
+  return validFitnessGoals.includes(value as FitnessGoal);
 };
 
 export default function RecipeCard({ recipe, compact = false }: RecipeCardProps) {
@@ -41,10 +56,25 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
   }
 
   // Determine which tags to display (prioritize dietary preferences and fitness goals)
-  const displayTags = [
-    ...(recipe.dietaryPreferences || []), 
-    ...(recipe.fitnessGoals || [])
-  ];
+  const displayTags: string[] = [];
+  
+  // Add dietary preferences if they exist and are valid
+  if (recipe.dietaryPreferences) {
+    recipe.dietaryPreferences.forEach(pref => {
+      if (isDietaryPreference(pref)) {
+        displayTags.push(pref);
+      }
+    });
+  }
+  
+  // Add fitness goals if they exist and are valid
+  if (recipe.fitnessGoals) {
+    recipe.fitnessGoals.forEach(goal => {
+      if (isFitnessGoal(goal)) {
+        displayTags.push(goal);
+      }
+    });
+  }
   
   // If we don't have enough dietary preferences or fitness goals, add some regular tags
   if (displayTags.length < 3 && recipe.tags.length > 0) {
