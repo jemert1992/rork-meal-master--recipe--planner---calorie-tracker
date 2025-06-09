@@ -44,19 +44,19 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
   const displayTags = [
     ...(recipe.dietaryPreferences || []), 
     ...(recipe.fitnessGoals || [])
-  ] as string[];
+  ];
   
   // If we don't have enough dietary preferences or fitness goals, add some regular tags
   if (displayTags.length < 3 && recipe.tags.length > 0) {
     const regularTags = recipe.tags.filter(tag => 
-      !displayTags.includes(tag) && 
+      !displayTags.includes(tag as any) && 
       tag !== recipe.mealType && 
       tag !== recipe.complexity
     );
     
     // Add up to 3 regular tags
     for (let i = 0; i < regularTags.length && displayTags.length < 3; i++) {
-      displayTags.push(regularTags[i]);
+      displayTags.push(regularTags[i] as any);
     }
   }
 

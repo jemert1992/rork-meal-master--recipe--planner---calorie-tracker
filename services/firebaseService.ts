@@ -360,7 +360,7 @@ export const searchRecipesInFirestore = async (query: string, pageSize: number =
     const searchLower = query.toLowerCase();
     
     querySnapshot.forEach(doc => {
-      const data = doc.data();
+      const data = doc.data() as DocumentData;
       const name = data.name.toLowerCase();
       const ingredients = data.ingredients.map((ing: RecipeIngredient) => ing.name.toLowerCase());
       const tags = Object.values(data.tags)

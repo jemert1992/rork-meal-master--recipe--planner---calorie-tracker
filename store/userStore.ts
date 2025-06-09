@@ -104,19 +104,18 @@ export const useUserStore = create<UserState>()(
       
       calculateNutritionGoals: () => {
         const { profile } = get();
-        const { gender, weight, height, age, activityLevel, dietType } = profile as any;
         
         // Skip calculation if required fields are missing
-        if (!gender || !weight || !height || !age || !activityLevel) {
+        if (!profile.gender || !profile.weight || !profile.height || !profile.age || !profile.activityLevel) {
           return;
         }
         
         // Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor Equation
         let bmr = 0;
-        if (gender === 'male') {
-          bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+        if (profile.gender === 'male') {
+          bmr = 10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5;
         } else {
-          bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+          bmr = 10 * profile.weight + 6.25 * profile.height - 5 * profile.age - 161;
         }
         
         // Apply activity multiplier
@@ -128,11 +127,11 @@ export const useUserStore = create<UserState>()(
           'very-active': 1.9,    // Very hard exercise & physical job
         };
         
-        const multiplier = activityMultipliers[activityLevel];
+        const multiplier = activityMultipliers[profile.activityLevel];
         let calorieGoal = Math.round(bmr * multiplier);
         
         // Adjust calorie goal based on diet type
-        if (dietType === 'keto' || dietType === 'low-carb') {
+        if (profile.dietType === 'keto' || profile.dietType === 'low-carb') {
           // Keto and low-carb diets often have slightly lower calorie targets
           calorieGoal = Math.round(calorieGoal * 0.9);
         }
@@ -143,15 +142,15 @@ export const useUserStore = create<UserState>()(
         let fatPercentage = 0.3;     // 30%
         
         // Adjust macros based on diet type
-        if (dietType === 'keto') {
+        if (profile.dietType === 'keto') {
           proteinPercentage = 0.25;  // 25%
           carbsPercentage = 0.05;    // 5%
           fatPercentage = 0.7;       // 70%
-        } else if (dietType === 'low-carb') {
+        } else if (profile.dietType === 'low-carb') {
           proteinPercentage = 0.3;   // 30%
           carbsPercentage = 0.2;     // 20%
           fatPercentage = 0.5;       // 50%
-        } else if (dietType === 'vegan' || dietType === 'vegetarian') {
+        } else if (profile.dietType === 'vegan' || profile.dietType === 'vegetarian') {
           proteinPercentage = 0.25;  // 25%
           carbsPercentage = 0.5;     // 50%
           fatPercentage = 0.25;      // 25%

@@ -50,6 +50,7 @@ export default function ImportRecipesScreen() {
 
     try {
       // Select a subset of mock recipes to import
+      // Ensure we're casting to Recipe[] to satisfy TypeScript
       const recipesToImport = mockRecipes.slice(0, importCount) as Recipe[];
       
       // Import recipes to Firestore

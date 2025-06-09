@@ -98,6 +98,9 @@ export interface UserProfile {
   fatGoal?: number;
   fitnessGoals?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
   completedOnboarding?: boolean;
+  gender?: 'male' | 'female' | 'other';
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
+  dietaryPreferences?: string[];
 }
 
 export interface SnackItem {
