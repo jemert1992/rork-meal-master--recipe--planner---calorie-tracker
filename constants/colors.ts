@@ -11,11 +11,11 @@ export default {
   border: '#E0E0E0',
   success: '#66BB6A',
   error: '#EF5350',
-  danger: '#EF5350', // Added danger color (same as error)
+  danger: '#EF5350',
   warning: '#FFC107',
   warningBg: '#FFF3CD',
   white: '#FFFFFF',
   black: '#000000',
-  gray: '#9E9E9E',     // Added gray color
-  lightGray: '#E0E0E0', // Added lightGray color (same as border)
+  gray: '#9E9E9E',
+  lightGray: '#E0E0E0',
 };

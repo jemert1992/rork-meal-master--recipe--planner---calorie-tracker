@@ -9,6 +9,7 @@ interface ApiSourcesConfig {
   useMealDB: boolean;
   useSpoonacular: boolean;
   useEdamam: boolean;
+  useFirebase: boolean;
 }
 
 // Type guard for meal type
@@ -26,9 +27,58 @@ function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'di
 
 // Function to validate a Recipe object
 function validateRecipe(recipe: any): Recipe {
+  // Determine complexity based on prep time and ingredients count
+  let complexity: 'simple' | 'complex' | undefined = undefined;
+  if (recipe.prepTime && recipe.ingredients) {
+    const prepTimeMinutes = parseInt(recipe.prepTime.split(' ')[0]);
+    const ingredientsCount = recipe.ingredients.length;
+    
+    if (prepTimeMinutes <= 15 && ingredientsCount <= 5) {
+      complexity = 'simple';
+    } else if (prepTimeMinutes >= 30 || ingredientsCount >= 8) {
+      complexity = 'complex';
+    } else {
+      complexity = 'simple';
+    }
+  }
+  
+  // Extract dietary preferences from tags
+  const dietaryPreferences: Recipe['dietaryPreferences'] = [];
+  const dietaryTags = [
+    'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 
+    'dairy-free', 'low-carb', 'high-protein'
+  ];
+  
+  if (recipe.tags) {
+    recipe.tags.forEach((tag: string) => {
+      if (dietaryTags.includes(tag)) {
+        dietaryPreferences.push(tag as any);
+      }
+    });
+  }
+  
+  // Extract fitness goals from tags
+  const fitnessGoals: Recipe['fitnessGoals'] = [];
+  const fitnessTags = [
+    'weight-loss', 'muscle-gain', 'general-health', 
+    'heart-health', 'energy-boost'
+  ];
+  
+  if (recipe.tags) {
+    recipe.tags.forEach((tag: string) => {
+      if (fitnessTags.includes(tag)) {
+        fitnessGoals.push(tag as any);
+      }
+    });
+  }
+  
   return {
     ...recipe,
-    mealType: toValidMealType(recipe.mealType)
+    mealType: toValidMealType(recipe.mealType),
+    complexity,
+    dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
+    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
+    fiber: recipe.fiber || Math.floor(Math.random() * 5) + 1 // Add estimated fiber if not present
   };
 }
 
@@ -62,13 +112,19 @@ export const loadInitialRecipesFromAllSources = async (
       console.log('Edamam API not implemented yet');
     }
     
+    // Load from Firebase if enabled (not implemented yet)
+    if (sources.useFirebase) {
+      // Placeholder for future implementation
+      console.log('Firebase API not implemented yet');
+    }
+    
     // If no recipes were loaded from APIs, return mock data
     if (recipes.length === 0) {
       console.warn('No recipes loaded from APIs, using mock data');
       return mockRecipes.map(validateRecipe);
     }
     
-    return recipes;
+    return recipes.map(validateRecipe);
   } catch (error) {
     console.error('Error loading recipes from APIs:', error);
     return mockRecipes.map(validateRecipe);
@@ -106,6 +162,12 @@ export const searchRecipesFromAllSources = async (
       console.log('Edamam API search not implemented yet');
     }
     
+    // Search from Firebase if enabled (not implemented yet)
+    if (sources.useFirebase) {
+      // Placeholder for future implementation
+      console.log('Firebase API search not implemented yet');
+    }
+    
     // If no recipes were found from APIs, search mock data
     if (recipes.length === 0) {
       console.warn('No recipes found from APIs, searching mock data');
@@ -117,7 +179,7 @@ export const searchRecipesFromAllSources = async (
       return mockSearchResults.slice(0, limit).map(validateRecipe);
     }
     
-    return recipes.slice(0, limit);
+    return recipes.slice(0, limit).map(validateRecipe);
   } catch (error) {
     console.error('Error searching recipes from APIs:', error);
     return [];
@@ -131,7 +193,7 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
     if (id.startsWith('mealdb-')) {
       const mealDbId = id.replace('mealdb-', '');
       const recipe = await getRecipeFromMealDBById(mealDbId);
-      return recipe;
+      return recipe ? validateRecipe(recipe) : null;
     }
     
     // Check if it's a Spoonacular ID (they start with 'spoon-')
@@ -145,6 +207,13 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
     if (id.startsWith('edamam-')) {
       // Placeholder for future implementation
       console.log('Edamam API getById not implemented yet');
+      return null;
+    }
+    
+    // Check if it's a Firebase ID (they start with 'firebase-')
+    if (id.startsWith('firebase-')) {
+      // Placeholder for future implementation
+      console.log('Firebase API getById not implemented yet');
       return null;
     }
     
@@ -250,7 +319,9 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   // Extract instructions
   const instructionsText = meal.strInstructions || '';
   const instructions = instructionsText
-    .split(/\r\n|\r|\n/)
+    .split(/\r
+|\r|
+/)
     .filter((step: string) => step.trim() !== '')
     .map((step: string) => step.trim());
   
@@ -350,27 +421,128 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   // Ensure mealType is one of the valid types using our helper function
   const validMealType = toValidMealType(mealType);
   
+  // Determine complexity based on ingredients count and estimated prep time
+  const complexity: 'simple' | 'complex' = 
+    ingredients.length <= 7 ? 'simple' : 'complex';
+  
+  // Extract dietary preferences
+  const dietaryPreferences: Recipe['dietaryPreferences'] = [];
+  
+  // Check for vegetarian
+  const meatIngredients = ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'meat', 'fish', 'seafood', 'shrimp', 'bacon'];
+  const isVegetarian = !ingredients.some(ingredient => 
+    meatIngredients.some(meat => ingredient.toLowerCase().includes(meat))
+  );
+  
+  if (isVegetarian) {
+    dietaryPreferences.push('vegetarian');
+    
+    // Check for vegan (vegetarian but also no dairy or eggs)
+    const nonVeganIngredients = ['milk', 'cheese', 'cream', 'yogurt', 'butter', 'egg', 'honey'];
+    const isVegan = !ingredients.some(ingredient => 
+      nonVeganIngredients.some(nonVegan => ingredient.toLowerCase().includes(nonVegan))
+    );
+    
+    if (isVegan) {
+      dietaryPreferences.push('vegan');
+    }
+  }
+  
+  // Check for low-carb
+  const highCarbIngredients = ['pasta', 'rice', 'bread', 'potato', 'sugar', 'flour', 'corn'];
+  const isLowCarb = !ingredients.some(ingredient => 
+    highCarbIngredients.some(carb => ingredient.toLowerCase().includes(carb))
+  );
+  
+  if (isLowCarb) {
+    dietaryPreferences.push('low-carb');
+    
+    // Check for keto (low-carb and high-fat)
+    const highFatIngredients = ['oil', 'butter', 'cream', 'cheese', 'avocado', 'nuts'];
+    const isKeto = ingredients.some(ingredient => 
+      highFatIngredients.some(fat => ingredient.toLowerCase().includes(fat))
+    );
+    
+    if (isKeto) {
+      dietaryPreferences.push('keto');
+    }
+  }
+  
+  // Check for high-protein
+  const highProteinIngredients = ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'fish', 'seafood', 'egg', 'tofu', 'lentil', 'bean', 'quinoa'];
+  const isHighProtein = ingredients.some(ingredient => 
+    highProteinIngredients.some(protein => ingredient.toLowerCase().includes(protein))
+  );
+  
+  if (isHighProtein) {
+    dietaryPreferences.push('high-protein');
+  }
+  
+  // Extract fitness goals
+  const fitnessGoals: Recipe['fitnessGoals'] = [];
+  
+  // Weight loss recipes are typically low-calorie, high-protein, and low-fat
+  if (isHighProtein && isLowCarb) {
+    fitnessGoals.push('weight-loss');
+  }
+  
+  // Muscle gain recipes are typically high-protein and calorie-dense
+  if (isHighProtein && !isLowCarb) {
+    fitnessGoals.push('muscle-gain');
+  }
+  
+  // Heart health recipes are typically low in saturated fat and sodium
+  const heartHealthyIngredients = ['olive oil', 'fish', 'nuts', 'seeds', 'avocado', 'whole grain', 'oat'];
+  const isHeartHealthy = ingredients.some(ingredient => 
+    heartHealthyIngredients.some(healthy => ingredient.toLowerCase().includes(healthy))
+  );
+  
+  if (isHeartHealthy) {
+    fitnessGoals.push('heart-health');
+  }
+  
+  // Energy boost recipes typically include complex carbs and protein
+  const energyBoostIngredients = ['oat', 'banana', 'nut', 'seed', 'quinoa', 'sweet potato'];
+  const isEnergyBoost = ingredients.some(ingredient => 
+    energyBoostIngredients.some(energy => ingredient.toLowerCase().includes(energy))
+  );
+  
+  if (isEnergyBoost) {
+    fitnessGoals.push('energy-boost');
+  }
+  
+  // If no specific fitness goal is identified, default to general health
+  if (fitnessGoals.length === 0) {
+    fitnessGoals.push('general-health');
+  }
+  
   // Estimate nutrition data (MealDB doesn't provide this)
   // These are very rough estimates and should be replaced with actual data if available
   const estimatedCalories = Math.floor(Math.random() * 300) + 200; // Random between 200-500
   const estimatedProtein = Math.floor(Math.random() * 20) + 10; // Random between 10-30g
   const estimatedCarbs = Math.floor(Math.random() * 30) + 20; // Random between 20-50g
   const estimatedFat = Math.floor(Math.random() * 15) + 5; // Random between 5-20g
+  const estimatedFiber = Math.floor(Math.random() * 5) + 1; // Random between 1-6g
   
   return {
     id: `mealdb-${meal.idMeal}`,
     name: meal.strMeal,
     image: meal.strMealThumb,
-    prepTime: '15 min', // MealDB doesn't provide prep time
-    cookTime: '30 min', // MealDB doesn't provide cook time
-    servings: 4, // MealDB doesn't provide servings
+    prepTime: `${Math.floor(Math.random() * 20) + 5} min`, // Random prep time
+    cookTime: `${Math.floor(Math.random() * 40) + 10} min`, // Random cook time
+    servings: Math.floor(Math.random() * 4) + 2, // 2-6 servings
     calories: estimatedCalories,
     protein: estimatedProtein,
     carbs: estimatedCarbs,
     fat: estimatedFat,
+    fiber: estimatedFiber,
     ingredients,
     instructions,
     tags,
     mealType: validMealType,
+    complexity,
+    dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
+    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
+    source: 'MealDB'
   };
 };

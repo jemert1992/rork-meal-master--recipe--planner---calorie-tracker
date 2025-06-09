@@ -7,7 +7,6 @@ const MAIN_CATEGORIES = [
   'breakfast',
   'lunch',
   'dinner',
-  'snack',
   'vegetarian',
   'vegan',
   'high-protein',
@@ -38,23 +37,6 @@ export default function CategoryFilter({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Pressable
-          style={[
-            styles.categoryButton,
-            selectedCategory === null && styles.categoryButtonActive
-          ]}
-          onPress={() => onSelectCategory(null)}
-        >
-          <Text 
-            style={[
-              styles.categoryText,
-              selectedCategory === null && styles.categoryTextActive
-            ]}
-          >
-            All
-          </Text>
-        </Pressable>
-        
         {filteredCategories.map((category) => (
           <Pressable
             key={category}
@@ -62,7 +44,7 @@ export default function CategoryFilter({
               styles.categoryButton,
               selectedCategory === category && styles.categoryButtonActive
             ]}
-            onPress={() => onSelectCategory(category)}
+            onPress={() => onSelectCategory(category === selectedCategory ? null : category)}
           >
             <Text 
               style={[
@@ -81,7 +63,7 @@ export default function CategoryFilter({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   scrollContent: {
     paddingHorizontal: 20,
