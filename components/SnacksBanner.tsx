@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Image, Modal, ScrollView, Animated } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Image, Modal, ScrollView } from 'react-native';
 import { ChevronRight, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { SnackItem } from '@/types';
@@ -186,7 +186,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
+    // Updated styling to make it more bubble-like
     transform: [{ scale: 0.98 }],
+    borderWidth: 0,
   },
   bannerContent: {
     flexDirection: 'row',
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
   bannerImage: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 25, // Make image fully rounded
     marginRight: 16,
   },
   bannerTextContainer: {
