@@ -97,7 +97,11 @@ export default function ProfileScreen() {
             {profile.weight && <Text style={styles.profileDetail}>Weight: {profile.weight} kg</Text>}
             {profile.height && <Text style={styles.profileDetail}>Height: {profile.height} cm</Text>}
             {profile.dietType && <Text style={styles.profileDetail}>Diet: {profile.dietType}</Text>}
-            {profile.fitnessGoal && <Text style={styles.profileDetail}>Goal: {profile.fitnessGoal.replace('-', ' ')}</Text>}
+            {profile.fitnessGoals && profile.fitnessGoals.length > 0 && (
+              <Text style={styles.profileDetail}>
+                Goal: {profile.fitnessGoals[0].replace('-', ' ')}
+              </Text>
+            )}
           </View>
           <Pressable style={styles.editButton} onPress={handleEditProfile}>
             <Text style={styles.editButtonText}>Edit Profile</Text>

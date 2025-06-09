@@ -16,9 +16,10 @@ import {
   deleteDoc,
   serverTimestamp,
   Timestamp,
-  QueryConstraint
+  QueryConstraint,
+  DocumentData
 } from 'firebase/firestore';
-import { Recipe, RecipeIngredient } from '@/types';
+import { Recipe, RecipeIngredient, FirestoreRecipe } from '@/types';
 
 // Firebase configuration
 // Replace with your own Firebase config
@@ -39,7 +40,7 @@ const db = getFirestore(app);
 const recipesCollection = collection(db, 'recipes');
 
 // Helper function to convert Firestore data to Recipe type
-export const convertFirestoreDataToRecipe = (docId: string, data: any): Recipe => {
+export const convertFirestoreDataToRecipe = (docId: string, data: DocumentData): Recipe => {
   return {
     id: docId,
     name: data.name,
@@ -56,7 +57,7 @@ export const convertFirestoreDataToRecipe = (docId: string, data: any): Recipe =
       `${ing.quantity} ${ing.unit} ${ing.name}`.trim()
     ),
     instructions: data.steps,
-    tags: Object.values(data.tags).filter(tag => typeof tag === 'string'),
+    tags: Object.values(data.tags).filter((tag: unknown) => typeof tag === 'string') as string[],
     mealType: data.tags.meal_type,
     complexity: data.tags.complexity,
     dietaryPreferences: Array.isArray(data.tags.diet) ? data.tags.diet : [data.tags.diet].filter(Boolean),
@@ -362,7 +363,9 @@ export const searchRecipesInFirestore = async (query: string, pageSize: number =
       const data = doc.data();
       const name = data.name.toLowerCase();
       const ingredients = data.ingredients.map((ing: RecipeIngredient) => ing.name.toLowerCase());
-      const tags = Object.values(data.tags).filter(tag => typeof tag === 'string').map((tag: string) => tag.toLowerCase());
+      const tags = Object.values(data.tags)
+        .filter((tag): tag is string => typeof tag === 'string')
+        .map((tag: string) => tag.toLowerCase());
       
       // Check if recipe matches search query
       if (

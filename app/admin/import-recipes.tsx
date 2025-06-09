@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Upload, Database } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 import { mockRecipes } from '@/constants/mockData';
+import { Recipe } from '@/types';
 
 export default function ImportRecipesScreen() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function ImportRecipesScreen() {
 
     try {
       // Select a subset of mock recipes to import
-      const recipesToImport = mockRecipes.slice(0, importCount);
+      const recipesToImport = mockRecipes.slice(0, importCount) as Recipe[];
       
       // Import recipes to Firestore
       const results = await importRecipesToFirestore(recipesToImport);
@@ -60,7 +61,11 @@ export default function ImportRecipesScreen() {
       // Show success message
       Alert.alert(
         "Import Complete",
-        `Successfully imported recipes to Firestore:\n\nAdded: ${results.added}\nDuplicates: ${results.duplicates}\nErrors: ${results.errors}`,
+        `Successfully imported recipes to Firestore:
+
+Added: ${results.added}
+Duplicates: ${results.duplicates}
+Errors: ${results.errors}`,
         [{ text: "OK" }]
       );
     } catch (error) {
@@ -155,7 +160,16 @@ export default function ImportRecipesScreen() {
 
           <View style={styles.codeBlock}>
             <Text style={styles.codeText}>
-              {`// In services/firebaseService.ts\n\nconst firebaseConfig = {\n  apiKey: "YOUR_API_KEY",\n  authDomain: "YOUR_AUTH_DOMAIN",\n  projectId: "YOUR_PROJECT_ID",\n  storageBucket: "YOUR_STORAGE_BUCKET",\n  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",\n  appId: "YOUR_APP_ID"\n};`}
+              {`// In services/firebaseService.ts
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};`}
             </Text>
           </View>
         </View>

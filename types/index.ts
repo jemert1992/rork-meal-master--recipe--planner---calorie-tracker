@@ -83,18 +83,21 @@ export interface FoodLogEntry {
   servingSize?: string;
 }
 
+export type DietType = 'any' | 'vegetarian' | 'vegan' | 'keto' | 'gluten-free' | 'dairy-free' | 'low-carb';
+
 export interface UserProfile {
   name: string;
   age?: number;
   weight?: number;
   height?: number;
-  dietType?: 'any' | 'vegetarian' | 'vegan' | 'keto' | 'gluten-free' | 'dairy-free';
+  dietType?: DietType;
   allergies?: string[];
   calorieGoal?: number;
   proteinGoal?: number;
   carbsGoal?: number;
   fatGoal?: number;
-  fitnessGoal?: 'weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost';
+  fitnessGoals?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
+  completedOnboarding?: boolean;
 }
 
 export interface SnackItem {

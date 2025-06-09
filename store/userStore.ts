@@ -2,25 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { poundsToKg, feetInchesToCm } from '@/utils/unitConversions';
-import { DietType } from '@/types';
-
-export type UserProfile = {
-  name: string;
-  age?: number;
-  weight?: number; // Stored in kg internally
-  height?: number; // Stored in cm internally
-  gender?: 'male' | 'female' | 'other';
-  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
-  dietaryPreferences?: string[];
-  dietType?: DietType;
-  allergies?: string[];
-  excludedIngredients?: string[];
-  calorieGoal?: number;
-  proteinGoal?: number;
-  carbsGoal?: number;
-  fatGoal?: number;
-  completedOnboarding: boolean;
-};
+import { DietType, UserProfile } from '@/types';
 
 interface UserState {
   isLoggedIn: boolean;
@@ -38,8 +20,8 @@ const DEFAULT_PROFILE: UserProfile = {
   completedOnboarding: false,
   dietaryPreferences: [],
   allergies: [],
-  excludedIngredients: [],
   dietType: 'any',
+  fitnessGoals: [],
 };
 
 export const useUserStore = create<UserState>()(
@@ -122,7 +104,7 @@ export const useUserStore = create<UserState>()(
       
       calculateNutritionGoals: () => {
         const { profile } = get();
-        const { gender, weight, height, age, activityLevel, dietType } = profile;
+        const { gender, weight, height, age, activityLevel, dietType } = profile as any;
         
         // Skip calculation if required fields are missing
         if (!gender || !weight || !height || !age || !activityLevel) {
@@ -138,7 +120,7 @@ export const useUserStore = create<UserState>()(
         }
         
         // Apply activity multiplier
-        const activityMultipliers = {
+        const activityMultipliers: Record<string, number> = {
           'sedentary': 1.2,      // Little or no exercise
           'light': 1.375,        // Light exercise 1-3 days/week
           'moderate': 1.55,      // Moderate exercise 3-5 days/week
