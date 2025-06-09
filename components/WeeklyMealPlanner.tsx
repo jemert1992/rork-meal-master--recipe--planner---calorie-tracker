@@ -1,22 +1,57 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  Pressable, 
+  Modal, 
+  ScrollView, 
+  Image, 
+  Alert, 
+  ActivityIndicator, 
+  FlatList,
+  Dimensions,
+  Share,
+  Platform
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, Plus, ShoppingBag, X, Sparkles, RefreshCw } from 'lucide-react-native';
-import { format, addDays, startOfWeek, endOfWeek } from 'date-fns';
+import { 
+  Calendar, 
+  ChevronRight, 
+  Plus, 
+  ShoppingBag, 
+  X, 
+  Sparkles, 
+  RefreshCw, 
+  ChevronLeft,
+  Share2
+} from 'lucide-react-native';
+import { format, addDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+import { captureRef } from 'react-native-view-shot';
 
 type WeeklyMealPlannerProps = {
   onGenerateGroceryList: () => void;
 };
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DAY_ITEM_WIDTH = SCREEN_WIDTH * 0.9;
+
 export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealPlannerProps) {
   const router = useRouter();
-  const { mealPlan, generateMealPlan, isRecipeUsedInMealPlan, generateWeeklyMealPlan, updateWeeklyUsedRecipeIds } = useMealPlanStore();
+  const { 
+    mealPlan, 
+    generateMealPlan, 
+    isRecipeUsedInMealPlan, 
+    generateWeeklyMealPlan, 
+    updateWeeklyUsedRecipeIds 
+  } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const { profile } = useUserStore();
+  
   const [modalVisible, setModalVisible] = useState(false);
   const [generatingMeal, setGeneratingMeal] = useState<{
     date: string;
@@ -24,22 +59,39 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     loading: boolean;
   } | null>(null);
   const [generatingWeeklyPlan, setGeneratingWeeklyPlan] = useState(false);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [sharingPlan, setSharingPlan] = useState(false);
+  
+  // Ref for capturing the meal plan view for sharing
+  const mealPlanRef = useRef<View>(null);
   
   // Get the current week starting from today
-  const [weekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+  const getWeekDays = useCallback((weekOffset: number) => {
+    const today = new Date();
+    const weekStart = startOfWeek(addDays(today, weekOffset * 7), { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+    
+    // Generate an array of 7 days starting from weekStart
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(weekStart, i);
+      return {
+        date,
+        dateString: format(date, 'yyyy-MM-dd'),
+        dayName: format(date, 'EEE'),
+        dayNumber: format(date, 'd'),
+        month: format(date, 'MMM'),
+        isToday: isSameDay(date, today)
+      };
+    });
+  }, []);
   
-  // Generate an array of 7 days starting from weekStart
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(weekStart, i);
-    return {
-      date,
-      dateString: format(date, 'yyyy-MM-dd'),
-      dayName: format(date, 'EEE'),
-      dayNumber: format(date, 'd'),
-      month: format(date, 'MMM')
-    };
-  });
+  const [weekDays, setWeekDays] = useState(getWeekDays(0));
+  const flatListRef = useRef<FlatList>(null);
+  
+  // Update week days when current week index changes
+  React.useEffect(() => {
+    setWeekDays(getWeekDays(currentWeekIndex));
+  }, [currentWeekIndex, getWeekDays]);
 
   const handleMealSlotPress = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
     router.push(`/add-meal/${date}?mealType=${mealType}`);
@@ -180,6 +232,161 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const plannedMealsCount = countPlannedMeals();
   const totalPossibleMeals = weekDays.length * 3; // 7 days * 3 meals
   const completionPercentage = Math.round((plannedMealsCount / totalPossibleMeals) * 100);
+  
+  const handlePreviousWeek = () => {
+    setCurrentWeekIndex(prev => prev - 1);
+  };
+  
+  const handleNextWeek = () => {
+    setCurrentWeekIndex(prev => prev + 1);
+  };
+  
+  const handleShareMealPlan = async () => {
+    if (!mealPlanRef.current) return;
+    
+    try {
+      setSharingPlan(true);
+      
+      // Capture the meal plan view as an image
+      const uri = await captureRef(mealPlanRef, {
+        format: 'png',
+        quality: 1,
+        result: 'data-uri',
+        width: 1080,
+        height: 1080
+      });
+      
+      // Share the image
+      await Share.share({
+        url: uri,
+        title: 'My Zestora Weekly Meal Plan',
+        message: 'Check out my weekly meal plan from Zestora! #Zestora #MealPlanning'
+      });
+      
+    } catch (error) {
+      console.error('Error sharing meal plan:', error);
+      Alert.alert(
+        'Sharing Failed',
+        'Could not share your meal plan. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setSharingPlan(false);
+    }
+  };
+  
+  const renderDayItem = ({ item }: { item: typeof weekDays[0] }) => {
+    const dayPlan = mealPlan[item.dateString] || {};
+    
+    return (
+      <View style={styles.dayContainer}>
+        <View style={styles.dayHeader}>
+          <View style={[
+            styles.dayNumberContainer,
+            item.isToday && styles.todayNumberContainer
+          ]}>
+            <Text style={[
+              styles.dayNumber,
+              item.isToday && styles.todayNumber
+            ]}>{item.dayNumber}</Text>
+            <Text style={[
+              styles.dayMonth,
+              item.isToday && styles.todayMonth
+            ]}>{item.month}</Text>
+          </View>
+          <View style={styles.dayInfo}>
+            <Text style={styles.dayName}>{item.dayName}</Text>
+            <Text style={styles.dayDate}>{format(item.date, 'MMMM d, yyyy')}</Text>
+          </View>
+        </View>
+
+        <View style={styles.mealsContainer}>
+          {['breakfast', 'lunch', 'dinner'].map((mealType) => {
+            const meal = dayPlan[mealType as keyof typeof dayPlan];
+            
+            const recipeId = meal?.recipeId;
+            const { name, image } = getRecipeDetails(recipeId);
+            
+            const isGenerating = generatingMeal && 
+              generatingMeal.date === item.dateString && 
+              generatingMeal.mealType === mealType && 
+              generatingMeal.loading;
+
+            return (
+              <View key={`${item.dateString}-${mealType}`} style={styles.mealSlotContainer}>
+                <Pressable
+                  style={[
+                    styles.mealSlot,
+                    name ? styles.filledMealSlot : styles.emptyMealSlot
+                  ]}
+                  onPress={() => handleMealSlotPress(item.dateString, mealType as 'breakfast' | 'lunch' | 'dinner')}
+                  disabled={isGenerating}
+                  accessibilityLabel={name 
+                    ? `${mealType}: ${name}` 
+                    : `Add ${mealType} for ${item.dayName}`
+                  }
+                  accessibilityRole="button"
+                >
+                  {name ? (
+                    <View style={styles.filledMealContent}>
+                      {image ? (
+                        <Image 
+                          source={{ uri: image }} 
+                          style={styles.mealImage}
+                          accessibilityLabel={`Image of ${name}`}
+                        />
+                      ) : (
+                        <View style={styles.mealImagePlaceholder} />
+                      )}
+                      <View style={styles.mealInfo}>
+                        <Text style={styles.mealTypeLabel}>
+                          {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                        </Text>
+                        <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyMealContent}>
+                      <Text style={styles.mealTypeLabel}>
+                        {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                      </Text>
+                      {isGenerating ? (
+                        <>
+                          <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
+                          <Text style={styles.generatingText}>Generating...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={20} color={Colors.primary} />
+                          <Text style={styles.addMealText}>Add Recipe</Text>
+                        </>
+                      )}
+                    </View>
+                  )}
+                </Pressable>
+                
+                {!name && !isGenerating && (
+                  <Pressable 
+                    style={styles.pickForMeButton}
+                    onPress={() => handleAutoGenerateMeal(
+                      item.dateString, 
+                      mealType as 'breakfast' | 'lunch' | 'dinner'
+                    )}
+                    accessibilityLabel={`Auto-generate ${mealType} for ${item.dayName}`}
+                    accessibilityHint="Let the app pick a recipe for you"
+                    accessibilityRole="button"
+                  >
+                    <Sparkles size={14} color={Colors.white} />
+                    <Text style={styles.pickForMeText}>Pick for me</Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -267,135 +474,145 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   : "Based on your preferences"}
               </Text>
             </View>
-
-            <ScrollView 
-              style={styles.modalScroll}
-              contentContainerStyle={styles.modalScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {weekDays.map((day) => (
-                <View key={day.dateString} style={styles.daySection}>
-                  <View style={styles.dayHeader}>
-                    <View style={styles.dayNumberContainer}>
-                      <Text style={styles.dayNumber}>{day.dayNumber}</Text>
-                      <Text style={styles.dayMonth}>{day.month}</Text>
-                    </View>
-                    <View style={styles.dayInfo}>
-                      <Text style={styles.dayName}>{day.dayName}</Text>
-                      <Text style={styles.dayDate}>{format(day.date, 'MMMM d, yyyy')}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.mealsContainer}>
-                    {['breakfast', 'lunch', 'dinner'].map((mealType) => {
-                      const dayPlan = mealPlan[day.dateString] || {};
-                      const meal = dayPlan[mealType as keyof typeof dayPlan];
-                      
-                      const recipeId = meal?.recipeId;
-                      const { name, image } = getRecipeDetails(recipeId);
-                      
-                      const isGenerating = generatingMeal && 
-                        generatingMeal.date === day.dateString && 
-                        generatingMeal.mealType === mealType && 
-                        generatingMeal.loading;
-
-                      return (
-                        <View key={`${day.dateString}-${mealType}`} style={styles.mealSlotContainer}>
-                          <Pressable
-                            style={[
-                              styles.mealSlot,
-                              name ? styles.filledMealSlot : styles.emptyMealSlot
-                            ]}
-                            onPress={() => handleMealSlotPress(day.dateString, mealType as 'breakfast' | 'lunch' | 'dinner')}
-                            disabled={isGenerating}
-                            accessibilityLabel={name 
-                              ? `${mealType}: ${name}` 
-                              : `Add ${mealType} for ${day.dayName}`
-                            }
-                            accessibilityRole="button"
-                          >
-                            {name ? (
-                              <View style={styles.filledMealContent}>
-                                {image ? (
-                                  <Image 
-                                    source={{ uri: image }} 
-                                    style={styles.mealImage}
-                                    accessibilityLabel={`Image of ${name}`}
-                                  />
-                                ) : (
-                                  <View style={styles.mealImagePlaceholder} />
-                                )}
-                                <View style={styles.mealInfo}>
-                                  <Text style={styles.mealTypeLabel}>
-                                    {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                                  </Text>
-                                  <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
-                                </View>
-                              </View>
-                            ) : (
-                              <View style={styles.emptyMealContent}>
-                                <Text style={styles.mealTypeLabel}>
-                                  {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                                </Text>
-                                {isGenerating ? (
-                                  <>
-                                    <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
-                                    <Text style={styles.generatingText}>Generating...</Text>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus size={20} color={Colors.primary} />
-                                    <Text style={styles.addMealText}>Add Recipe</Text>
-                                  </>
-                                )}
-                              </View>
-                            )}
-                          </Pressable>
-                          
-                          {!name && !isGenerating && (
-                            <Pressable 
-                              style={styles.pickForMeButton}
-                              onPress={() => handleAutoGenerateMeal(
-                                day.dateString, 
-                                mealType as 'breakfast' | 'lunch' | 'dinner'
-                              )}
-                              accessibilityLabel={`Auto-generate ${mealType} for ${day.dayName}`}
-                              accessibilityHint="Let the app pick a recipe for you"
-                              accessibilityRole="button"
-                            >
-                              <Sparkles size={14} color={Colors.white} />
-                              <Text style={styles.pickForMeText}>Pick for me</Text>
-                            </Pressable>
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
+            
+            <View style={styles.weekNavigationContainer}>
               <Pressable 
-                style={[
-                  styles.generateButton,
-                  plannedMealsCount === 0 && styles.disabledButton
-                ]} 
-                onPress={() => {
-                  onGenerateGroceryList();
-                  setModalVisible(false);
-                }}
-                disabled={plannedMealsCount === 0}
-                accessibilityLabel="Generate grocery list"
-                accessibilityHint={plannedMealsCount === 0 
-                  ? "You need to add meals to your plan first" 
-                  : "Create a shopping list based on your meal plan"
-                }
+                style={styles.weekNavigationButton} 
+                onPress={handlePreviousWeek}
+                accessibilityLabel="Previous week"
                 accessibilityRole="button"
               >
-                <ShoppingBag size={20} color={Colors.white} />
-                <Text style={styles.generateButtonText}>Generate Grocery List</Text>
+                <ChevronLeft size={20} color={Colors.text} />
+                <Text style={styles.weekNavigationText}>Previous</Text>
               </Pressable>
+              
+              <Text style={styles.weekRangeText}>
+                {format(weekDays[0].date, 'MMM d')} - {format(weekDays[6].date, 'MMM d, yyyy')}
+              </Text>
+              
+              <Pressable 
+                style={styles.weekNavigationButton} 
+                onPress={handleNextWeek}
+                accessibilityLabel="Next week"
+                accessibilityRole="button"
+              >
+                <Text style={styles.weekNavigationText}>Next</Text>
+                <ChevronRight size={20} color={Colors.text} />
+              </Pressable>
+            </View>
+            
+            <FlatList
+              ref={flatListRef}
+              data={weekDays}
+              renderItem={renderDayItem}
+              keyExtractor={(item) => item.dateString}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={DAY_ITEM_WIDTH}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              contentContainerStyle={styles.dayListContent}
+              getItemLayout={(_, index) => ({
+                length: DAY_ITEM_WIDTH,
+                offset: DAY_ITEM_WIDTH * index,
+                index,
+              })}
+            />
+
+            <View style={styles.modalFooter}>
+              <View style={styles.footerButtonsRow}>
+                <Pressable 
+                  style={[
+                    styles.generateButton,
+                    plannedMealsCount === 0 && styles.disabledButton
+                  ]} 
+                  onPress={() => {
+                    onGenerateGroceryList();
+                    setModalVisible(false);
+                  }}
+                  disabled={plannedMealsCount === 0}
+                  accessibilityLabel="Generate grocery list"
+                  accessibilityHint={plannedMealsCount === 0 
+                    ? "You need to add meals to your plan first" 
+                    : "Create a shopping list based on your meal plan"
+                  }
+                  accessibilityRole="button"
+                >
+                  <ShoppingBag size={20} color={Colors.white} />
+                  <Text style={styles.generateButtonText}>Generate Grocery List</Text>
+                </Pressable>
+                
+                <Pressable 
+                  style={[
+                    styles.shareButton,
+                    (plannedMealsCount === 0 || sharingPlan) && styles.disabledButton
+                  ]} 
+                  onPress={handleShareMealPlan}
+                  disabled={plannedMealsCount === 0 || sharingPlan}
+                  accessibilityLabel="Share meal plan"
+                  accessibilityHint="Share your weekly meal plan as an image"
+                  accessibilityRole="button"
+                >
+                  {sharingPlan ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <>
+                      <Share2 size={20} color={Colors.white} />
+                      <Text style={styles.shareButtonText}>Share Plan</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+            
+            {/* Hidden view for capturing the meal plan image */}
+            <View style={styles.captureContainer} pointerEvents="none">
+              <View ref={mealPlanRef} style={styles.captureContent}>
+                <View style={styles.captureHeader}>
+                  <Text style={styles.captureTitle}>My #Zestora Week 🍎</Text>
+                  <Text style={styles.captureSubtitle}>
+                    {format(weekDays[0].date, 'MMM d')} - {format(weekDays[6].date, 'MMM d, yyyy')}
+                  </Text>
+                </View>
+                
+                {weekDays.map((day) => {
+                  const dayPlan = mealPlan[day.dateString] || {};
+                  
+                  return (
+                    <View key={day.dateString} style={styles.captureDayRow}>
+                      <View style={styles.captureDayHeader}>
+                        <Text style={styles.captureDayName}>{day.dayName}</Text>
+                        <Text style={styles.captureDayDate}>{day.dayNumber} {day.month}</Text>
+                      </View>
+                      
+                      <View style={styles.captureMealsColumn}>
+                        {['breakfast', 'lunch', 'dinner'].map((mealType) => {
+                          const meal = dayPlan[mealType as keyof typeof dayPlan];
+                          const { name } = getRecipeDetails(meal?.recipeId);
+                          
+                          return (
+                            <View key={`${day.dateString}-${mealType}`} style={styles.captureMealItem}>
+                              <Text style={styles.captureMealType}>
+                                {mealType.charAt(0).toUpperCase() + mealType.slice(1)}:
+                              </Text>
+                              <Text style={styles.captureMealName}>
+                                {name || "Not planned"}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })}
+                
+                <View style={styles.captureFooter}>
+                  <Text style={styles.captureFooterText}>
+                    Made with Zestora - Your Personal Meal Planning Assistant
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
@@ -529,15 +746,35 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
   },
-  modalScroll: {
-    flex: 1,
+  weekNavigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 8,
   },
-  modalScrollContent: {
-    paddingBottom: 20,
+  weekNavigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
   },
-  daySection: {
+  weekNavigationText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+  weekRangeText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  dayListContent: {
+    paddingHorizontal: 16,
+  },
+  dayContainer: {
+    width: DAY_ITEM_WIDTH,
     marginBottom: 24,
-    paddingHorizontal: 20,
   },
   dayHeader: {
     flexDirection: 'row',
@@ -554,15 +791,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
+  todayNumberContainer: {
+    backgroundColor: Colors.accent,
+  },
   dayNumber: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: Colors.white,
+  },
+  todayNumber: {
     color: Colors.white,
   },
   dayMonth: {
     fontSize: 12,
     color: Colors.white,
     opacity: 0.8,
+  },
+  todayMonth: {
+    color: Colors.white,
   },
   dayInfo: {
     flex: 1,
@@ -647,7 +893,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.backgroundLight,
   },
+  footerButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   generateButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -655,10 +907,25 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
   },
+  shareButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
   disabledButton: {
     backgroundColor: Colors.backgroundLight,
   },
   generateButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.white,
+    marginLeft: 8,
+  },
+  shareButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: Colors.white,
@@ -689,5 +956,78 @@ const styles = StyleSheet.create({
   },
   generatingIndicator: {
     marginBottom: 4,
+  },
+  // Styles for capturing the meal plan image
+  captureContainer: {
+    position: 'absolute',
+    top: -9999,
+    left: -9999,
+    width: 1080,
+    height: 1080,
+    backgroundColor: Colors.white,
+  },
+  captureContent: {
+    width: 1080,
+    height: 1080,
+    padding: 40,
+    backgroundColor: Colors.white,
+  },
+  captureHeader: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  captureTitle: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  captureSubtitle: {
+    fontSize: 24,
+    color: Colors.primary,
+    marginBottom: 20,
+  },
+  captureDayRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  captureDayHeader: {
+    width: 120,
+    marginRight: 20,
+  },
+  captureDayName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  captureDayDate: {
+    fontSize: 18,
+    color: Colors.textLight,
+  },
+  captureMealsColumn: {
+    flex: 1,
+  },
+  captureMealItem: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  captureMealType: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: Colors.primary,
+    width: 120,
+  },
+  captureMealName: {
+    fontSize: 20,
+    color: Colors.text,
+    flex: 1,
+  },
+  captureFooter: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  captureFooterText: {
+    fontSize: 18,
+    color: Colors.textLight,
   },
 });

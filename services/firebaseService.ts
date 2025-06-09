@@ -411,6 +411,39 @@ export const getRecipesForMealPlan = async (
   }
 };
 
+// Function to get alternative recipes for meal swapping
+export const getAlternativeRecipes = async (
+  mealType: MealType,
+  currentRecipeId: string,
+  filters: {
+    dietType?: DietType;
+    allergies?: string[];
+    excludedIngredients?: string[];
+    fitnessGoal?: string;
+    calorieRange?: { min: number; max: number };
+    excludeIds?: string[];
+  } = {},
+  limit: number = 5
+): Promise<Recipe[]> => {
+  try {
+    // Make sure we exclude the current recipe
+    const excludeIds = [...(filters.excludeIds || []), currentRecipeId];
+    
+    // Get alternative recipes
+    return await getRecipesForMealPlan(
+      mealType,
+      {
+        ...filters,
+        excludeIds
+      },
+      limit
+    );
+  } catch (error) {
+    console.error('Error getting alternative recipes:', error);
+    return [];
+  }
+};
+
 // Function to import recipes in bulk to Firestore
 export const importRecipesToFirestore = async (recipes: Recipe[]): Promise<{ added: number, duplicates: number, errors: number }> => {
   let added = 0;

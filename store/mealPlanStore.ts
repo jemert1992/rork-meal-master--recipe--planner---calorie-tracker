@@ -9,6 +9,8 @@ import * as firebaseService from '@/services/firebaseService';
 interface MealPlanState {
   mealPlan: MealPlan;
   weeklyUsedRecipeIds: Set<string>;
+  alternativeRecipes: Record<string, Record<string, Recipe[]>>;
+  isLoadingAlternatives: boolean;
   addMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', meal: MealItem) => void;
   removeMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
   clearDay: (date: string) => void;
@@ -25,6 +27,9 @@ interface MealPlanState {
     calorieDeviation: number;
   };
   isRecipeUsedInMealPlan: (recipeId: string) => boolean;
+  swapMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', newRecipeId: string) => Promise<boolean>;
+  getAlternativeRecipes: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', currentRecipeId: string) => Promise<Recipe[]>;
+  clearAlternativeRecipes: () => void;
 }
 
 export const useMealPlanStore = create<MealPlanState>()(
@@ -32,6 +37,8 @@ export const useMealPlanStore = create<MealPlanState>()(
     (set, get) => ({
       mealPlan: mockMealPlan,
       weeklyUsedRecipeIds: new Set<string>(),
+      alternativeRecipes: {},
+      isLoadingAlternatives: false,
       
       addMeal: (date, mealType, meal) => {
         // Check if the recipe is already used in the meal plan
@@ -309,6 +316,183 @@ export const useMealPlanStore = create<MealPlanState>()(
         }
         
         return true;
+      },
+      
+      swapMeal: async (date, mealType, newRecipeId) => {
+        try {
+          // Get the current meal plan for the day
+          const dayPlan = get().mealPlan[date] || {};
+          
+          // Get the current meal
+          const currentMeal = dayPlan[mealType];
+          
+          // If there's no current meal, we can't swap
+          if (!currentMeal) {
+            console.warn(`No ${mealType} found for ${date} to swap`);
+            return false;
+          }
+          
+          // Get the current recipe ID
+          const currentRecipeId = currentMeal.recipeId;
+          
+          // If there's no current recipe ID, we can't swap
+          if (!currentRecipeId) {
+            console.warn(`No recipe ID found for ${mealType} on ${date}`);
+            return false;
+          }
+          
+          // Check if the new recipe ID is already used in the meal plan
+          if (get().isRecipeUsedInMealPlan(newRecipeId)) {
+            console.warn(`Recipe ${newRecipeId} is already used in the meal plan`);
+            return false;
+          }
+          
+          // Get the new recipe details
+          const newRecipe = await firebaseService.getRecipeFromFirestore(newRecipeId);
+          
+          // If we couldn't get the new recipe, we can't swap
+          if (!newRecipe) {
+            console.warn(`Could not find recipe with ID ${newRecipeId}`);
+            return false;
+          }
+          
+          // Create the new meal item
+          const newMeal: MealItem = {
+            recipeId: newRecipe.id,
+            name: newRecipe.name,
+            calories: newRecipe.calories,
+            protein: newRecipe.protein,
+            carbs: newRecipe.carbs,
+            fat: newRecipe.fat,
+            fiber: newRecipe.fiber
+          };
+          
+          // Update the meal plan
+          set((state) => {
+            const updatedDayPlan = { ...state.mealPlan[date] } || {};
+            updatedDayPlan[mealType] = newMeal;
+            
+            // Remove the old recipe ID from weekly used IDs if it's not used elsewhere
+            let isOldRecipeUsedElsewhere = false;
+            Object.entries(state.mealPlan).forEach(([d, meals]) => {
+              if (d !== date) {
+                if (meals.breakfast?.recipeId === currentRecipeId ||
+                    meals.lunch?.recipeId === currentRecipeId ||
+                    meals.dinner?.recipeId === currentRecipeId) {
+                  isOldRecipeUsedElsewhere = true;
+                }
+              } else {
+                // Check other meal types on the same day
+                if (mealType !== 'breakfast' && meals.breakfast?.recipeId === currentRecipeId) {
+                  isOldRecipeUsedElsewhere = true;
+                }
+                if (mealType !== 'lunch' && meals.lunch?.recipeId === currentRecipeId) {
+                  isOldRecipeUsedElsewhere = true;
+                }
+                if (mealType !== 'dinner' && meals.dinner?.recipeId === currentRecipeId) {
+                  isOldRecipeUsedElsewhere = true;
+                }
+              }
+            });
+            
+            if (!isOldRecipeUsedElsewhere) {
+              state.weeklyUsedRecipeIds.delete(currentRecipeId);
+            }
+            
+            // Add the new recipe ID to weekly used IDs
+            state.weeklyUsedRecipeIds.add(newRecipeId);
+            
+            return {
+              mealPlan: {
+                ...state.mealPlan,
+                [date]: updatedDayPlan
+              },
+              weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
+            };
+          });
+          
+          return true;
+        } catch (error) {
+          console.error('Error swapping meal:', error);
+          return false;
+        }
+      },
+      
+      getAlternativeRecipes: async (date, mealType, currentRecipeId) => {
+        try {
+          // Check if we already have alternatives for this meal
+          const existingAlternatives = get().alternativeRecipes[date]?.[mealType];
+          if (existingAlternatives && existingAlternatives.length > 0) {
+            return existingAlternatives;
+          }
+          
+          // Set loading state
+          set({ isLoadingAlternatives: true });
+          
+          // Get user profile for personalization
+          const userProfile = useUserStore.getState().profile;
+          const { 
+            dietType = 'any', 
+            allergies = [], 
+            excludedIngredients = [],
+            calorieGoal = 2000,
+            fitnessGoals = []
+          } = userProfile;
+          
+          // Define meal split percentages for calorie distribution
+          const mealSplit = {
+            breakfast: 0.3, // 30% of daily calories
+            lunch: 0.35,    // 35% of daily calories
+            dinner: 0.35,   // 35% of daily calories
+          };
+          
+          // Calculate target calories per meal
+          const targetCalories = Math.round(calorieGoal * mealSplit[mealType]);
+          
+          // Get already used recipe IDs to avoid duplicates
+          const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
+          
+          // Get alternative recipes
+          const alternatives = await firebaseService.getAlternativeRecipes(
+            mealType,
+            currentRecipeId,
+            {
+              dietType,
+              allergies,
+              excludedIngredients,
+              fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+              calorieRange: { min: targetCalories * 0.8, max: targetCalories * 1.2 },
+              excludeIds: weeklyUsedRecipeIds
+            },
+            10 // Get up to 10 alternatives
+          );
+          
+          // Store the alternatives in the state
+          set((state) => {
+            const updatedAlternatives = { ...state.alternativeRecipes };
+            
+            if (!updatedAlternatives[date]) {
+              updatedAlternatives[date] = {};
+            }
+            
+            updatedAlternatives[date][mealType] = alternatives;
+            
+            return {
+              alternativeRecipes: updatedAlternatives,
+              isLoadingAlternatives: false
+            };
+          });
+          
+          return alternatives;
+        } catch (error) {
+          console.error('Error getting alternative recipes:', error);
+          set({ isLoadingAlternatives: false });
+          return [];
+        }
+      },
+      
+      clearAlternativeRecipes: () => {
+        set({ alternativeRecipes: {} });
       },
       
       generateMealPlan: async (date, recipes, specificMealType) => {
