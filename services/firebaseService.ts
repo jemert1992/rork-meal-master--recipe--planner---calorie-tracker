@@ -217,7 +217,8 @@ export const getRecipeFromFirestore = async (id: string): Promise<Recipe | null>
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return convertFirestoreDataToRecipe(docSnap.id, docSnap.data());
+      const data = docSnap.data() as DocumentData;
+      return convertFirestoreDataToRecipe(docSnap.id, data);
     } else {
       return null;
     }
