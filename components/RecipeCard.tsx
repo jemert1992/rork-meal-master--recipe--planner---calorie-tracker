@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Heart } from 'lucide-react-native';
+import { Heart, Clock, Users } from 'lucide-react-native';
 import { Recipe } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
@@ -40,6 +40,23 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
     );
   }
 
+  // Determine which tags to display (prioritize dietary preferences and fitness goals)
+  const displayTags = [...(recipe.dietaryPreferences || []), ...(recipe.fitnessGoals || [])];
+  
+  // If we don't have enough dietary preferences or fitness goals, add some regular tags
+  if (displayTags.length < 3 && recipe.tags.length > 0) {
+    const regularTags = recipe.tags.filter(tag => 
+      !displayTags.includes(tag as any) && 
+      tag !== recipe.mealType && 
+      tag !== recipe.complexity
+    );
+    
+    // Add up to 3 regular tags
+    for (let i = 0; i < regularTags.length && displayTags.length < 3; i++) {
+      displayTags.push(regularTags[i]);
+    }
+  }
+
   return (
     <Pressable 
       style={styles.container} 
@@ -57,8 +74,16 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
           fill={favorite ? Colors.error : 'transparent'} 
         />
       </Pressable>
+      
+      {recipe.mealType && (
+        <View style={styles.mealTypeTag}>
+          <Text style={styles.mealTypeText}>{recipe.mealType}</Text>
+        </View>
+      )}
+      
       <View style={styles.content}>
-        <Text style={styles.title}>{recipe.name}</Text>
+        <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
+        
         <View style={styles.metaContainer}>
           <View style={styles.metaItem}>
             <Text style={styles.metaValue}>{recipe.calories}</Text>
@@ -66,21 +91,36 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
           </View>
           <View style={styles.metaDivider} />
           <View style={styles.metaItem}>
-            <Text style={styles.metaValue}>{recipe.prepTime}</Text>
-            <Text style={styles.metaLabel}>prep time</Text>
+            <Clock size={16} color={Colors.primary} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{recipe.prepTime}</Text>
           </View>
           <View style={styles.metaDivider} />
           <View style={styles.metaItem}>
-            <Text style={styles.metaValue}>{recipe.servings}</Text>
-            <Text style={styles.metaLabel}>servings</Text>
+            <Users size={16} color={Colors.primary} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{recipe.servings}</Text>
           </View>
         </View>
+        
         <View style={styles.tagsContainer}>
-          {recipe.tags.map((tag, index) => (
+          {displayTags.slice(0, 3).map((tag, index) => (
             <View key={index} style={styles.tag}>
               <Text style={styles.tagText}>{tag}</Text>
             </View>
           ))}
+          
+          {recipe.complexity && (
+            <View style={[
+              styles.tag, 
+              recipe.complexity === 'simple' ? styles.simpleTag : styles.complexTag
+            ]}>
+              <Text style={[
+                styles.tagText,
+                recipe.complexity === 'simple' ? styles.simpleTagText : styles.complexTagText
+              ]}>
+                {recipe.complexity}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </Pressable>
@@ -114,6 +154,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  mealTypeTag: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  mealTypeText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '500',
+  },
   content: {
     padding: 16,
   },
@@ -122,15 +176,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 12,
+    height: 50, // Fixed height for 2 lines
   },
   metaContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    alignItems: 'center',
   },
   metaItem: {
     flex: 1,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   metaValue: {
     fontSize: 16,
@@ -140,9 +198,18 @@ const styles = StyleSheet.create({
   metaLabel: {
     fontSize: 12,
     color: Colors.textLight,
+    marginLeft: 4,
+  },
+  metaIcon: {
+    marginRight: 4,
+  },
+  metaText: {
+    fontSize: 14,
+    color: Colors.text,
   },
   metaDivider: {
     width: 1,
+    height: 20,
     backgroundColor: Colors.border,
     marginHorizontal: 8,
   },
@@ -162,6 +229,18 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     color: Colors.primary,
+  },
+  simpleTag: {
+    backgroundColor: '#e6f7ee',
+  },
+  simpleTagText: {
+    color: '#2ecc71',
+  },
+  complexTag: {
+    backgroundColor: '#ffeaea',
+  },
+  complexTagText: {
+    color: '#e74c3c',
   },
   compactContainer: {
     flexDirection: 'row',

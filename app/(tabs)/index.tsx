@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, RefreshCw, ChevronRight } from 'lucide-react-native';
+import { Search, Filter, RefreshCw, ChevronRight, Database, Cloud } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useGroceryStore } from '@/store/groceryStore';
 import RecipeCard from '@/components/RecipeCard';
@@ -35,8 +35,8 @@ const featuredCollections = [
   }
 ];
 
-// Recipe categories
-const recipeCategories: RecipeCategory[] = [
+// Recipe categories with immutable structure
+const initialRecipeCategories: RecipeCategory[] = [
   { id: 'breakfast', name: 'Breakfast', count: 0, image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
   { id: 'lunch', name: 'Lunch', count: 0, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
   { id: 'dinner', name: 'Dinner', count: 0, image: 'https://images.unsplash.com/photo-1559847844-5315695dadae?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
@@ -47,12 +47,19 @@ const recipeCategories: RecipeCategory[] = [
 
 export default function RecipesScreen() {
   const router = useRouter();
+  const flatListRef = useRef<FlatList>(null);
+  
   const { 
     recipes, 
     favoriteRecipeIds, 
     isLoading, 
     loadRecipesFromApi,
-    searchRecipes 
+    searchRecipes,
+    filterRecipes,
+    loadMoreRecipes,
+    pagination,
+    useFirestore,
+    setUseFirestore
   } = useRecipeStore();
   
   const { mealPlan } = useMealPlanStore();
@@ -64,22 +71,47 @@ export default function RecipesScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [recipeCategories, setRecipeCategories] = useState<RecipeCategory[]>(initialRecipeCategories);
+  const [displayedRecipes, setDisplayedRecipes] = useState<Recipe[]>([]);
 
   // Update category counts
   useEffect(() => {
-    recipeCategories.forEach(category => {
+    const updatedCategories = initialRecipeCategories.map(category => {
+      let count = 0;
+      
       if (category.id === 'breakfast' || category.id === 'lunch' || category.id === 'dinner') {
-        category.count = recipes.filter(recipe => recipe.mealType === category.id).length;
+        count = recipes.filter(recipe => recipe.mealType === category.id).length;
       } else {
-        category.count = recipes.filter(recipe => recipe.tags.includes(category.id)).length;
+        count = recipes.filter(recipe => 
+          recipe.tags.includes(category.id) || 
+          recipe.dietaryPreferences?.includes(category.id as any)
+        ).length;
       }
+      
+      return { ...category, count };
     });
+    
+    setRecipeCategories(updatedCategories);
   }, [recipes]);
 
   // Load recipes from API on first render
   useEffect(() => {
     loadRecipesFromApi();
   }, []);
+
+  // Update displayed recipes when filters or search results change
+  useEffect(() => {
+    const updateDisplayedRecipes = async () => {
+      if (searchQuery.trim().length >= 2) {
+        setDisplayedRecipes(searchResults);
+      } else {
+        const filteredRecipes = await filterRecipes(filters);
+        setDisplayedRecipes(filteredRecipes);
+      }
+    };
+    
+    updateDisplayedRecipes();
+  }, [searchResults, filters, filterRecipes]);
 
   // Memoize the search function to prevent recreating it on every render
   const performSearch = useCallback(async (query: string) => {
@@ -104,7 +136,7 @@ export default function RecipesScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadRecipesFromApi();
+    await loadRecipesFromApi(false);
     setRefreshing(false);
   };
 
@@ -112,43 +144,22 @@ export default function RecipesScreen() {
     setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
     
     if (categoryId === selectedCategory) {
-      setFilters({...filters, mealType: null});
+      setFilters({...filters, mealType: null, dietaryPreference: null});
     } else if (categoryId === 'breakfast' || categoryId === 'lunch' || categoryId === 'dinner') {
-      setFilters({...filters, mealType: categoryId as 'breakfast' | 'lunch' | 'dinner'});
+      setFilters({...filters, mealType: categoryId as 'breakfast' | 'lunch' | 'dinner', dietaryPreference: null});
     } else {
       // For other categories like vegetarian, vegan, etc.
-      setFilters({...filters, dietaryPreference: categoryId});
+      setFilters({...filters, dietaryPreference: categoryId, mealType: null});
+    }
+    
+    // Scroll to top when changing category
+    if (flatListRef.current) {
+      flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
   };
 
   const handleFilterToggle = () => {
     setFilters({...filters, favorite: !filters.favorite});
-  };
-
-  // Determine which recipes to display
-  const getFilteredRecipes = () => {
-    let filteredRecipes = searchQuery.trim().length >= 2 ? searchResults : recipes;
-    
-    // Apply meal type filter
-    if (filters.mealType) {
-      filteredRecipes = filteredRecipes.filter(recipe => recipe.mealType === filters.mealType);
-    }
-    
-    // Apply dietary preference filter
-    if (filters.dietaryPreference) {
-      filteredRecipes = filteredRecipes.filter(recipe => 
-        recipe.tags.includes(filters.dietaryPreference!)
-      );
-    }
-    
-    // Apply favorites filter
-    if (filters.favorite) {
-      filteredRecipes = filteredRecipes.filter(recipe => 
-        favoriteRecipeIds.includes(recipe.id)
-      );
-    }
-    
-    return filteredRecipes;
   };
 
   const handleGenerateGroceryList = () => {
@@ -197,6 +208,18 @@ export default function RecipesScreen() {
     );
   };
 
+  const handleLoadMore = () => {
+    if (!isLoading && !refreshing && pagination.hasMore && !pagination.loading) {
+      loadMoreRecipes(filters);
+    }
+  };
+
+  const toggleDataSource = () => {
+    setUseFirestore(!useFirestore);
+    // Reload recipes with the new data source
+    loadRecipesFromApi(false);
+  };
+
   const renderCategoryItem = ({ item }: { item: RecipeCategory }) => (
     <Pressable 
       style={[
@@ -223,6 +246,11 @@ export default function RecipesScreen() {
           setFilters({...filters, dietaryPreference: 'high-protein'});
         } else if (item.id === 'weight-loss') {
           setFilters({...filters, fitnessGoal: 'weight-loss'});
+        }
+        
+        // Scroll to top when changing collection
+        if (flatListRef.current) {
+          flatListRef.current.scrollToOffset({ offset: 0, animated: true });
         }
       }}
     >
@@ -287,11 +315,37 @@ export default function RecipesScreen() {
     </>
   );
 
+  const renderFooter = () => {
+    if (!pagination.loading) return null;
+    
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={Colors.primary} />
+        <Text style={styles.footerText}>Loading more recipes...</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Discover Recipes</Text>
-        <Text style={styles.subtitle}>Find and save your favorite meals</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.subtitle}>Find and save your favorite meals</Text>
+          <Pressable 
+            style={styles.dataSourceButton} 
+            onPress={toggleDataSource}
+          >
+            {useFirestore ? (
+              <Database size={16} color={Colors.primary} />
+            ) : (
+              <Cloud size={16} color={Colors.primary} />
+            )}
+            <Text style={styles.dataSourceText}>
+              {useFirestore ? 'Firestore' : 'API'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -323,7 +377,8 @@ export default function RecipesScreen() {
         </View>
       ) : (
         <FlatList
-          data={getFilteredRecipes()}
+          ref={flatListRef}
+          data={displayedRecipes}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <RecipeCard recipe={item} />}
           contentContainerStyle={styles.listContent}
@@ -331,6 +386,9 @@ export default function RecipesScreen() {
           refreshing={refreshing}
           onRefresh={handleRefresh}
           ListHeaderComponent={renderListHeader}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No recipes found</Text>
@@ -357,6 +415,11 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -367,6 +430,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textLight,
     marginBottom: 16,
+  },
+  dataSourceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  dataSourceText: {
+    fontSize: 12,
+    color: Colors.primary,
+    marginLeft: 4,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -428,6 +504,15 @@ const styles = StyleSheet.create({
   loaderText: {
     marginTop: 12,
     fontSize: 16,
+    color: Colors.textLight,
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  footerText: {
+    marginTop: 8,
+    fontSize: 14,
     color: Colors.textLight,
   },
   emptyContainer: {

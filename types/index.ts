@@ -1,3 +1,9 @@
+export interface RecipeIngredient {
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
 export interface Recipe {
   id: string;
   name: string;
@@ -18,6 +24,33 @@ export interface Recipe {
   dietaryPreferences?: ('vegan' | 'vegetarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein')[];
   fitnessGoals?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
   source?: string;
+}
+
+export interface FirestoreRecipe {
+  name: string;
+  ingredients: RecipeIngredient[];
+  steps: string[];
+  nutrition: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber?: number;
+  };
+  tags: {
+    meal_type?: 'breakfast' | 'lunch' | 'dinner';
+    complexity?: 'simple' | 'complex';
+    diet?: ('vegan' | 'vegetarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein')[];
+    goal?: ('weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost')[];
+    prep_time: number;
+    servings: number;
+  };
+  image_url: string;
+  source?: string;
+  created_at?: any;
+  updated_at?: any;
+  needs_review?: boolean;
+  missing_fields?: string[];
 }
 
 export interface MealPlan {
@@ -102,4 +135,10 @@ export interface RecipeCollection {
   description: string;
   image: string;
   recipeIds: string[];
+}
+
+export interface PaginationState {
+  lastDoc: any;
+  hasMore: boolean;
+  loading: boolean;
 }

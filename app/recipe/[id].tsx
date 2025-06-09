@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, Pressable, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Image, Pressable, Platform, ActivityIndicator, Alert, Share } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Heart, Clock, Users, ArrowLeft, Plus } from 'lucide-react-native';
+import { Heart, Clock, Users, ArrowLeft, Plus, Share2 } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { recipes, isFavorite, toggleFavorite, getRecipeById } = useRecipeStore();
+  const { recipes, isFavorite, toggleFavorite, getRecipeById, updateRecipe } = useRecipeStore();
   const [recipe, setRecipe] = useState(recipes.find(r => r.id === id));
   const [loading, setLoading] = useState(!recipe);
   
@@ -44,6 +44,34 @@ export default function RecipeDetailScreen() {
     router.push(`/add-meal/select?recipeId=${id}`);
   };
 
+  const handleShareRecipe = async () => {
+    if (!recipe) return;
+    
+    try {
+      const result = await Share.share({
+        title: recipe.name,
+        message: `Check out this delicious ${recipe.name} recipe on Zestora!\n\n` +
+          `Calories: ${recipe.calories} | Protein: ${recipe.protein}g | Carbs: ${recipe.carbs}g | Fat: ${recipe.fat}g\n\n` +
+          `Ingredients:\n${recipe.ingredients.join('\n')}\n\n` +
+          `Instructions:\n${recipe.instructions.map((step, index) => `${index + 1}. ${step}`).join('\n')}\n\n` +
+          `#Zestora #HealthyEating ${recipe.tags.map(tag => `#${tag.replace(/\s+/g, '')}`).join(' ')}`
+      });
+      
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          console.log(`Shared via ${result.activityType}`);
+        } else {
+          console.log('Shared successfully');
+        }
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not share recipe');
+      console.error('Error sharing recipe:', error);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -72,13 +100,18 @@ export default function RecipeDetailScreen() {
           <Pressable style={styles.backButton} onPress={handleBackPress}>
             <ArrowLeft size={24} color={Colors.white} />
           </Pressable>
-          <Pressable style={styles.favoriteButton} onPress={handleFavoritePress}>
-            <Heart 
-              size={24} 
-              color={Colors.white} 
-              fill={favorite ? Colors.error : 'transparent'} 
-            />
-          </Pressable>
+          <View style={styles.actionButtonsContainer}>
+            <Pressable style={styles.actionButton} onPress={handleFavoritePress}>
+              <Heart 
+                size={24} 
+                color={Colors.white} 
+                fill={favorite ? Colors.error : 'transparent'} 
+              />
+            </Pressable>
+            <Pressable style={styles.actionButton} onPress={handleShareRecipe}>
+              <Share2 size={24} color={Colors.white} />
+            </Pressable>
+          </View>
         </View>
         
         <View style={styles.content}>
@@ -119,6 +152,15 @@ export default function RecipeDetailScreen() {
               <Text style={styles.nutritionValue}>{recipe.fat}g</Text>
               <Text style={styles.nutritionLabel}>Fat</Text>
             </View>
+            {recipe.fiber !== undefined && (
+              <>
+                <View style={styles.nutritionDivider} />
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionValue}>{recipe.fiber}g</Text>
+                  <Text style={styles.nutritionLabel}>Fiber</Text>
+                </View>
+              </>
+            )}
           </View>
           
           <View style={styles.section}>
@@ -149,8 +191,34 @@ export default function RecipeDetailScreen() {
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
               ))}
+              {recipe.mealType && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>{recipe.mealType}</Text>
+                </View>
+              )}
+              {recipe.complexity && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>{recipe.complexity}</Text>
+                </View>
+              )}
+              {recipe.dietaryPreferences?.map((pref, index) => (
+                <View key={`pref-${index}`} style={styles.tag}>
+                  <Text style={styles.tagText}>{pref}</Text>
+                </View>
+              ))}
+              {recipe.fitnessGoals?.map((goal, index) => (
+                <View key={`goal-${index}`} style={styles.tag}>
+                  <Text style={styles.tagText}>{goal}</Text>
+                </View>
+              ))}
             </View>
           </View>
+          
+          {recipe.source && (
+            <View style={styles.sourceContainer}>
+              <Text style={styles.sourceText}>Source: {recipe.source}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
       
@@ -202,16 +270,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  favoriteButton: {
+  actionButtonsContainer: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 60 : 40,
     right: 20,
+    flexDirection: 'row',
+  },
+  actionButton: {
     backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: 20,
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 10,
   },
   content: {
     padding: 20,
@@ -315,7 +387,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   tagsContainer: {
-    marginBottom: 80,
+    marginBottom: 20,
   },
   tagsList: {
     flexDirection: 'row',
@@ -332,6 +404,15 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 14,
     color: Colors.primary,
+  },
+  sourceContainer: {
+    marginBottom: 80,
+    alignItems: 'center',
+  },
+  sourceText: {
+    fontSize: 14,
+    color: Colors.textLight,
+    fontStyle: 'italic',
   },
   bottomBar: {
     position: 'absolute',

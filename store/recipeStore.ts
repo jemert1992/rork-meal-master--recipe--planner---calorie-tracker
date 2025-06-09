@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Recipe, RecipeFilters, RecipeCollection } from '@/types';
+import { Recipe, RecipeFilters, RecipeCollection, PaginationState } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
 import * as recipeApiService from '@/services/recipeApiService';
+import * as firebaseService from '@/services/firebaseService';
 
 // Helper function to validate recipe mealType
 function validateRecipe(recipe: any): Recipe {
@@ -105,22 +106,26 @@ interface RecipeState {
   isLoading: boolean;
   hasLoadedFromApi: boolean;
   offlineRecipes: Recipe[];
+  useFirestore: boolean;
+  pagination: PaginationState;
   apiSources: {
     useMealDB: boolean;
     useSpoonacular: boolean;
     useEdamam: boolean;
     useFirebase: boolean;
   };
-  addRecipe: (recipe: Recipe) => void;
-  updateRecipe: (recipe: Recipe) => void;
-  deleteRecipe: (id: string) => void;
+  addRecipe: (recipe: Recipe) => Promise<string | null>;
+  updateRecipe: (recipe: Recipe) => Promise<boolean>;
+  deleteRecipe: (id: string) => Promise<boolean>;
   toggleFavorite: (id: string) => void;
   isFavorite: (id: string) => boolean;
-  loadRecipesFromApi: () => Promise<void>;
+  loadRecipesFromApi: (useCache?: boolean) => Promise<void>;
+  loadMoreRecipes: (filters?: RecipeFilters) => Promise<void>;
   searchRecipes: (query: string) => Promise<Recipe[]>;
   getRecipeById: (id: string) => Promise<Recipe | null>;
   setApiSource: (source: string, enabled: boolean) => void;
-  filterRecipes: (filters: RecipeFilters) => Recipe[];
+  setUseFirestore: (useFirestore: boolean) => void;
+  filterRecipes: (filters: RecipeFilters) => Promise<Recipe[]>;
   addToCollection: (collectionId: string, recipeId: string) => void;
   removeFromCollection: (collectionId: string, recipeId: string) => void;
   createCollection: (collection: Omit<RecipeCollection, 'recipeIds'>) => void;
@@ -128,6 +133,7 @@ interface RecipeState {
   updateCollection: (collection: RecipeCollection) => void;
   getCollection: (id: string) => RecipeCollection | undefined;
   cacheRecipesOffline: (count?: number) => void;
+  importRecipesToFirestore: (recipes: Recipe[]) => Promise<{ added: number, duplicates: number, errors: number }>;
 }
 
 export const useRecipeStore = create<RecipeState>()(
@@ -139,6 +145,12 @@ export const useRecipeStore = create<RecipeState>()(
       isLoading: false,
       hasLoadedFromApi: false,
       offlineRecipes: [],
+      useFirestore: false,
+      pagination: {
+        lastDoc: null,
+        hasMore: true,
+        loading: false
+      },
       apiSources: {
         useMealDB: true,
         useSpoonacular: false,
@@ -146,22 +158,92 @@ export const useRecipeStore = create<RecipeState>()(
         useFirebase: false,
       },
       
-      addRecipe: (recipe) => {
-        set((state) => ({
-          recipes: [...state.recipes, validateRecipe(recipe)],
-        }));
+      addRecipe: async (recipe) => {
+        const validatedRecipe = validateRecipe(recipe);
+        
+        if (get().useFirestore) {
+          // Add to Firestore
+          const recipeId = await firebaseService.addRecipeToFirestore(validatedRecipe);
+          
+          if (recipeId) {
+            // Update local state
+            set((state) => ({
+              recipes: [...state.recipes, { ...validatedRecipe, id: recipeId }],
+            }));
+            return recipeId;
+          }
+          return null;
+        } else {
+          // Add to local state only
+          const newRecipe = {
+            ...validatedRecipe,
+            id: `local-${Date.now()}`
+          };
+          
+          set((state) => ({
+            recipes: [...state.recipes, newRecipe],
+          }));
+          
+          return newRecipe.id;
+        }
       },
       
-      updateRecipe: (recipe) => {
-        set((state) => ({
-          recipes: state.recipes.map((r) => (r.id === recipe.id ? validateRecipe(recipe) : r)),
-        }));
+      updateRecipe: async (recipe) => {
+        const validatedRecipe = validateRecipe(recipe);
+        
+        if (get().useFirestore && !recipe.id.startsWith('local-')) {
+          // Update in Firestore
+          const success = await firebaseService.updateRecipeInFirestore(recipe.id, validatedRecipe);
+          
+          if (success) {
+            // Update local state
+            set((state) => ({
+              recipes: state.recipes.map((r) => (r.id === recipe.id ? validatedRecipe : r)),
+            }));
+            return true;
+          }
+          return false;
+        } else {
+          // Update local state only
+          set((state) => ({
+            recipes: state.recipes.map((r) => (r.id === recipe.id ? validatedRecipe : r)),
+          }));
+          
+          return true;
+        }
       },
       
-      deleteRecipe: (id) => {
-        set((state) => ({
-          recipes: state.recipes.filter((r) => r.id !== id),
-        }));
+      deleteRecipe: async (id) => {
+        if (get().useFirestore && !id.startsWith('local-')) {
+          // Delete from Firestore
+          const success = await firebaseService.deleteRecipeFromFirestore(id);
+          
+          if (success) {
+            // Update local state
+            set((state) => ({
+              recipes: state.recipes.filter((r) => r.id !== id),
+              favoriteRecipeIds: state.favoriteRecipeIds.filter((recipeId) => recipeId !== id),
+              collections: state.collections.map(collection => ({
+                ...collection,
+                recipeIds: collection.recipeIds.filter(recipeId => recipeId !== id)
+              }))
+            }));
+            return true;
+          }
+          return false;
+        } else {
+          // Delete from local state only
+          set((state) => ({
+            recipes: state.recipes.filter((r) => r.id !== id),
+            favoriteRecipeIds: state.favoriteRecipeIds.filter((recipeId) => recipeId !== id),
+            collections: state.collections.map(collection => ({
+              ...collection,
+              recipeIds: collection.recipeIds.filter(recipeId => recipeId !== id)
+            }))
+          }));
+          
+          return true;
+        }
       },
       
       toggleFavorite: (id) => {
@@ -191,39 +273,34 @@ export const useRecipeStore = create<RecipeState>()(
         }));
       },
       
-      loadRecipesFromApi: async () => {
+      setUseFirestore: (useFirestore) => {
+        set({ useFirestore });
+      },
+      
+      loadRecipesFromApi: async (useCache = true) => {
         set({ isLoading: true });
         
         try {
-          const { apiSources } = get();
-          
-          // If no API sources are enabled, default to MealDB
-          const useDefaultSource = !Object.values(apiSources).some(Boolean);
-          
-          if (useDefaultSource) {
+          // Check if we should use cached recipes
+          if (useCache && get().offlineRecipes.length > 0) {
             set((state) => ({
-              apiSources: {
-                ...state.apiSources,
-                useMealDB: true,
-              }
+              recipes: [...state.offlineRecipes],
+              isLoading: false
             }));
+            return;
+          }
+          
+          if (get().useFirestore) {
+            // Load from Firestore
+            const { recipes, lastDoc } = await firebaseService.getRecipesFromFirestore({}, 50);
             
-            const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(50, {
-              useMealDB: true,
-              useSpoonacular: false,
-              useEdamam: false,
-              useFirebase: false
-            });
-            
-            if (apiRecipes.length > 0) {
-              const validatedRecipes = apiRecipes.map(validateRecipe);
-              
+            if (recipes.length > 0) {
               // Update collections with new recipes
               const updatedCollections = get().collections.map(collection => {
                 const newRecipeIds = [...collection.recipeIds];
                 
                 if (collection.id === 'quick-meals') {
-                  validatedRecipes
+                  recipes
                     .filter(r => r.complexity === 'simple')
                     .slice(0, 20)
                     .forEach(r => {
@@ -232,7 +309,7 @@ export const useRecipeStore = create<RecipeState>()(
                       }
                     });
                 } else if (collection.id === 'high-protein') {
-                  validatedRecipes
+                  recipes
                     .filter(r => r.dietaryPreferences?.includes('high-protein'))
                     .slice(0, 20)
                     .forEach(r => {
@@ -241,7 +318,7 @@ export const useRecipeStore = create<RecipeState>()(
                       }
                     });
                 } else if (collection.id === 'weight-loss') {
-                  validatedRecipes
+                  recipes
                     .filter(r => r.calories < 400)
                     .slice(0, 20)
                     .forEach(r => {
@@ -250,7 +327,7 @@ export const useRecipeStore = create<RecipeState>()(
                       }
                     });
                 } else if (collection.id === 'vegetarian') {
-                  validatedRecipes
+                  recipes
                     .filter(r => r.dietaryPreferences?.includes('vegetarian'))
                     .slice(0, 20)
                     .forEach(r => {
@@ -267,76 +344,164 @@ export const useRecipeStore = create<RecipeState>()(
               });
               
               set((state) => ({
-                recipes: [...validatedRecipes, ...state.recipes.filter(r => !validatedRecipes.some(ar => ar.id === r.id))],
+                recipes: [...recipes, ...state.recipes.filter(r => !recipes.some(ar => ar.id === r.id))],
                 hasLoadedFromApi: true,
-                collections: updatedCollections
+                collections: updatedCollections,
+                pagination: {
+                  lastDoc,
+                  hasMore: recipes.length >= 50,
+                  loading: false
+                }
               }));
               
               // Cache recipes offline
               get().cacheRecipesOffline(100);
             }
           } else {
-            const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(50, apiSources);
+            // Load from external APIs
+            const { apiSources } = get();
             
-            if (apiRecipes.length > 0) {
-              const validatedRecipes = apiRecipes.map(validateRecipe);
-              
-              // Update collections with new recipes
-              const updatedCollections = get().collections.map(collection => {
-                const newRecipeIds = [...collection.recipeIds];
-                
-                if (collection.id === 'quick-meals') {
-                  validatedRecipes
-                    .filter(r => r.complexity === 'simple')
-                    .slice(0, 20)
-                    .forEach(r => {
-                      if (!newRecipeIds.includes(r.id)) {
-                        newRecipeIds.push(r.id);
-                      }
-                    });
-                } else if (collection.id === 'high-protein') {
-                  validatedRecipes
-                    .filter(r => r.dietaryPreferences?.includes('high-protein'))
-                    .slice(0, 20)
-                    .forEach(r => {
-                      if (!newRecipeIds.includes(r.id)) {
-                        newRecipeIds.push(r.id);
-                      }
-                    });
-                } else if (collection.id === 'weight-loss') {
-                  validatedRecipes
-                    .filter(r => r.calories < 400)
-                    .slice(0, 20)
-                    .forEach(r => {
-                      if (!newRecipeIds.includes(r.id)) {
-                        newRecipeIds.push(r.id);
-                      }
-                    });
-                } else if (collection.id === 'vegetarian') {
-                  validatedRecipes
-                    .filter(r => r.dietaryPreferences?.includes('vegetarian'))
-                    .slice(0, 20)
-                    .forEach(r => {
-                      if (!newRecipeIds.includes(r.id)) {
-                        newRecipeIds.push(r.id);
-                      }
-                    });
-                }
-                
-                return {
-                  ...collection,
-                  recipeIds: newRecipeIds
-                };
-              });
-              
+            // If no API sources are enabled, default to MealDB
+            const useDefaultSource = !Object.values(apiSources).some(Boolean);
+            
+            if (useDefaultSource) {
               set((state) => ({
-                recipes: [...validatedRecipes, ...state.recipes.filter(r => !validatedRecipes.some(ar => ar.id === r.id))],
-                hasLoadedFromApi: true,
-                collections: updatedCollections
+                apiSources: {
+                  ...state.apiSources,
+                  useMealDB: true,
+                }
               }));
               
-              // Cache recipes offline
-              get().cacheRecipesOffline(100);
+              const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(50, {
+                useMealDB: true,
+                useSpoonacular: false,
+                useEdamam: false,
+                useFirebase: false
+              });
+              
+              if (apiRecipes.length > 0) {
+                const validatedRecipes = apiRecipes.map(validateRecipe);
+                
+                // Update collections with new recipes
+                const updatedCollections = get().collections.map(collection => {
+                  const newRecipeIds = [...collection.recipeIds];
+                  
+                  if (collection.id === 'quick-meals') {
+                    validatedRecipes
+                      .filter(r => r.complexity === 'simple')
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  } else if (collection.id === 'high-protein') {
+                    validatedRecipes
+                      .filter(r => r.dietaryPreferences?.includes('high-protein'))
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  } else if (collection.id === 'weight-loss') {
+                    validatedRecipes
+                      .filter(r => r.calories < 400)
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  } else if (collection.id === 'vegetarian') {
+                    validatedRecipes
+                      .filter(r => r.dietaryPreferences?.includes('vegetarian'))
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  }
+                  
+                  return {
+                    ...collection,
+                    recipeIds: newRecipeIds
+                  };
+                });
+                
+                set((state) => ({
+                  recipes: [...validatedRecipes, ...state.recipes.filter(r => !validatedRecipes.some(ar => ar.id === r.id))],
+                  hasLoadedFromApi: true,
+                  collections: updatedCollections
+                }));
+                
+                // Cache recipes offline
+                get().cacheRecipesOffline(100);
+              }
+            } else {
+              const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(50, apiSources);
+              
+              if (apiRecipes.length > 0) {
+                const validatedRecipes = apiRecipes.map(validateRecipe);
+                
+                // Update collections with new recipes
+                const updatedCollections = get().collections.map(collection => {
+                  const newRecipeIds = [...collection.recipeIds];
+                  
+                  if (collection.id === 'quick-meals') {
+                    validatedRecipes
+                      .filter(r => r.complexity === 'simple')
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  } else if (collection.id === 'high-protein') {
+                    validatedRecipes
+                      .filter(r => r.dietaryPreferences?.includes('high-protein'))
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  } else if (collection.id === 'weight-loss') {
+                    validatedRecipes
+                      .filter(r => r.calories < 400)
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  } else if (collection.id === 'vegetarian') {
+                    validatedRecipes
+                      .filter(r => r.dietaryPreferences?.includes('vegetarian'))
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
+                  }
+                  
+                  return {
+                    ...collection,
+                    recipeIds: newRecipeIds
+                  };
+                });
+                
+                set((state) => ({
+                  recipes: [...validatedRecipes, ...state.recipes.filter(r => !validatedRecipes.some(ar => ar.id === r.id))],
+                  hasLoadedFromApi: true,
+                  collections: updatedCollections
+                }));
+                
+                // Cache recipes offline
+                get().cacheRecipesOffline(100);
+              }
             }
           }
         } catch (error) {
@@ -346,24 +511,97 @@ export const useRecipeStore = create<RecipeState>()(
         }
       },
       
+      loadMoreRecipes: async (filters = {}) => {
+        const { pagination } = get();
+        
+        if (!pagination.hasMore || pagination.loading) return;
+        
+        set(state => ({
+          pagination: {
+            ...state.pagination,
+            loading: true
+          }
+        }));
+        
+        try {
+          if (get().useFirestore) {
+            // Load more from Firestore
+            const { recipes, lastDoc } = await firebaseService.getRecipesFromFirestore(
+              filters,
+              20,
+              pagination.lastDoc
+            );
+            
+            set(state => ({
+              recipes: [...state.recipes, ...recipes.filter(r => !state.recipes.some(sr => sr.id === r.id))],
+              pagination: {
+                lastDoc,
+                hasMore: recipes.length >= 20,
+                loading: false
+              }
+            }));
+          } else {
+            // For external APIs, we don't have true pagination
+            // So we'll just load more random recipes
+            const { apiSources } = get();
+            const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(20, apiSources);
+            
+            if (apiRecipes.length > 0) {
+              const validatedRecipes = apiRecipes.map(validateRecipe);
+              
+              set(state => ({
+                recipes: [...state.recipes, ...validatedRecipes.filter(r => !state.recipes.some(sr => sr.id === r.id))],
+                pagination: {
+                  ...state.pagination,
+                  loading: false,
+                  hasMore: false // Set to false since we can't reliably paginate external APIs
+                }
+              }));
+            } else {
+              set(state => ({
+                pagination: {
+                  ...state.pagination,
+                  loading: false,
+                  hasMore: false
+                }
+              }));
+            }
+          }
+        } catch (error) {
+          console.error('Error loading more recipes:', error);
+          set(state => ({
+            pagination: {
+              ...state.pagination,
+              loading: false
+            }
+          }));
+        }
+      },
+      
       searchRecipes: async (query) => {
         if (!query.trim()) return [];
         
         try {
-          const { apiSources } = get();
-          
-          // If no API sources are enabled, default to MealDB
-          const useDefaultSource = !Object.values(apiSources).some(Boolean);
-          
-          if (useDefaultSource) {
-            return await recipeApiService.searchRecipesFromAllSources(query, 20, {
-              useMealDB: true,
-              useSpoonacular: false,
-              useEdamam: false,
-              useFirebase: false
-            });
+          if (get().useFirestore) {
+            // Search in Firestore
+            return await firebaseService.searchRecipesInFirestore(query);
           } else {
-            return await recipeApiService.searchRecipesFromAllSources(query, 20, apiSources);
+            // Search in external APIs
+            const { apiSources } = get();
+            
+            // If no API sources are enabled, default to MealDB
+            const useDefaultSource = !Object.values(apiSources).some(Boolean);
+            
+            if (useDefaultSource) {
+              return await recipeApiService.searchRecipesFromAllSources(query, 20, {
+                useMealDB: true,
+                useSpoonacular: false,
+                useEdamam: false,
+                useFirebase: false
+              });
+            } else {
+              return await recipeApiService.searchRecipesFromAllSources(query, 20, apiSources);
+            }
           }
         } catch (error) {
           console.error('Error searching recipes:', error);
@@ -381,62 +619,86 @@ export const useRecipeStore = create<RecipeState>()(
         if (offlineRecipe) return offlineRecipe;
         
         try {
-          // If not, fetch it from the appropriate API
-          const recipe = await recipeApiService.getRecipeByIdFromSource(id);
-          
-          // If found, add it to our store
-          if (recipe) {
-            get().addRecipe(recipe);
+          if (get().useFirestore && !id.startsWith('mealdb-') && !id.startsWith('local-')) {
+            // Get from Firestore
+            return await firebaseService.getRecipeFromFirestore(id);
+          } else {
+            // Get from external API
+            const recipe = await recipeApiService.getRecipeByIdFromSource(id);
+            
+            // If found, add it to our store
+            if (recipe) {
+              const validatedRecipe = validateRecipe(recipe);
+              set((state) => ({
+                recipes: [...state.recipes, validatedRecipe]
+              }));
+              return validatedRecipe;
+            }
+            
+            return null;
           }
-          
-          return recipe;
         } catch (error) {
           console.error('Error getting recipe by ID:', error);
           return null;
         }
       },
       
-      filterRecipes: (filters) => {
-        let filteredRecipes = get().recipes;
-        
-        if (filters.mealType) {
-          filteredRecipes = filteredRecipes.filter(recipe => recipe.mealType === filters.mealType);
+      filterRecipes: async (filters) => {
+        if (get().useFirestore) {
+          // Filter in Firestore
+          const { recipes } = await firebaseService.getRecipesFromFirestore(filters, 50);
+          
+          // Apply favorite filter client-side
+          if (filters.favorite) {
+            return recipes.filter(recipe => 
+              get().favoriteRecipeIds.includes(recipe.id)
+            );
+          }
+          
+          return recipes;
+        } else {
+          // Filter client-side
+          let filteredRecipes = get().recipes;
+          
+          if (filters.mealType) {
+            filteredRecipes = filteredRecipes.filter(recipe => recipe.mealType === filters.mealType);
+          }
+          
+          if (filters.complexity) {
+            filteredRecipes = filteredRecipes.filter(recipe => recipe.complexity === filters.complexity);
+          }
+          
+          if (filters.dietaryPreference) {
+            filteredRecipes = filteredRecipes.filter(recipe => 
+              recipe.dietaryPreferences?.includes(filters.dietaryPreference as any) ||
+              recipe.tags.includes(filters.dietaryPreference!)
+            );
+          }
+          
+          if (filters.fitnessGoal) {
+            filteredRecipes = filteredRecipes.filter(recipe => 
+              recipe.fitnessGoals?.includes(filters.fitnessGoal as any) ||
+              recipe.tags.includes(filters.fitnessGoal!)
+            );
+          }
+          
+          if (filters.searchQuery && filters.searchQuery.trim() !== '') {
+            const query = filters.searchQuery.toLowerCase();
+            filteredRecipes = filteredRecipes.filter(recipe => 
+              recipe.name.toLowerCase().includes(query) ||
+              recipe.tags.some(tag => tag.toLowerCase().includes(query)) ||
+              recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(query))
+            );
+          }
+          
+          if (filters.favorite) {
+            filteredRecipes = filteredRecipes.filter(recipe => 
+              get().favoriteRecipeIds.includes(recipe.id)
+            );
+          }
+          
+          return filteredRecipes;
         }
-        
-        if (filters.complexity) {
-          filteredRecipes = filteredRecipes.filter(recipe => recipe.complexity === filters.complexity);
-        }
-        
-        if (filters.dietaryPreference) {
-          filteredRecipes = filteredRecipes.filter(recipe => 
-            recipe.dietaryPreferences?.includes(filters.dietaryPreference as any) ||
-            recipe.tags.includes(filters.dietaryPreference)
-          );
-        }
-        
-        if (filters.fitnessGoal) {
-          filteredRecipes = filteredRecipes.filter(recipe => 
-            recipe.fitnessGoals?.includes(filters.fitnessGoal as any) ||
-            recipe.tags.includes(filters.fitnessGoal)
-          );
-        }
-        
-        if (filters.searchQuery && filters.searchQuery.trim() !== '') {
-          const query = filters.searchQuery.toLowerCase();
-          filteredRecipes = filteredRecipes.filter(recipe => 
-            recipe.name.toLowerCase().includes(query) ||
-            recipe.tags.some(tag => tag.toLowerCase().includes(query)) ||
-            recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(query))
-          );
-        }
-        
-        if (filters.favorite) {
-          filteredRecipes = filteredRecipes.filter(recipe => 
-            get().favoriteRecipeIds.includes(recipe.id)
-          );
-        }
-        
-        return filteredRecipes;
       },
       
       addToCollection: (collectionId, recipeId) => {
@@ -513,6 +775,29 @@ export const useRecipeStore = create<RecipeState>()(
         const recipesToCache = [...breakfastRecipes, ...lunchRecipes, ...dinnerRecipes, ...otherRecipes];
         
         set({ offlineRecipes: recipesToCache });
+      },
+      
+      importRecipesToFirestore: async (recipes) => {
+        if (!get().useFirestore) {
+          console.warn('Firestore is not enabled. Enable it first with setUseFirestore(true).');
+          return { added: 0, duplicates: 0, errors: 0 };
+        }
+        
+        try {
+          // Validate recipes
+          const validatedRecipes = recipes.map(validateRecipe);
+          
+          // Import to Firestore
+          const result = await firebaseService.importRecipesToFirestore(validatedRecipes);
+          
+          // Refresh recipes from Firestore
+          await get().loadRecipesFromApi(false);
+          
+          return result;
+        } catch (error) {
+          console.error('Error importing recipes to Firestore:', error);
+          return { added: 0, duplicates: 0, errors: recipes.length };
+        }
       }
     }),
     {
