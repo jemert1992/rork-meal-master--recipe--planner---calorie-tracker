@@ -319,9 +319,7 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   // Extract instructions
   const instructionsText = meal.strInstructions || '';
   const instructions = instructionsText
-    .split(/\r
-|\r|
-/)
+    .split(/\r\n|\r|\n/)
     .filter((step: string) => step.trim() !== '')
     .map((step: string) => step.trim());
   
