@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Meal Master: Recipe, Planner & Calorie Tracker",
-    "slug": "meal-master-recipe-planner-calorie-tracker",
+    "name": "Zestora: Recipe & Meal Planner",
+    "slug": "zestora-meal-planner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.meal-master-recipe-planner-calorie-tracker"
+      "bundleIdentifier": "app.rork.zestora"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.meal-master-recipe-planner-calorie-tracker"
+      "package": "app.rork.zestora"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
