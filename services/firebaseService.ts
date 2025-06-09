@@ -322,7 +322,7 @@ export const getRecipesForMealPlan = async (
     calorieRange?: { min: number; max: number };
     excludeIds?: string[];
   } = {},
-  limit: number = 10
+  recipeLimit: number = 10
 ): Promise<Recipe[]> => {
   try {
     const constraints: QueryConstraint[] = [];
@@ -349,7 +349,7 @@ export const getRecipesForMealPlan = async (
     
     // Add ordering and limit
     constraints.push(orderBy('created_at', 'desc'));
-    constraints.push(limit(limit * 2)); // Get more than needed to allow for filtering
+    constraints.push(limit(recipeLimit * 2)); // Get more than needed to allow for filtering
     
     // Create query
     const q = query(recipesCollection, ...constraints);
@@ -404,7 +404,7 @@ export const getRecipesForMealPlan = async (
     recipes = recipes.sort(() => 0.5 - Math.random());
     
     // Return limited number of recipes
-    return recipes.slice(0, limit);
+    return recipes.slice(0, recipeLimit);
   } catch (error) {
     console.error('Error getting recipes for meal plan:', error);
     return [];
@@ -485,7 +485,7 @@ export const searchRecipesInFirestore = async (searchTerm: string, pageSize: num
       }
     });
     
-    // Use slice instead of calling Number as a function
+    // Use slice to limit the number of results
     return recipes.slice(0, pageSize);
   } catch (error) {
     console.error('Error searching recipes in Firestore:', error);
