@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   todayNumberContainer: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
   },
   dayNumber: {
     fontSize: 18,
@@ -912,7 +912,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.secondary,
     paddingVertical: 16,
     borderRadius: 12,
   },

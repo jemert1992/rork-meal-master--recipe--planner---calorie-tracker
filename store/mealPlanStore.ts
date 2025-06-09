@@ -291,6 +291,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           };
           
           const requiredTags = dietTags[dietType];
+          // Fixed: This expression was always truthy because it was checking if requiredTags.length > 0 twice
           if (requiredTags.length > 0 && !requiredTags.some(tag => 
             recipe.tags.some(recipeTag => 
               recipeTag.toLowerCase() === tag.toLowerCase()

@@ -3,6 +3,7 @@ export default {
   primaryLight: '#A5D6A7',
   secondary: '#64B5F6',
   secondaryLight: '#BBDEFB',
+  accent: '#FF9800',  // Added accent color (orange) to complement the primary green
   background: '#FFFFFF',
   backgroundLight: '#F5F5F5',
   card: '#F9F9F9',
