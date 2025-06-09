@@ -485,6 +485,7 @@ export const searchRecipesInFirestore = async (searchTerm: string, pageSize: num
       }
     });
     
+    // Use slice instead of calling Number as a function
     return recipes.slice(0, pageSize);
   } catch (error) {
     console.error('Error searching recipes in Firestore:', error);
