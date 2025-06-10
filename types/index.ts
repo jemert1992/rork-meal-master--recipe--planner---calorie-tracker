@@ -26,6 +26,13 @@ export type Recipe = {
   source?: string;
 };
 
+export type RecipeCategory = {
+  id: string;
+  name: string;
+  count: number;
+  image: string;
+};
+
 export type RecipeIngredient = {
   name: string;
   quantity: number;
@@ -71,6 +78,7 @@ export type DailyMeals = {
   breakfast?: MealItem;
   lunch?: MealItem;
   dinner?: MealItem;
+  snacks?: MealItem[];
 };
 
 export type MealPlan = {
@@ -83,6 +91,10 @@ export type FoodLog = {
     lunch: FoodItem[];
     dinner: FoodItem[];
     snacks: FoodItem[];
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFat: number;
   };
 };
 

@@ -12,6 +12,7 @@ import FoodLogItem from '@/components/FoodLogItem';
 import Colors from '@/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as edamamService from '@/services/edamamService';
+import { FoodItem } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -22,7 +23,16 @@ export default function ProfileScreen() {
   const [edamamConfigured, setEdamamConfigured] = useState(false);
   
   const dateString = selectedDate.toISOString().split('T')[0];
-  const dayLog = foodLog[dateString] || { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, meals: [] };
+  const dayLog = foodLog[dateString] || { 
+    breakfast: [], 
+    lunch: [], 
+    dinner: [], 
+    snacks: [], 
+    totalCalories: 0, 
+    totalProtein: 0, 
+    totalCarbs: 0, 
+    totalFat: 0 
+  };
 
   // Check if Edamam credentials are configured
   useEffect(() => {
@@ -132,13 +142,12 @@ export default function ProfileScreen() {
   };
 
   // Group meals by meal type
-  const groupedMeals = dayLog.meals.reduce((acc, meal) => {
-    if (!acc[meal.mealType]) {
-      acc[meal.mealType] = [];
-    }
-    acc[meal.mealType].push(meal);
-    return acc;
-  }, {} as Record<string, typeof dayLog.meals>);
+  const groupedMeals = {
+    breakfast: dayLog.breakfast || [],
+    lunch: dayLog.lunch || [],
+    dinner: dayLog.dinner || [],
+    snack: dayLog.snacks || []
+  };
 
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -237,21 +246,39 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        {dayLog.meals.length === 0 ? (
+        {(dayLog.breakfast.length === 0 && dayLog.lunch.length === 0 && 
+          dayLog.dinner.length === 0 && dayLog.snacks.length === 0) ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No food entries for this day</Text>
             <Text style={styles.emptySubtext}>Tap the button above to add your first meal</Text>
           </View>
         ) : (
           mealTypes.map(mealType => {
-            const meals = groupedMeals[mealType] || [];
-            if (meals.length === 0) return null;
+            const meals = mealType === 'snack' ? dayLog.snacks : dayLog[mealType as keyof typeof dayLog] as FoodItem[];
+            if (!meals || meals.length === 0) return null;
             
             return (
               <View key={mealType} style={styles.mealTypeContainer}>
                 <Text style={styles.mealTypeTitle}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
-                {meals.map((meal, index) => {
-                  const originalIndex = dayLog.meals.findIndex(m => m === meal);
+                {meals.map((meal: FoodItem, index: number) => {
+                  // Find the original index in the combined array
+                  let originalIndex = 0;
+                  let currentMealType = '';
+                  
+                  if (mealType === 'breakfast') {
+                    originalIndex = index;
+                    currentMealType = 'breakfast';
+                  } else if (mealType === 'lunch') {
+                    originalIndex = dayLog.breakfast.length + index;
+                    currentMealType = 'lunch';
+                  } else if (mealType === 'dinner') {
+                    originalIndex = dayLog.breakfast.length + dayLog.lunch.length + index;
+                    currentMealType = 'dinner';
+                  } else if (mealType === 'snack') {
+                    originalIndex = dayLog.breakfast.length + dayLog.lunch.length + dayLog.dinner.length + index;
+                    currentMealType = 'snacks';
+                  }
+                  
                   return (
                     <FoodLogItem
                       key={`${meal.name}-${meal.time}-${index}`}

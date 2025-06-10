@@ -11,6 +11,7 @@ export default {
   textLight: '#757575',
   border: '#E0E0E0',
   success: '#66BB6A',
+  successLight: '#E8F5E9', // Added success light color
   error: '#EF5350',
   danger: '#EF5350',
   warning: '#FFC107',
