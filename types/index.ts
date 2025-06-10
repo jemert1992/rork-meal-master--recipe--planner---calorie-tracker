@@ -85,17 +85,31 @@ export type MealPlan = {
   [date: string]: DailyMeals;
 };
 
+export type FoodEntry = {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  quantity: number;
+  unit: string;
+  recipeId?: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+  time?: string;
+};
+
+export type DailyLog = {
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  meals: FoodEntry[];
+};
+
 export type FoodLog = {
-  [date: string]: {
-    breakfast: FoodItem[];
-    lunch: FoodItem[];
-    dinner: FoodItem[];
-    snacks: FoodItem[];
-    totalCalories: number;
-    totalProtein: number;
-    totalCarbs: number;
-    totalFat: number;
-  };
+  [date: string]: DailyLog;
 };
 
 export type FoodItem = {

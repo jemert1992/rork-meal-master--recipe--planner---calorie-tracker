@@ -1,36 +1,97 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FoodLog, FoodEntry, DailyLog } from '@/types';
-import { mockFoodLog } from '@/constants/mockData';
+import { FoodLog, FoodEntry, DailyLog, FoodItem } from '@/types';
 
 interface FoodLogState {
   foodLog: FoodLog;
-  addFoodEntry: (date: string, entry: FoodEntry) => void;
+  addFoodEntry: (date: string, entry: FoodItem) => void;
   removeFoodEntry: (date: string, index: number) => void;
-  updateFoodEntry: (date: string, index: number, entry: FoodEntry) => void;
+  updateFoodEntry: (date: string, index: number, entry: FoodItem) => void;
   getDailyLog: (date: string) => DailyLog | null;
 }
 
-// Convert mock data to ensure it matches the FoodLog type
-const typedMockFoodLog: FoodLog = {};
-for (const [date, log] of Object.entries(mockFoodLog)) {
-  typedMockFoodLog[date] = {
-    totalCalories: log.totalCalories,
-    totalProtein: log.totalProtein,
-    totalCarbs: log.totalCarbs,
-    totalFat: log.totalFat,
-    meals: log.meals.map(meal => ({
-      ...meal,
-      mealType: meal.mealType as FoodEntry['mealType']
-    }))
-  };
-}
+// Mock data structure that matches our FoodLog type
+const mockFoodLog: FoodLog = {
+  '2023-06-10': {
+    totalCalories: 1850,
+    totalProtein: 95,
+    totalCarbs: 220,
+    totalFat: 60,
+    meals: [
+      {
+        id: '1',
+        name: 'Oatmeal with Berries',
+        calories: 350,
+        protein: 12,
+        carbs: 60,
+        fat: 8,
+        fiber: 8,
+        quantity: 1,
+        unit: 'bowl',
+        mealType: 'breakfast',
+        time: '08:00'
+      },
+      {
+        id: '2',
+        name: 'Grilled Chicken Salad',
+        calories: 450,
+        protein: 35,
+        carbs: 25,
+        fat: 22,
+        fiber: 6,
+        quantity: 1,
+        unit: 'plate',
+        mealType: 'lunch',
+        time: '13:00'
+      },
+      {
+        id: '3',
+        name: 'Salmon with Vegetables',
+        calories: 550,
+        protein: 40,
+        carbs: 30,
+        fat: 25,
+        fiber: 8,
+        quantity: 1,
+        unit: 'plate',
+        mealType: 'dinner',
+        time: '19:00'
+      },
+      {
+        id: '4',
+        name: 'Greek Yogurt',
+        calories: 150,
+        protein: 15,
+        carbs: 10,
+        fat: 5,
+        fiber: 0,
+        quantity: 1,
+        unit: 'cup',
+        mealType: 'snacks',
+        time: '16:00'
+      },
+      {
+        id: '5',
+        name: 'Apple',
+        calories: 95,
+        protein: 0.5,
+        carbs: 25,
+        fat: 0.3,
+        fiber: 4,
+        quantity: 1,
+        unit: 'medium',
+        mealType: 'snacks',
+        time: '11:00'
+      }
+    ]
+  }
+};
 
 export const useFoodLogStore = create<FoodLogState>()(
   persist(
     (set, get) => ({
-      foodLog: typedMockFoodLog,
+      foodLog: mockFoodLog,
       
       addFoodEntry: (date, entry) => {
         set((state) => {
