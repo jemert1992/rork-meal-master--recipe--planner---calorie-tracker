@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, RefreshCw, ChevronRight, Database, Cloud } from 'lucide-react-native';
+import { Search, Filter, RefreshCw, ChevronRight, Database, Cloud, Key } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useGroceryStore } from '@/store/groceryStore';
 import RecipeCard from '@/components/RecipeCard';
@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
+import * as edamamService from '@/services/edamamService';
 
 // Featured recipe collections
 const featuredCollections = [
@@ -59,7 +60,8 @@ export default function RecipesScreen() {
     loadMoreRecipes,
     pagination,
     useFirestore,
-    setUseFirestore
+    setUseFirestore,
+    apiSources
   } = useRecipeStore();
   
   const { mealPlan } = useMealPlanStore();
@@ -73,6 +75,17 @@ export default function RecipesScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [recipeCategories, setRecipeCategories] = useState<RecipeCategory[]>(initialRecipeCategories);
   const [displayedRecipes, setDisplayedRecipes] = useState<Recipe[]>([]);
+  const [edamamConfigured, setEdamamConfigured] = useState(false);
+
+  // Check if Edamam credentials are configured
+  useEffect(() => {
+    const checkEdamamCredentials = async () => {
+      const isConfigured = await edamamService.checkEdamamCredentials();
+      setEdamamConfigured(isConfigured);
+    };
+    
+    checkEdamamCredentials();
+  }, []);
 
   // Update category counts
   useEffect(() => {
@@ -144,12 +157,12 @@ export default function RecipesScreen() {
     setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
     
     if (categoryId === selectedCategory) {
-      setFilters({...filters, mealType: null, dietaryPreference: null});
+      setFilters({...filters, mealType: undefined, dietaryPreference: undefined});
     } else if (categoryId === 'breakfast' || categoryId === 'lunch' || categoryId === 'dinner') {
-      setFilters({...filters, mealType: categoryId as 'breakfast' | 'lunch' | 'dinner', dietaryPreference: null});
+      setFilters({...filters, mealType: categoryId as 'breakfast' | 'lunch' | 'dinner', dietaryPreference: undefined});
     } else {
       // For other categories like vegetarian, vegan, etc.
-      setFilters({...filters, dietaryPreference: categoryId, mealType: null});
+      setFilters({...filters, dietaryPreference: categoryId, mealType: undefined});
     }
     
     // Scroll to top when changing category
@@ -332,19 +345,28 @@ export default function RecipesScreen() {
         <Text style={styles.title}>Discover Recipes</Text>
         <View style={styles.headerRow}>
           <Text style={styles.subtitle}>Find and save your favorite meals</Text>
-          <Pressable 
-            style={styles.dataSourceButton} 
-            onPress={toggleDataSource}
-          >
-            {useFirestore ? (
-              <Database size={16} color={Colors.primary} />
-            ) : (
-              <Cloud size={16} color={Colors.primary} />
+          <View style={styles.dataSourceContainer}>
+            <Pressable 
+              style={styles.dataSourceButton} 
+              onPress={toggleDataSource}
+            >
+              {useFirestore ? (
+                <Database size={16} color={Colors.primary} />
+              ) : (
+                <Cloud size={16} color={Colors.primary} />
+              )}
+              <Text style={styles.dataSourceText}>
+                {useFirestore ? 'Firestore' : 'API'}
+              </Text>
+            </Pressable>
+            
+            {apiSources.useEdamam && edamamConfigured && (
+              <View style={styles.edamamBadge}>
+                <Key size={12} color={Colors.success} />
+                <Text style={styles.edamamBadgeText}>Edamam</Text>
+              </View>
             )}
-            <Text style={styles.dataSourceText}>
-              {useFirestore ? 'Firestore' : 'API'}
-            </Text>
-          </Pressable>
+          </View>
         </View>
       </View>
 
@@ -431,6 +453,10 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginBottom: 16,
   },
+  dataSourceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   dataSourceButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -442,6 +468,20 @@ const styles = StyleSheet.create({
   dataSourceText: {
     fontSize: 12,
     color: Colors.primary,
+    marginLeft: 4,
+  },
+  edamamBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginLeft: 6,
+  },
+  edamamBadgeText: {
+    fontSize: 10,
+    color: Colors.success,
     marginLeft: 4,
   },
   searchContainer: {

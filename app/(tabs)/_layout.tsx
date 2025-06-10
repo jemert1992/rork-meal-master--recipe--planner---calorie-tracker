@@ -1,75 +1,55 @@
-import React from 'react';
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
-import { Home, Calendar, ShoppingBag, User, BookOpen } from 'lucide-react-native';
+import { useColorScheme } from 'react-native';
 import Colors from '@/constants/colors';
+import { Home, Search, Calendar, ShoppingBag, User, Settings } from 'lucide-react-native';
 
-export default function TabsLayout() {
+export default function TabLayout() {
+  const colorScheme = useColorScheme();
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textLight,
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.border,
-          height: Platform.OS === 'ios' ? 90 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-          paddingTop: 10,
+          backgroundColor: colorScheme === 'dark' ? Colors.darkBackground : Colors.white,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
-        headerStyle: {
-          backgroundColor: Colors.white,
-          borderBottomColor: Colors.border,
-          borderBottomWidth: 1,
-        },
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-          color: Colors.text,
-        },
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Recipes',
-          tabBarLabel: 'Recipes',
-          tabBarIcon: ({ color }) => <BookOpen size={24} color={color} />,
-          headerShown: false,
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="meal-plan"
         options={{
           title: 'Meal Plan',
-          tabBarLabel: 'Meal Plan',
-          tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
+          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="grocery-list"
         options={{
-          title: 'Grocery List',
-          tabBarLabel: 'Grocery',
-          tabBarIcon: ({ color }) => <ShoppingBag size={24} color={color} />,
+          title: 'Grocery',
+          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="admin/import-recipes"
+        name="api-settings"
         options={{
-          href: null, // Hide this tab from the tab bar
+          title: 'API Settings',
+          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
     </Tabs>

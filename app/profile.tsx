@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Database, Cloud, RefreshCw, Upload } from 'lucide-react-native';
+import { ChevronRight, Database, Cloud, RefreshCw, Upload, Key } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+import * as edamamService from '@/services/edamamService';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -18,6 +19,17 @@ export default function ProfileScreen() {
     loadRecipesFromApi,
     recipes
   } = useRecipeStore();
+  const [edamamConfigured, setEdamamConfigured] = useState(false);
+
+  // Check if Edamam credentials are configured
+  useEffect(() => {
+    const checkEdamamCredentials = async () => {
+      const isConfigured = await edamamService.checkEdamamCredentials();
+      setEdamamConfigured(isConfigured);
+    };
+    
+    checkEdamamCredentials();
+  }, []);
 
   const handleEditProfile = () => {
     router.push('/profile/edit');
@@ -66,7 +78,57 @@ export default function ProfileScreen() {
   };
 
   const handleToggleApiSource = (source: string, enabled: boolean) => {
+    if (source === 'useEdamam' && enabled && !edamamConfigured) {
+      Alert.alert(
+        "Edamam API Configuration Required",
+        "To use Edamam API, you need to configure your API credentials in the API Settings screen.",
+        [
+          {
+            text: "Configure Now",
+            onPress: () => router.push('/api-settings')
+          },
+          {
+            text: "Later",
+            style: "cancel"
+          }
+        ]
+      );
+      return;
+    }
+    
     setApiSource(source, enabled);
+    
+    if (source === 'useSpoonacular' && enabled) {
+      Alert.alert(
+        "Spoonacular API Enabled",
+        "The app will now use Spoonacular API to fetch recipes. Refresh recipes to see new content.",
+        [
+          {
+            text: "Refresh Now",
+            onPress: () => loadRecipesFromApi(false)
+          },
+          {
+            text: "Later",
+            style: "cancel"
+          }
+        ]
+      );
+    } else if (source === 'useEdamam' && enabled) {
+      Alert.alert(
+        "Edamam API Enabled",
+        "The app will now use Edamam API to fetch recipes. Refresh recipes to see new content.",
+        [
+          {
+            text: "Refresh Now",
+            onPress: () => loadRecipesFromApi(false)
+          },
+          {
+            text: "Later",
+            style: "cancel"
+          }
+        ]
+      );
+    }
   };
 
   const handleRefreshRecipes = () => {
@@ -142,24 +204,35 @@ export default function ProfileScreen() {
               </View>
               
               <View style={styles.settingItem}>
-                <Text style={styles.settingLabel}>Spoonacular API (Coming Soon)</Text>
+                <View style={styles.settingLabelContainer}>
+                  <Text style={styles.settingLabel}>Spoonacular API</Text>
+                  {apiSources.useSpoonacular && (
+                    <Text style={styles.apiKeyStatus}>API Key: Active</Text>
+                  )}
+                </View>
                 <Switch
                   value={apiSources.useSpoonacular}
                   onValueChange={(value) => handleToggleApiSource('useSpoonacular', value)}
                   trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                   thumbColor={apiSources.useSpoonacular ? Colors.primary : Colors.textLight}
-                  disabled={true}
                 />
               </View>
               
               <View style={styles.settingItem}>
-                <Text style={styles.settingLabel}>Edamam API (Coming Soon)</Text>
+                <View style={styles.settingLabelContainer}>
+                  <Text style={styles.settingLabel}>Edamam API</Text>
+                  {edamamConfigured && (
+                    <View style={styles.apiKeyBadge}>
+                      <Key size={12} color={Colors.success} />
+                      <Text style={styles.apiKeyBadgeText}>Configured</Text>
+                    </View>
+                  )}
+                </View>
                 <Switch
                   value={apiSources.useEdamam}
                   onValueChange={(value) => handleToggleApiSource('useEdamam', value)}
                   trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                   thumbColor={apiSources.useEdamam ? Colors.primary : Colors.textLight}
-                  disabled={true}
                 />
               </View>
             </>
@@ -170,9 +243,23 @@ export default function ProfileScreen() {
             <Text style={styles.actionButtonText}>Refresh Recipe Data</Text>
           </Pressable>
           
+          <Pressable 
+            style={styles.configButton} 
+            onPress={() => router.push('/api-settings')}
+          >
+            <Key size={18} color={Colors.primary} />
+            <Text style={styles.configButtonText}>API Configuration</Text>
+          </Pressable>
+          
           <View style={styles.statsContainer}>
             <Text style={styles.statsText}>Total Recipes: {recipes.length}</Text>
             <Text style={styles.statsText}>Data Source: {useFirestore ? 'Firestore' : 'External APIs'}</Text>
+            {apiSources.useSpoonacular && (
+              <Text style={styles.statsText}>Spoonacular API: Enabled</Text>
+            )}
+            {apiSources.useEdamam && (
+              <Text style={styles.statsText}>Edamam API: {edamamConfigured ? 'Configured' : 'Not Configured'}</Text>
+            )}
           </View>
         </View>
 
@@ -272,6 +359,7 @@ const styles = StyleSheet.create({
   settingLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   settingIcon: {
     marginRight: 8,
@@ -279,6 +367,30 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 16,
     color: Colors.text,
+    flex: 1,
+  },
+  apiKeyStatus: {
+    fontSize: 12,
+    color: Colors.success,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  apiKeyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  apiKeyBadgeText: {
+    fontSize: 10,
+    color: Colors.success,
+    marginLeft: 4,
   },
   actionButton: {
     flexDirection: 'row',
@@ -289,6 +401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
+    marginBottom: 12,
   },
   actionButtonText: {
     color: Colors.white,
@@ -296,8 +409,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
   },
+  configButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  configButtonText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 8,
+  },
   statsContainer: {
-    marginTop: 16,
     padding: 12,
     backgroundColor: Colors.background,
     borderRadius: 8,

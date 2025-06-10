@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter } from 'lucide-react-native';
+import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter, Info, X } from 'lucide-react-native';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
@@ -23,7 +23,10 @@ export default function MealPlanScreen() {
     generateMealPlan,
     isRecipeSuitable,
     isRecipeUsedInMealPlan,
-    updateWeeklyUsedRecipeIds
+    updateWeeklyUsedRecipeIds,
+    lastGenerationError,
+    generationSuggestions,
+    clearGenerationError
   } = useMealPlanStore();
   const { recipes, isLoading, useFirestore } = useRecipeStore();
   const { profile } = useUserStore();
@@ -41,9 +44,26 @@ export default function MealPlanScreen() {
   const [showDietaryWarning, setShowDietaryWarning] = useState(false);
   const [isLoadingFirestoreRecipes, setIsLoadingFirestoreRecipes] = useState(false);
   const [firestoreRecipes, setFirestoreRecipes] = useState<Recipe[]>([]);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [alternativesAvailable, setAlternativesAvailable] = useState<{
+    breakfast: boolean;
+    lunch: boolean;
+    dinner: boolean;
+  }>({
+    breakfast: false,
+    lunch: false,
+    dinner: false
+  });
 
   const dateString = selectedDate.toISOString().split('T')[0];
   const dayPlan = mealPlan[dateString] || {};
+
+  // Show error modal when generation error occurs
+  useEffect(() => {
+    if (lastGenerationError) {
+      setShowErrorModal(true);
+    }
+  }, [lastGenerationError]);
 
   // Memoize the addNutritionFromMeal function to prevent recreating it on every render
   const addNutritionFromMeal = useCallback((meal: any, recipeList: Recipe[]) => {
@@ -170,6 +190,77 @@ export default function MealPlanScreen() {
     loadFirestoreRecipes();
   }, [useFirestore, showSuggestions, selectedDate, profile, updateWeeklyUsedRecipeIds]);
 
+  // Check if alternatives are available for each meal type
+  useEffect(() => {
+    const checkAlternatives = async () => {
+      const newAlternativesAvailable = {
+        breakfast: false,
+        lunch: false,
+        dinner: false
+      };
+      
+      if (dayPlan.breakfast?.recipeId) {
+        try {
+          const alternatives = await firebaseService.getAlternativeRecipes(
+            'breakfast',
+            dayPlan.breakfast.recipeId,
+            {
+              dietType: profile.dietType,
+              allergies: profile.allergies,
+              excludedIngredients: profile.excludedIngredients
+            },
+            1
+          );
+          newAlternativesAvailable.breakfast = alternatives.length > 0;
+        } catch (error) {
+          console.error('Error checking breakfast alternatives:', error);
+        }
+      }
+      
+      if (dayPlan.lunch?.recipeId) {
+        try {
+          const alternatives = await firebaseService.getAlternativeRecipes(
+            'lunch',
+            dayPlan.lunch.recipeId,
+            {
+              dietType: profile.dietType,
+              allergies: profile.allergies,
+              excludedIngredients: profile.excludedIngredients
+            },
+            1
+          );
+          newAlternativesAvailable.lunch = alternatives.length > 0;
+        } catch (error) {
+          console.error('Error checking lunch alternatives:', error);
+        }
+      }
+      
+      if (dayPlan.dinner?.recipeId) {
+        try {
+          const alternatives = await firebaseService.getAlternativeRecipes(
+            'dinner',
+            dayPlan.dinner.recipeId,
+            {
+              dietType: profile.dietType,
+              allergies: profile.allergies,
+              excludedIngredients: profile.excludedIngredients
+            },
+            1
+          );
+          newAlternativesAvailable.dinner = alternatives.length > 0;
+        } catch (error) {
+          console.error('Error checking dinner alternatives:', error);
+        }
+      }
+      
+      setAlternativesAvailable(newAlternativesAvailable);
+    };
+    
+    if (useFirestore && Object.keys(dayPlan).length > 0) {
+      checkAlternatives();
+    }
+  }, [dayPlan, profile, useFirestore]);
+
   // Memoize the function to generate meal suggestions
   const generateMealSuggestions = useCallback(() => {
     // Use Firestore recipes if available, otherwise use local recipes
@@ -287,7 +378,26 @@ export default function MealPlanScreen() {
       
       if (useFirestore) {
         // Generate meal plan using Firestore
-        await generateMealPlan(dateString, []);
+        const result = await generateMealPlan(dateString, []);
+        
+        if (result.success) {
+          if (result.generatedMeals.length === 0) {
+            Alert.alert(
+              'No Changes Needed',
+              'Your meal plan is already complete for this day.',
+              [{ text: 'OK' }]
+            );
+          } else {
+            Alert.alert(
+              'Success',
+              `Generated ${result.generatedMeals.length} meal(s) for your plan!`,
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          // Error will be shown in the error modal
+          setShowErrorModal(true);
+        }
       } else {
         // Filter recipes by dietary preferences if available
         let recipesToUse = [...recipes];
@@ -327,13 +437,34 @@ export default function MealPlanScreen() {
           }
         }
         
-        await generateMealPlan(dateString, recipesToUse);
+        const result = await generateMealPlan(dateString, recipesToUse);
+        
+        if (result.success) {
+          if (result.generatedMeals.length === 0) {
+            Alert.alert(
+              'No Changes Needed',
+              'Your meal plan is already complete for this day.',
+              [{ text: 'OK' }]
+            );
+          } else {
+            Alert.alert(
+              'Success',
+              `Generated ${result.generatedMeals.length} meal(s) for your plan!`,
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          // Error will be shown in the error modal
+          setShowErrorModal(true);
+        }
       }
-      
-      Alert.alert('Success', 'Meal plan generated successfully!');
     } catch (error) {
       console.error('Error generating meal plan:', error);
-      Alert.alert('Error', 'Failed to generate meal plan. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to generate meal plan. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -476,6 +607,7 @@ export default function MealPlanScreen() {
           date={dateString}
           onRemove={() => handleRemoveMeal('breakfast')}
           onAdd={() => handleAddMeal('breakfast')}
+          hasAlternatives={alternativesAvailable.breakfast}
         />
 
         <MealPlanItem
@@ -484,6 +616,7 @@ export default function MealPlanScreen() {
           date={dateString}
           onRemove={() => handleRemoveMeal('lunch')}
           onAdd={() => handleAddMeal('lunch')}
+          hasAlternatives={alternativesAvailable.lunch}
         />
 
         <MealPlanItem
@@ -492,6 +625,7 @@ export default function MealPlanScreen() {
           date={dateString}
           onRemove={() => handleRemoveMeal('dinner')}
           onAdd={() => handleAddMeal('dinner')}
+          hasAlternatives={alternativesAvailable.dinner}
         />
 
         {/* Meal Suggestions Section */}
@@ -550,7 +684,12 @@ export default function MealPlanScreen() {
                   </Pressable>
                 ))
               ) : (
-                <Text style={styles.emptyText}>No suggestions available</Text>
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No suggestions available</Text>
+                  <Text style={styles.emptySubtext}>
+                    Try adjusting your dietary preferences or adding more recipes to your collection
+                  </Text>
+                </View>
               )}
             </View>
           )}
@@ -641,6 +780,61 @@ export default function MealPlanScreen() {
         {/* Add extra padding at the bottom to ensure everything is scrollable */}
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* Error Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showErrorModal}
+        onRequestClose={() => {
+          setShowErrorModal(false);
+          clearGenerationError();
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={styles.errorModalHeader}>
+              <Info size={24} color={Colors.warning} />
+              <Text style={styles.errorModalTitle}>Generation Issue</Text>
+              <Pressable 
+                onPress={() => {
+                  setShowErrorModal(false);
+                  clearGenerationError();
+                }}
+                style={styles.closeButton}
+              >
+                <X size={24} color={Colors.text} />
+              </Pressable>
+            </View>
+            
+            <Text style={styles.errorModalMessage}>
+              {lastGenerationError || "There was an issue generating your meal plan."}
+            </Text>
+            
+            {generationSuggestions && generationSuggestions.length > 0 && (
+              <View style={styles.suggestionsList}>
+                <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+                {generationSuggestions.map((suggestion, index) => (
+                  <View key={index} style={styles.suggestionItem}>
+                    <View style={styles.bulletPoint} />
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            <Pressable 
+              style={styles.errorModalButton}
+              onPress={() => {
+                setShowErrorModal(false);
+                clearGenerationError();
+              }}
+            >
+              <Text style={styles.errorModalButtonText}>Got it</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -748,12 +942,19 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   emptyText: {
-    fontSize: 14,
-    color: Colors.textLight,
-    fontStyle: 'italic',
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.text,
     textAlign: 'center',
     marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginTop: 8,
     marginBottom: 12,
+    paddingHorizontal: 20,
   },
   suggestionsContainer: {
     marginBottom: 24,
@@ -895,5 +1096,83 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 80, // Extra padding at the bottom
+  },
+  // Error Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorModal: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  errorModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  errorModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginLeft: 12,
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  errorModalMessage: {
+    fontSize: 16,
+    color: Colors.text,
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  suggestionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  bulletPoint: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+    marginRight: 8,
+    marginTop: 8,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+    lineHeight: 20,
+  },
+  errorModalButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  errorModalButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
 });

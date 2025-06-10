@@ -112,20 +112,178 @@ export const convertRecipeToFirestoreData = (recipe: Recipe) => {
 
 // Function to check if a recipe is a duplicate
 export const isDuplicateRecipe = async (recipe: Recipe): Promise<boolean> => {
-  // Check for exact name match (case-insensitive)
-  const nameQuery = query(
-    recipesCollection,
-    where('name', '==', recipe.name.toLowerCase())
-  );
+  try {
+    // Check for exact name match (case-insensitive)
+    const nameQuery = query(
+      recipesCollection,
+      where('name', '==', recipe.name.toLowerCase())
+    );
+    
+    const nameQuerySnapshot = await getDocs(nameQuery);
+    if (!nameQuerySnapshot.empty) {
+      // Found a recipe with the same name, now check ingredients similarity
+      for (const doc of nameQuerySnapshot.docs) {
+        const existingRecipe = convertFirestoreDataToRecipe(doc.id, doc.data());
+        
+        // Check if ingredients are similar (at least 70% match)
+        const ingredientSimilarity = calculateIngredientSimilarity(
+          existingRecipe.ingredients, 
+          recipe.ingredients
+        );
+        
+        if (ingredientSimilarity >= 0.7) {
+          return true; // It's a duplicate
+        }
+      }
+    }
+    
+    // Check for similar ingredients and instructions
+    // This is a more complex check that would ideally be done in a Cloud Function
+    // For now, we'll just check for recipes with similar ingredients
+    const mainIngredients = extractMainIngredients(recipe.ingredients);
+    
+    if (mainIngredients.length >= 3) {
+      // If we have at least 3 main ingredients, check for recipes with the same main ingredients
+      const ingredientQueries = mainIngredients.slice(0, 3).map(ingredient => {
+        return query(
+          recipesCollection,
+          where('ingredients', 'array-contains', { name: ingredient.toLowerCase() })
+        );
+      });
+      
+      // Execute each query
+      for (const q of ingredientQueries) {
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          // Check each recipe for similarity
+          for (const doc of querySnapshot.docs) {
+            const existingRecipe = convertFirestoreDataToRecipe(doc.id, doc.data());
+            
+            // Check if ingredients are similar (at least 70% match)
+            const ingredientSimilarity = calculateIngredientSimilarity(
+              existingRecipe.ingredients, 
+              recipe.ingredients
+            );
+            
+            // Check if instructions are similar (at least 60% match)
+            const instructionSimilarity = calculateInstructionSimilarity(
+              existingRecipe.instructions, 
+              recipe.instructions
+            );
+            
+            // If both ingredients and instructions are similar, it's likely a duplicate
+            if (ingredientSimilarity >= 0.7 && instructionSimilarity >= 0.6) {
+              return true; // It's a duplicate
+            }
+          }
+        }
+      }
+    }
+    
+    return false; // Not a duplicate
+  } catch (error) {
+    console.error('Error checking for duplicate recipe:', error);
+    return false; // Assume it's not a duplicate if there's an error
+  }
+};
+
+// Helper function to extract main ingredients from a list of ingredients
+const extractMainIngredients = (ingredients: string[]): string[] => {
+  // Common ingredients to ignore (these are usually not the main ingredients)
+  const commonIngredients = [
+    'salt', 'pepper', 'oil', 'water', 'sugar', 'flour', 'butter', 
+    'garlic', 'onion', 'olive oil', 'vegetable oil', 'baking powder',
+    'baking soda', 'vanilla extract', 'cinnamon', 'nutmeg', 'paprika'
+  ];
   
-  const nameQuerySnapshot = await getDocs(nameQuery);
-  if (!nameQuerySnapshot.empty) return true;
+  // Extract the main ingredient from each ingredient string
+  const mainIngredients = ingredients.map(ingredient => {
+    // Remove quantity and unit
+    const parts = ingredient.split(' ');
+    const isFirstPartNumber = !isNaN(parseFloat(parts[0]));
+    
+    // If the first part is a number, remove it and possibly the unit
+    let mainIngredient = isFirstPartNumber 
+      ? parts.slice(parts[1] && parts[1].match(/^[a-zA-Z]+$/) ? 2 : 1).join(' ')
+      : ingredient;
+    
+    // Remove any text in parentheses (like "chopped" or "diced")
+    mainIngredient = mainIngredient.replace(/\s*\([^)]*\)/g, '');
+    
+    // Remove common preparation instructions
+    const prepTerms = [
+      'chopped', 'diced', 'minced', 'sliced', 'grated', 'peeled',
+      'crushed', 'ground', 'shredded', 'julienned', 'cubed', 'quartered',
+      'halved', 'thinly sliced', 'roughly chopped', 'finely chopped',
+      'to taste', 'for serving', 'optional'
+    ];
+    
+    for (const term of prepTerms) {
+      mainIngredient = mainIngredient.replace(new RegExp(`\\s*${term}\\b`, 'gi'), '');
+    }
+    
+    // Final cleanup
+    mainIngredient = mainIngredient.trim().toLowerCase();
+    
+    return mainIngredient;
+  });
   
-  // Check for similar ingredients and name
-  // This is a more complex check that would ideally be done in a Cloud Function
-  // For now, we'll just check for exact name match
+  // Filter out common ingredients and duplicates
+  return [...new Set(
+    mainIngredients.filter(ingredient => 
+      !commonIngredients.includes(ingredient) && ingredient.length > 0
+    )
+  )];
+};
+
+// Helper function to calculate similarity between two sets of ingredients
+const calculateIngredientSimilarity = (ingredients1: string[], ingredients2: string[]): number => {
+  const mainIngredients1 = extractMainIngredients(ingredients1);
+  const mainIngredients2 = extractMainIngredients(ingredients2);
   
-  return false;
+  // Count how many ingredients are in both sets
+  let commonCount = 0;
+  for (const ingredient1 of mainIngredients1) {
+    if (mainIngredients2.some(ingredient2 => 
+      ingredient2.includes(ingredient1) || ingredient1.includes(ingredient2)
+    )) {
+      commonCount++;
+    }
+  }
+  
+  // Calculate Jaccard similarity: intersection / union
+  const unionCount = mainIngredients1.length + mainIngredients2.length - commonCount;
+  return unionCount > 0 ? commonCount / unionCount : 0;
+};
+
+// Helper function to calculate similarity between two sets of instructions
+const calculateInstructionSimilarity = (instructions1: string[], instructions2: string[]): number => {
+  // Combine all instructions into a single string for each recipe
+  const text1 = instructions1.join(' ').toLowerCase();
+  const text2 = instructions2.join(' ').toLowerCase();
+  
+  // Split into words and remove common words
+  const commonWords = [
+    'the', 'and', 'a', 'an', 'in', 'on', 'with', 'to', 'for', 'of', 'until',
+    'about', 'add', 'stir', 'mix', 'cook', 'heat', 'place', 'remove', 'set',
+    'let', 'then', 'minutes', 'minute', 'hour', 'hours', 'over', 'under'
+  ];
+  
+  const words1 = text1.split(/\s+/).filter(word => !commonWords.includes(word));
+  const words2 = text2.split(/\s+/).filter(word => !commonWords.includes(word));
+  
+  // Count how many words are in both sets
+  let commonCount = 0;
+  for (const word1 of words1) {
+    if (words2.includes(word1)) {
+      commonCount++;
+    }
+  }
+  
+  // Calculate Jaccard similarity: intersection / union
+  const unionCount = words1.length + words2.length - commonCount;
+  return unionCount > 0 ? commonCount / unionCount : 0;
 };
 
 // Function to validate recipe completeness
@@ -400,6 +558,35 @@ export const getRecipesForMealPlan = async (
       recipes = recipes.filter(recipe => !filters.excludeIds?.includes(recipe.id));
     }
     
+    // If no recipes match the filters, try with more relaxed constraints
+    if (recipes.length === 0) {
+      // Try without diet type filter
+      const relaxedConstraints: QueryConstraint[] = [
+        where('tags.meal_type', '==', mealType),
+        orderBy('created_at', 'desc'),
+        limit(recipeLimit * 2)
+      ];
+      
+      const relaxedQuery = query(recipesCollection, ...relaxedConstraints);
+      const relaxedSnapshot = await getDocs(relaxedQuery);
+      
+      relaxedSnapshot.forEach(doc => {
+        recipes.push(convertFirestoreDataToRecipe(doc.id, doc.data()));
+      });
+      
+      // Still filter by calorie range and excluded IDs
+      if (filters.calorieRange) {
+        recipes = recipes.filter(recipe => 
+          recipe.calories >= filters.calorieRange!.min && 
+          recipe.calories <= filters.calorieRange!.max
+        );
+      }
+      
+      if (filters.excludeIds && filters.excludeIds.length > 0) {
+        recipes = recipes.filter(recipe => !filters.excludeIds?.includes(recipe.id));
+      }
+    }
+    
     // Randomize the results to get variety
     recipes = recipes.sort(() => 0.5 - Math.random());
     
@@ -407,7 +594,7 @@ export const getRecipesForMealPlan = async (
     return recipes.slice(0, recipeLimit);
   } catch (error) {
     console.error('Error getting recipes for meal plan:', error);
-    return [];
+    throw new Error(`Failed to get recipes for meal plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -440,7 +627,7 @@ export const getAlternativeRecipes = async (
     );
   } catch (error) {
     console.error('Error getting alternative recipes:', error);
-    return [];
+    throw new Error(`Failed to get alternative recipes: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -522,6 +709,6 @@ export const searchRecipesInFirestore = async (searchTerm: string, pageSize: num
     return recipes.slice(0, pageSize);
   } catch (error) {
     console.error('Error searching recipes in Firestore:', error);
-    return [];
+    throw new Error(`Failed to search recipes: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };

@@ -63,7 +63,8 @@ function validateRecipe(recipe: any): Recipe {
     mealType,
     complexity,
     dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
-    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined
+    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
+    fiber: recipe.fiber || Math.floor(Math.random() * 5) + 1 // Add estimated fiber if not present
   };
 }
 
@@ -95,6 +96,13 @@ const defaultCollections: RecipeCollection[] = [
     name: 'Vegetarian',
     description: 'Delicious meat-free recipes',
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+    recipeIds: []
+  },
+  {
+    id: 'desserts',
+    name: 'Desserts & Snacks',
+    description: 'Sweet treats and snacks for any time of day',
+    image: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
     recipeIds: []
   }
 ];
@@ -134,6 +142,9 @@ interface RecipeState {
   getCollection: (id: string) => RecipeCollection | undefined;
   cacheRecipesOffline: (count?: number) => void;
   importRecipesToFirestore: (recipes: Recipe[]) => Promise<{ added: number, duplicates: number, errors: number }>;
+  getRecipesByDietType: (dietType: string, limit?: number) => Promise<Recipe[]>;
+  getRecipesByMealType: (mealType: 'breakfast' | 'lunch' | 'dinner', limit?: number) => Promise<Recipe[]>;
+  getRecipesByComplexity: (complexity: 'simple' | 'complex', limit?: number) => Promise<Recipe[]>;
 }
 
 export const useRecipeStore = create<RecipeState>()(
@@ -153,7 +164,7 @@ export const useRecipeStore = create<RecipeState>()(
       },
       apiSources: {
         useMealDB: true,
-        useSpoonacular: false,
+        useSpoonacular: true,
         useEdamam: false,
         useFirebase: false,
       },
@@ -335,6 +346,17 @@ export const useRecipeStore = create<RecipeState>()(
                         newRecipeIds.push(r.id);
                       }
                     });
+                } else if (collection.id === 'desserts') {
+                  recipes
+                    .filter(r => !r.mealType && r.tags.some(tag => 
+                      ['dessert', 'sweet', 'snack', 'treat'].includes(tag.toLowerCase())
+                    ))
+                    .slice(0, 20)
+                    .forEach(r => {
+                      if (!newRecipeIds.includes(r.id)) {
+                        newRecipeIds.push(r.id);
+                      }
+                    });
                 }
                 
                 return {
@@ -422,6 +444,17 @@ export const useRecipeStore = create<RecipeState>()(
                           newRecipeIds.push(r.id);
                         }
                       });
+                  } else if (collection.id === 'desserts') {
+                    validatedRecipes
+                      .filter(r => !r.mealType && r.tags.some(tag => 
+                        ['dessert', 'sweet', 'snack', 'treat'].includes(tag.toLowerCase())
+                      ))
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
                   }
                   
                   return {
@@ -485,6 +518,17 @@ export const useRecipeStore = create<RecipeState>()(
                           newRecipeIds.push(r.id);
                         }
                       });
+                  } else if (collection.id === 'desserts') {
+                    validatedRecipes
+                      .filter(r => !r.mealType && r.tags.some(tag => 
+                        ['dessert', 'sweet', 'snack', 'treat'].includes(tag.toLowerCase())
+                      ))
+                      .slice(0, 20)
+                      .forEach(r => {
+                        if (!newRecipeIds.includes(r.id)) {
+                          newRecipeIds.push(r.id);
+                        }
+                      });
                   }
                   
                   return {
@@ -506,6 +550,14 @@ export const useRecipeStore = create<RecipeState>()(
           }
         } catch (error) {
           console.error('Failed to load recipes from API:', error);
+          
+          // Fallback to offline recipes if available
+          if (get().offlineRecipes.length > 0) {
+            set((state) => ({
+              recipes: [...state.offlineRecipes],
+              isLoading: false
+            }));
+          }
         } finally {
           set({ isLoading: false });
         }
@@ -605,7 +657,15 @@ export const useRecipeStore = create<RecipeState>()(
           }
         } catch (error) {
           console.error('Error searching recipes:', error);
-          return [];
+          
+          // Fallback to local search if API search fails
+          const localResults = get().recipes.filter(recipe => 
+            recipe.name.toLowerCase().includes(query.toLowerCase()) ||
+            recipe.tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())) ||
+            recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(query.toLowerCase()))
+          );
+          
+          return localResults.slice(0, 20);
         }
       },
       
@@ -619,7 +679,7 @@ export const useRecipeStore = create<RecipeState>()(
         if (offlineRecipe) return offlineRecipe;
         
         try {
-          if (get().useFirestore && !id.startsWith('mealdb-') && !id.startsWith('local-')) {
+          if (get().useFirestore && !id.startsWith('mealdb-') && !id.startsWith('spoon-') && !id.startsWith('edamam-') && !id.startsWith('local-')) {
             // Get from Firestore
             return await firebaseService.getRecipeFromFirestore(id);
           } else {
@@ -762,17 +822,25 @@ export const useRecipeStore = create<RecipeState>()(
         const allRecipes = get().recipes;
         
         // Select a diverse set of recipes to cache
-        const breakfastRecipes = allRecipes.filter(r => r.mealType === 'breakfast').slice(0, Math.floor(count / 3));
-        const lunchRecipes = allRecipes.filter(r => r.mealType === 'lunch').slice(0, Math.floor(count / 3));
-        const dinnerRecipes = allRecipes.filter(r => r.mealType === 'dinner').slice(0, Math.floor(count / 3));
+        const breakfastRecipes = allRecipes.filter(r => r.mealType === 'breakfast').slice(0, Math.floor(count / 4));
+        const lunchRecipes = allRecipes.filter(r => r.mealType === 'lunch').slice(0, Math.floor(count / 4));
+        const dinnerRecipes = allRecipes.filter(r => r.mealType === 'dinner').slice(0, Math.floor(count / 4));
+        const dessertRecipes = allRecipes.filter(r => !r.mealType && r.tags.some(tag => 
+          ['dessert', 'sweet', 'snack', 'treat'].includes(tag.toLowerCase())
+        )).slice(0, Math.floor(count / 4));
         
         // Fill remaining slots with other recipes
-        const remainingCount = count - breakfastRecipes.length - lunchRecipes.length - dinnerRecipes.length;
+        const remainingCount = count - breakfastRecipes.length - lunchRecipes.length - dinnerRecipes.length - dessertRecipes.length;
         const otherRecipes = allRecipes
-          .filter(r => !breakfastRecipes.includes(r) && !lunchRecipes.includes(r) && !dinnerRecipes.includes(r))
+          .filter(r => 
+            !breakfastRecipes.includes(r) && 
+            !lunchRecipes.includes(r) && 
+            !dinnerRecipes.includes(r) &&
+            !dessertRecipes.includes(r)
+          )
           .slice(0, remainingCount);
         
-        const recipesToCache = [...breakfastRecipes, ...lunchRecipes, ...dinnerRecipes, ...otherRecipes];
+        const recipesToCache = [...breakfastRecipes, ...lunchRecipes, ...dinnerRecipes, ...dessertRecipes, ...otherRecipes];
         
         set({ offlineRecipes: recipesToCache });
       },
@@ -797,6 +865,109 @@ export const useRecipeStore = create<RecipeState>()(
         } catch (error) {
           console.error('Error importing recipes to Firestore:', error);
           return { added: 0, duplicates: 0, errors: recipes.length };
+        }
+      },
+      
+      getRecipesByDietType: async (dietType, limit = 20) => {
+        try {
+          if (get().useFirestore) {
+            // Get from Firestore
+            const { recipes } = await firebaseService.getRecipesFromFirestore(
+              { dietaryPreference: dietType },
+              limit
+            );
+            return recipes;
+          } else {
+            // Filter from local recipes
+            const filteredRecipes = get().recipes.filter(recipe => 
+              recipe.dietaryPreferences?.includes(dietType as any) ||
+              recipe.tags.includes(dietType)
+            );
+            
+            // If we don't have enough recipes locally, try to get more from APIs
+            if (filteredRecipes.length < limit && get().apiSources.useEdamam) {
+              try {
+                const edamamRecipes = await import('@/services/edamamService')
+                  .then(module => module.getRecipesByDietType(dietType, limit));
+                
+                // Combine and deduplicate
+                const combinedRecipes = [
+                  ...filteredRecipes,
+                  ...edamamRecipes.filter(r => !filteredRecipes.some(fr => fr.id === r.id))
+                ];
+                
+                return combinedRecipes.slice(0, limit);
+              } catch (error) {
+                console.error('Error getting recipes by diet type from Edamam:', error);
+                return filteredRecipes.slice(0, limit);
+              }
+            }
+            
+            return filteredRecipes.slice(0, limit);
+          }
+        } catch (error) {
+          console.error('Error getting recipes by diet type:', error);
+          return [];
+        }
+      },
+      
+      getRecipesByMealType: async (mealType, limit = 20) => {
+        try {
+          if (get().useFirestore) {
+            // Get from Firestore
+            const { recipes } = await firebaseService.getRecipesFromFirestore(
+              { mealType },
+              limit
+            );
+            return recipes;
+          } else {
+            // Filter from local recipes
+            const filteredRecipes = get().recipes.filter(recipe => recipe.mealType === mealType);
+            
+            // If we don't have enough recipes locally, try to get more from APIs
+            if (filteredRecipes.length < limit && get().apiSources.useEdamam) {
+              try {
+                const edamamRecipes = await import('@/services/edamamService')
+                  .then(module => module.getRecipesByMealType(mealType, limit));
+                
+                // Combine and deduplicate
+                const combinedRecipes = [
+                  ...filteredRecipes,
+                  ...edamamRecipes.filter(r => !filteredRecipes.some(fr => fr.id === r.id))
+                ];
+                
+                return combinedRecipes.slice(0, limit);
+              } catch (error) {
+                console.error('Error getting recipes by meal type from Edamam:', error);
+                return filteredRecipes.slice(0, limit);
+              }
+            }
+            
+            return filteredRecipes.slice(0, limit);
+          }
+        } catch (error) {
+          console.error('Error getting recipes by meal type:', error);
+          return [];
+        }
+      },
+      
+      getRecipesByComplexity: async (complexity, limit = 20) => {
+        try {
+          if (get().useFirestore) {
+            // Get from Firestore
+            const { recipes } = await firebaseService.getRecipesFromFirestore(
+              { complexity },
+              limit
+            );
+            return recipes;
+          } else {
+            // Filter from local recipes
+            const filteredRecipes = get().recipes.filter(recipe => recipe.complexity === complexity);
+            return filteredRecipes.slice(0, limit);
+          }
+        } catch (error) {
+          console.error('Error getting recipes by complexity:', error);
+          return [];
         }
       }
     }),

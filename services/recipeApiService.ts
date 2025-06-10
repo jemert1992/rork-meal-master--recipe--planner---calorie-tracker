@@ -1,8 +1,11 @@
 import { Recipe } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
+import * as edamamService from '@/services/edamamService';
 
 // API configuration
 const MEALDB_API_URL = 'https://www.themealdb.com/api/json/v1/1';
+const SPOONACULAR_API_URL = 'https://api.spoonacular.com';
+const SPOONACULAR_API_KEY = '802ab87547244544b1e9a9dc02f63a2b'; // Updated with the provided API key
 
 // Interface for API sources configuration
 interface ApiSourcesConfig {
@@ -97,19 +100,30 @@ export const loadInitialRecipesFromAllSources = async (
         recipes.push(...mealDbRecipes);
       } catch (error) {
         console.error('Error loading recipes from MealDB:', error);
+        // Don't throw, try other sources
       }
     }
     
-    // Load from Spoonacular if enabled (not implemented yet)
+    // Load from Spoonacular if enabled
     if (sources.useSpoonacular) {
-      // Placeholder for future implementation
-      console.log('Spoonacular API not implemented yet');
+      try {
+        const spoonacularRecipes = await loadRecipesFromSpoonacular(limit);
+        recipes.push(...spoonacularRecipes);
+      } catch (error) {
+        console.error('Error loading recipes from Spoonacular:', error);
+        // Don't throw, try other sources
+      }
     }
     
-    // Load from Edamam if enabled (not implemented yet)
+    // Load from Edamam if enabled
     if (sources.useEdamam) {
-      // Placeholder for future implementation
-      console.log('Edamam API not implemented yet');
+      try {
+        const edamamRecipes = await edamamService.loadInitialRecipes(limit);
+        recipes.push(...edamamRecipes);
+      } catch (error) {
+        console.error('Error loading recipes from Edamam:', error);
+        // Don't throw, try other sources
+      }
     }
     
     // Load from Firebase if enabled (not implemented yet)
@@ -147,19 +161,30 @@ export const searchRecipesFromAllSources = async (
         recipes.push(...mealDbRecipes);
       } catch (error) {
         console.error('Error searching recipes from MealDB:', error);
+        // Don't throw, try other sources
       }
     }
     
-    // Search from Spoonacular if enabled (not implemented yet)
+    // Search from Spoonacular if enabled
     if (sources.useSpoonacular) {
-      // Placeholder for future implementation
-      console.log('Spoonacular API search not implemented yet');
+      try {
+        const spoonacularRecipes = await searchRecipesFromSpoonacular(query, limit);
+        recipes.push(...spoonacularRecipes);
+      } catch (error) {
+        console.error('Error searching recipes from Spoonacular:', error);
+        // Don't throw, try other sources
+      }
     }
     
-    // Search from Edamam if enabled (not implemented yet)
+    // Search from Edamam if enabled
     if (sources.useEdamam) {
-      // Placeholder for future implementation
-      console.log('Edamam API search not implemented yet');
+      try {
+        const edamamRecipes = await edamamService.searchRecipesByQuery(query, limit);
+        recipes.push(...edamamRecipes);
+      } catch (error) {
+        console.error('Error searching recipes from Edamam:', error);
+        // Don't throw, try other sources
+      }
     }
     
     // Search from Firebase if enabled (not implemented yet)
@@ -182,7 +207,13 @@ export const searchRecipesFromAllSources = async (
     return recipes.slice(0, limit).map(validateRecipe);
   } catch (error) {
     console.error('Error searching recipes from APIs:', error);
-    return [];
+    // Fallback to local search
+    const mockSearchResults = mockRecipes.filter(recipe => 
+      recipe.name.toLowerCase().includes(query.toLowerCase()) ||
+      recipe.tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())) ||
+      recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(query.toLowerCase()))
+    );
+    return mockSearchResults.slice(0, limit).map(validateRecipe);
   }
 };
 
@@ -192,29 +223,52 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
     // Check if it's a MealDB ID (they start with 'mealdb-')
     if (id.startsWith('mealdb-')) {
       const mealDbId = id.replace('mealdb-', '');
-      const recipe = await getRecipeFromMealDBById(mealDbId);
-      return recipe ? validateRecipe(recipe) : null;
+      try {
+        const recipe = await getRecipeFromMealDBById(mealDbId);
+        return recipe ? validateRecipe(recipe) : null;
+      } catch (error) {
+        console.error('Error getting recipe from MealDB:', error);
+        // Fallback to mock data
+        const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
+        return mockRecipe ? validateRecipe(mockRecipe) : null;
+      }
     }
     
     // Check if it's a Spoonacular ID (they start with 'spoon-')
     if (id.startsWith('spoon-')) {
-      // Placeholder for future implementation
-      console.log('Spoonacular API getById not implemented yet');
-      return null;
+      const spoonacularId = id.replace('spoon-', '');
+      try {
+        const recipe = await getRecipeFromSpoonacularById(spoonacularId);
+        return recipe ? validateRecipe(recipe) : null;
+      } catch (error) {
+        console.error('Error getting recipe from Spoonacular:', error);
+        // Fallback to mock data
+        const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
+        return mockRecipe ? validateRecipe(mockRecipe) : null;
+      }
     }
     
     // Check if it's an Edamam ID (they start with 'edamam-')
     if (id.startsWith('edamam-')) {
-      // Placeholder for future implementation
-      console.log('Edamam API getById not implemented yet');
-      return null;
+      const edamamId = id.replace('edamam-', '');
+      try {
+        const recipe = await edamamService.getRecipeById(edamamId);
+        return recipe ? validateRecipe(recipe) : null;
+      } catch (error) {
+        console.error('Error getting recipe from Edamam:', error);
+        // Fallback to mock data
+        const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
+        return mockRecipe ? validateRecipe(mockRecipe) : null;
+      }
     }
     
     // Check if it's a Firebase ID (they start with 'firebase-')
     if (id.startsWith('firebase-')) {
       // Placeholder for future implementation
       console.log('Firebase API getById not implemented yet');
-      return null;
+      // Fallback to mock data
+      const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
+      return mockRecipe ? validateRecipe(mockRecipe) : null;
     }
     
     // If it's not from an API, check mock data
@@ -226,7 +280,9 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
     return null;
   } catch (error) {
     console.error('Error getting recipe by ID:', error);
-    return null;
+    // Fallback to mock data
+    const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
+    return mockRecipe ? validateRecipe(mockRecipe) : null;
   }
 };
 
@@ -242,15 +298,17 @@ const loadRecipesFromMealDB = async (limit: number = 20): Promise<Recipe[]> => {
       fetchPromises.push(fetchRandomMealDBRecipe());
     }
     
-    const results = await Promise.all(fetchPromises);
-    results.forEach(recipe => {
-      if (recipe) recipes.push(recipe);
+    const results = await Promise.allSettled(fetchPromises);
+    results.forEach(result => {
+      if (result.status === 'fulfilled' && result.value) {
+        recipes.push(result.value);
+      }
     });
     
     return recipes;
   } catch (error) {
     console.error('Error loading recipes from MealDB:', error);
-    return [];
+    throw new Error('Failed to load recipes from MealDB');
   }
 };
 
@@ -258,6 +316,11 @@ const loadRecipesFromMealDB = async (limit: number = 20): Promise<Recipe[]> => {
 const searchRecipesFromMealDB = async (query: string): Promise<Recipe[]> => {
   try {
     const response = await fetch(`${MEALDB_API_URL}/search.php?s=${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`MealDB API error: ${response.status} ${response.statusText}`);
+    }
+    
     const data = await response.json();
     
     if (!data.meals) return [];
@@ -265,7 +328,7 @@ const searchRecipesFromMealDB = async (query: string): Promise<Recipe[]> => {
     return data.meals.map((meal: any) => convertMealDBToRecipe(meal));
   } catch (error) {
     console.error('Error searching recipes from MealDB:', error);
-    return [];
+    throw new Error('Failed to search recipes from MealDB');
   }
 };
 
@@ -273,6 +336,11 @@ const searchRecipesFromMealDB = async (query: string): Promise<Recipe[]> => {
 const getRecipeFromMealDBById = async (id: string): Promise<Recipe | null> => {
   try {
     const response = await fetch(`${MEALDB_API_URL}/lookup.php?i=${id}`);
+    
+    if (!response.ok) {
+      throw new Error(`MealDB API error: ${response.status} ${response.statusText}`);
+    }
+    
     const data = await response.json();
     
     if (!data.meals || data.meals.length === 0) return null;
@@ -280,7 +348,7 @@ const getRecipeFromMealDBById = async (id: string): Promise<Recipe | null> => {
     return convertMealDBToRecipe(data.meals[0]);
   } catch (error) {
     console.error('Error getting recipe from MealDB by ID:', error);
-    return null;
+    throw new Error('Failed to get recipe from MealDB');
   }
 };
 
@@ -288,6 +356,11 @@ const getRecipeFromMealDBById = async (id: string): Promise<Recipe | null> => {
 const fetchRandomMealDBRecipe = async (): Promise<Recipe | null> => {
   try {
     const response = await fetch(`${MEALDB_API_URL}/random.php`);
+    
+    if (!response.ok) {
+      throw new Error(`MealDB API error: ${response.status} ${response.statusText}`);
+    }
+    
     const data = await response.json();
     
     if (!data.meals || data.meals.length === 0) return null;
@@ -542,5 +615,398 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
     fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
     source: 'MealDB'
+  };
+};
+
+// Helper function to load recipes from Spoonacular
+const loadRecipesFromSpoonacular = async (limit: number = 20): Promise<Recipe[]> => {
+  try {
+    // Spoonacular has a "get random recipes" endpoint with a limit
+    const response = await fetch(
+      `${SPOONACULAR_API_URL}/recipes/random?number=${limit}&apiKey=${SPOONACULAR_API_KEY}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Spoonacular API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.recipes || data.recipes.length === 0) {
+      return [];
+    }
+    
+    return data.recipes.map((recipe: any) => convertSpoonacularToRecipe(recipe));
+  } catch (error) {
+    console.error('Error loading recipes from Spoonacular:', error);
+    throw new Error('Failed to load recipes from Spoonacular');
+  }
+};
+
+// Helper function to search recipes from Spoonacular
+const searchRecipesFromSpoonacular = async (query: string, limit: number = 20): Promise<Recipe[]> => {
+  try {
+    // First, search for recipes by query
+    const searchResponse = await fetch(
+      `${SPOONACULAR_API_URL}/recipes/complexSearch?query=${encodeURIComponent(query)}&number=${limit}&apiKey=${SPOONACULAR_API_KEY}`
+    );
+    
+    if (!searchResponse.ok) {
+      throw new Error(`Spoonacular API error: ${searchResponse.status} ${searchResponse.statusText}`);
+    }
+    
+    const searchData = await searchResponse.json();
+    
+    if (!searchData.results || searchData.results.length === 0) {
+      return [];
+    }
+    
+    // Then, get detailed information for each recipe
+    const recipePromises = searchData.results.map(async (result: any) => {
+      try {
+        const detailResponse = await fetch(
+          `${SPOONACULAR_API_URL}/recipes/${result.id}/information?includeNutrition=true&apiKey=${SPOONACULAR_API_KEY}`
+        );
+        
+        if (!detailResponse.ok) {
+          throw new Error(`Spoonacular API error: ${detailResponse.status} ${detailResponse.statusText}`);
+        }
+        
+        const detailData = await detailResponse.json();
+        return convertSpoonacularToRecipe(detailData);
+      } catch (error) {
+        console.error(`Error getting details for recipe ${result.id}:`, error);
+        return null;
+      }
+    });
+    
+    const recipes = await Promise.allSettled(recipePromises);
+    return recipes
+      .filter((result): result is PromiseFulfilledResult<Recipe> => 
+        result.status === 'fulfilled' && result.value !== null
+      )
+      .map(result => result.value);
+  } catch (error) {
+    console.error('Error searching recipes from Spoonacular:', error);
+    throw new Error('Failed to search recipes from Spoonacular');
+  }
+};
+
+// Helper function to get a recipe by ID from Spoonacular
+const getRecipeFromSpoonacularById = async (id: string): Promise<Recipe | null> => {
+  try {
+    const response = await fetch(
+      `${SPOONACULAR_API_URL}/recipes/${id}/information?includeNutrition=true&apiKey=${SPOONACULAR_API_KEY}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Spoonacular API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return convertSpoonacularToRecipe(data);
+  } catch (error) {
+    console.error('Error getting recipe from Spoonacular by ID:', error);
+    throw new Error('Failed to get recipe from Spoonacular');
+  }
+};
+
+// Helper function to convert Spoonacular format to our Recipe format
+const convertSpoonacularToRecipe = (recipe: any): Recipe => {
+  // Extract ingredients
+  const ingredients = recipe.extendedIngredients?.map((ingredient: any) => {
+    const amount = ingredient.measures?.us?.amount || ingredient.amount || '';
+    const unit = ingredient.measures?.us?.unitShort || ingredient.unit || '';
+    const name = ingredient.originalName || ingredient.name || '';
+    
+    if (amount && unit) {
+      return `${amount} ${unit} ${name}`;
+    } else if (amount) {
+      return `${amount} ${name}`;
+    } else {
+      return name;
+    }
+  }) || [];
+  
+  // Extract instructions
+  let instructions: string[] = [];
+  
+  if (recipe.analyzedInstructions && recipe.analyzedInstructions.length > 0) {
+    // Use analyzed instructions if available
+    recipe.analyzedInstructions.forEach((instructionSet: any) => {
+      instructionSet.steps.forEach((step: any) => {
+        instructions.push(step.step);
+      });
+    });
+  } else if (recipe.instructions) {
+    // Otherwise, parse the instructions text
+    instructions = recipe.instructions
+      .split(/\r\n|\r|\n|\.|\./)
+      .filter((step: string) => step.trim() !== '')
+      .map((step: string) => step.trim());
+  }
+  
+  // Extract tags
+  const tags: string[] = [];
+  
+  // Add cuisines as tags
+  if (recipe.cuisines && recipe.cuisines.length > 0) {
+    recipe.cuisines.forEach((cuisine: string) => {
+      tags.push(cuisine.toLowerCase());
+    });
+  }
+  
+  // Add dish types as tags
+  if (recipe.dishTypes && recipe.dishTypes.length > 0) {
+    recipe.dishTypes.forEach((dishType: string) => {
+      tags.push(dishType.toLowerCase());
+    });
+  }
+  
+  // Add diets as tags
+  if (recipe.diets && recipe.diets.length > 0) {
+    recipe.diets.forEach((diet: string) => {
+      tags.push(diet.toLowerCase());
+    });
+  }
+  
+  // Add occasions as tags
+  if (recipe.occasions && recipe.occasions.length > 0) {
+    recipe.occasions.forEach((occasion: string) => {
+      tags.push(occasion.toLowerCase());
+    });
+  }
+  
+  // Determine meal type based on tags and dish types
+  let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
+  
+  // Check if it's a dessert
+  const isDessert = 
+    recipe.dishTypes?.some((type: string) => type.toLowerCase().includes('dessert')) ||
+    tags.some((tag: string) => tag.includes('dessert') || tag.includes('sweet'));
+  
+  if (isDessert) {
+    mealType = undefined; // Desserts don't have a specific meal type
+  } else {
+    // Check for breakfast
+    const isBreakfast = 
+      recipe.dishTypes?.some((type: string) => 
+        type.toLowerCase().includes('breakfast') || 
+        type.toLowerCase().includes('brunch') ||
+        type.toLowerCase().includes('morning meal')
+      ) ||
+      tags.some((tag: string) => tag.includes('breakfast') || tag.includes('brunch'));
+    
+    if (isBreakfast) {
+      mealType = 'breakfast';
+    } 
+    // Check for lunch
+    else if (
+      recipe.dishTypes?.some((type: string) => 
+        type.toLowerCase().includes('lunch') || 
+        type.toLowerCase().includes('main course') ||
+        type.toLowerCase().includes('main dish') ||
+        type.toLowerCase().includes('salad') ||
+        type.toLowerCase().includes('soup')
+      )
+    ) {
+      mealType = 'lunch';
+    } 
+    // Check for dinner
+    else if (
+      recipe.dishTypes?.some((type: string) => 
+        type.toLowerCase().includes('dinner') || 
+        type.toLowerCase().includes('main course') ||
+        type.toLowerCase().includes('main dish')
+      )
+    ) {
+      mealType = 'dinner';
+    }
+    // Default based on time to cook
+    else {
+      // If it's quick to make, it's more likely to be lunch
+      // If it takes longer, it's more likely to be dinner
+      mealType = recipe.readyInMinutes && recipe.readyInMinutes <= 30 ? 'lunch' : 'dinner';
+    }
+  }
+  
+  // Determine complexity based on ingredients count and preparation time
+  const complexity: 'simple' | 'complex' = 
+    (ingredients.length <= 7 && recipe.readyInMinutes && recipe.readyInMinutes <= 30) 
+      ? 'simple' 
+      : 'complex';
+  
+  // Extract dietary preferences
+  const dietaryPreferences: Recipe['dietaryPreferences'] = [];
+  
+  // Map Spoonacular diets to our dietary preferences
+  if (recipe.diets) {
+    if (recipe.diets.includes('vegan')) {
+      dietaryPreferences.push('vegan');
+      dietaryPreferences.push('vegetarian'); // Vegan is also vegetarian
+    } else if (recipe.diets.includes('vegetarian')) {
+      dietaryPreferences.push('vegetarian');
+    }
+    
+    if (recipe.diets.includes('ketogenic')) {
+      dietaryPreferences.push('keto');
+    }
+    
+    if (recipe.diets.includes('paleo')) {
+      dietaryPreferences.push('paleo');
+    }
+    
+    if (recipe.diets.includes('gluten free')) {
+      dietaryPreferences.push('gluten-free');
+    }
+    
+    if (recipe.diets.includes('dairy free')) {
+      dietaryPreferences.push('dairy-free');
+    }
+    
+    if (recipe.diets.includes('low carb')) {
+      dietaryPreferences.push('low-carb');
+    }
+  }
+  
+  // Check for high-protein based on nutrition data
+  if (recipe.nutrition && recipe.nutrition.nutrients) {
+    const proteinData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'protein'
+    );
+    
+    if (proteinData && proteinData.amount >= 20) { // 20g or more of protein is considered high-protein
+      dietaryPreferences.push('high-protein');
+    }
+  }
+  
+  // Extract fitness goals
+  const fitnessGoals: Recipe['fitnessGoals'] = [];
+  
+  // Determine fitness goals based on nutrition data and dietary preferences
+  if (recipe.nutrition && recipe.nutrition.nutrients) {
+    const caloriesData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'calories'
+    );
+    
+    const proteinData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'protein'
+    );
+    
+    const fatData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'fat'
+    );
+    
+    // Weight loss: low calorie, high protein
+    if (caloriesData && caloriesData.amount < 400 && proteinData && proteinData.amount >= 15) {
+      fitnessGoals.push('weight-loss');
+    }
+    
+    // Muscle gain: high protein, moderate to high calories
+    if (proteinData && proteinData.amount >= 25 && caloriesData && caloriesData.amount >= 400) {
+      fitnessGoals.push('muscle-gain');
+    }
+    
+    // Heart health: low saturated fat, high in healthy fats
+    const saturatedFatData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'saturated fat'
+    );
+    
+    if (
+      saturatedFatData && saturatedFatData.amount < 5 && 
+      fatData && fatData.amount >= 10 && 
+      recipe.diets?.some((diet: string) => 
+        diet.includes('mediterranean') || diet.includes('dash')
+      )
+    ) {
+      fitnessGoals.push('heart-health');
+    }
+    
+    // Energy boost: complex carbs, moderate protein
+    const carbsData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'carbohydrates'
+    );
+    
+    if (carbsData && carbsData.amount >= 30 && proteinData && proteinData.amount >= 10) {
+      fitnessGoals.push('energy-boost');
+    }
+  }
+  
+  // If no specific fitness goal is identified, default to general health
+  if (fitnessGoals.length === 0) {
+    fitnessGoals.push('general-health');
+  }
+  
+  // Extract nutrition data
+  let calories = 0;
+  let protein = 0;
+  let carbs = 0;
+  let fat = 0;
+  let fiber = 0;
+  
+  if (recipe.nutrition && recipe.nutrition.nutrients) {
+    const caloriesData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'calories'
+    );
+    if (caloriesData) {
+      calories = Math.round(caloriesData.amount);
+    }
+    
+    const proteinData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'protein'
+    );
+    if (proteinData) {
+      protein = Math.round(proteinData.amount);
+    }
+    
+    const carbsData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'carbohydrates'
+    );
+    if (carbsData) {
+      carbs = Math.round(carbsData.amount);
+    }
+    
+    const fatData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'fat'
+    );
+    if (fatData) {
+      fat = Math.round(fatData.amount);
+    }
+    
+    const fiberData = recipe.nutrition.nutrients.find((nutrient: any) => 
+      nutrient.name.toLowerCase() === 'fiber'
+    );
+    if (fiberData) {
+      fiber = Math.round(fiberData.amount);
+    }
+  } else {
+    // Estimate nutrition data if not available
+    calories = Math.floor(Math.random() * 300) + 200; // Random between 200-500
+    protein = Math.floor(Math.random() * 20) + 10; // Random between 10-30g
+    carbs = Math.floor(Math.random() * 30) + 20; // Random between 20-50g
+    fat = Math.floor(Math.random() * 15) + 5; // Random between 5-20g
+    fiber = Math.floor(Math.random() * 5) + 1; // Random between 1-6g
+  }
+  
+  return {
+    id: `spoon-${recipe.id}`,
+    name: recipe.title,
+    image: recipe.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+    prepTime: recipe.preparationMinutes ? `${recipe.preparationMinutes} min` : `${Math.floor(Math.random() * 20) + 5} min`,
+    cookTime: recipe.cookingMinutes ? `${recipe.cookingMinutes} min` : `${Math.floor(Math.random() * 40) + 10} min`,
+    servings: recipe.servings || Math.floor(Math.random() * 4) + 2,
+    calories,
+    protein,
+    carbs,
+    fat,
+    fiber,
+    ingredients,
+    instructions,
+    tags,
+    mealType,
+    complexity,
+    dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
+    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
+    source: 'Spoonacular'
   };
 };

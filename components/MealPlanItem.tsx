@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, Clock, Users, RefreshCw, Check } from 'lucide-react-native';
+import { X, Clock, Users, RefreshCw, Check, AlertCircle } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -13,18 +13,20 @@ type MealPlanItemProps = {
   date: string;
   onRemove: () => void;
   onAdd: () => void;
+  hasAlternatives?: boolean;
 };
 
-export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: MealPlanItemProps) {
+export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, hasAlternatives = false }: MealPlanItemProps) {
   const router = useRouter();
   const { recipes } = useRecipeStore();
-  const { getAlternativeRecipes, swapMeal, isLoadingAlternatives } = useMealPlanStore();
+  const { getAlternativeRecipes, swapMeal, isLoadingAlternatives, lastGenerationError } = useMealPlanStore();
   const recipe = meal?.recipeId ? recipes.find(r => r.id === meal.recipeId) : null;
   
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [alternatives, setAlternatives] = useState<Recipe[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [swappingRecipe, setSwappingRecipe] = useState(false);
+  const [alternativesError, setAlternativesError] = useState<string | null>(null);
 
   const formatMealType = (type: string) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
@@ -50,6 +52,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
     if (!meal?.recipeId) return;
     
     setLoadingAlternatives(true);
+    setAlternativesError(null);
     setShowAlternatives(true);
     
     try {
@@ -59,9 +62,14 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
         meal.recipeId
       );
       
-      setAlternatives(alternativeRecipes);
+      if (alternativeRecipes.length === 0) {
+        setAlternativesError("No alternative recipes found that match your dietary preferences.");
+      } else {
+        setAlternatives(alternativeRecipes);
+      }
     } catch (error) {
       console.error('Error loading alternative recipes:', error);
+      setAlternativesError("Failed to load alternative recipes. Please try again later.");
     } finally {
       setLoadingAlternatives(false);
     }
@@ -81,9 +89,14 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
       
       if (success) {
         setShowAlternatives(false);
+      } else if (lastGenerationError) {
+        setAlternativesError(lastGenerationError);
+      } else {
+        setAlternativesError("Failed to swap recipe. Please try again.");
       }
     } catch (error) {
       console.error('Error swapping recipe:', error);
+      setAlternativesError("An unexpected error occurred. Please try again.");
     } finally {
       setSwappingRecipe(false);
     }
@@ -93,7 +106,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.mealType}>{formatMealType(mealType)}</Text>
-        {meal?.recipeId && (
+        {meal?.recipeId && hasAlternatives && (
           <Pressable 
             style={styles.swapButton} 
             onPress={handleShowAlternatives}
@@ -115,7 +128,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
           accessibilityHint={`${getCalories()} calories. Tap to view details.`}
           accessibilityRole="button"
         >
-          {recipe && (
+          {recipe && recipe.image && (
             <Image 
               source={{ uri: recipe.image }} 
               style={styles.mealImage} 
@@ -196,6 +209,23 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
                 <ActivityIndicator size="large" color={Colors.primary} />
                 <Text style={styles.loadingText}>Loading alternatives...</Text>
               </View>
+            ) : alternativesError ? (
+              <View style={styles.errorContainer}>
+                <AlertCircle size={40} color={Colors.warning} />
+                <Text style={styles.errorText}>{alternativesError}</Text>
+                <Text style={styles.errorSubtext}>
+                  Try adjusting your dietary preferences or adding more recipes to your collection.
+                </Text>
+                <Pressable 
+                  style={styles.tryAgainButton}
+                  onPress={() => {
+                    setAlternativesError(null);
+                    handleShowAlternatives();
+                  }}
+                >
+                  <Text style={styles.tryAgainButtonText}>Try Again</Text>
+                </Pressable>
+              </View>
             ) : alternatives.length > 0 ? (
               <FlatList
                 data={alternatives}
@@ -209,11 +239,15 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd }: 
                     accessibilityHint={`${item.calories} calories. Tap to swap.`}
                     accessibilityRole="button"
                   >
-                    <Image 
-                      source={{ uri: item.image }} 
-                      style={styles.alternativeImage} 
-                      accessibilityLabel={`Image of ${item.name}`}
-                    />
+                    {item.image ? (
+                      <Image 
+                        source={{ uri: item.image }} 
+                        style={styles.alternativeImage} 
+                        accessibilityLabel={`Image of ${item.name}`}
+                      />
+                    ) : (
+                      <View style={styles.alternativeImagePlaceholder} />
+                    )}
                     <View style={styles.alternativeContent}>
                       <Text style={styles.alternativeName}>{item.name}</Text>
                       <Text style={styles.alternativeCalories}>{item.calories} calories</Text>
@@ -451,6 +485,11 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
   },
+  alternativeImagePlaceholder: {
+    width: 80,
+    height: 80,
+    backgroundColor: Colors.backgroundLight,
+  },
   alternativeContent: {
     flex: 1,
     padding: 12,
@@ -471,5 +510,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.primary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  tryAgainButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  tryAgainButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

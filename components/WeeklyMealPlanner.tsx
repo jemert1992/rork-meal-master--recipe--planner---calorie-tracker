@@ -24,7 +24,9 @@ import {
   Sparkles, 
   RefreshCw, 
   ChevronLeft,
-  Share2
+  Share2,
+  AlertCircle,
+  Info
 } from 'lucide-react-native';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -47,7 +49,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     generateMealPlan, 
     isRecipeUsedInMealPlan, 
     generateWeeklyMealPlan, 
-    updateWeeklyUsedRecipeIds 
+    updateWeeklyUsedRecipeIds,
+    lastGenerationError,
+    generationSuggestions,
+    clearGenerationError
   } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const { profile } = useUserStore();
@@ -61,6 +66,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const [generatingWeeklyPlan, setGeneratingWeeklyPlan] = useState(false);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [sharingPlan, setSharingPlan] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   
   // Ref for capturing the meal plan view for sharing
   const mealPlanRef = useRef<View>(null);
@@ -93,6 +99,13 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     setWeekDays(getWeekDays(currentWeekIndex));
   }, [currentWeekIndex, getWeekDays]);
 
+  // Show error modal when generation error occurs
+  React.useEffect(() => {
+    if (lastGenerationError) {
+      setShowErrorModal(true);
+    }
+  }, [lastGenerationError]);
+
   const handleMealSlotPress = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
     router.push(`/add-meal/${date}?mealType=${mealType}`);
     setModalVisible(false);
@@ -114,12 +127,19 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             { 
               text: "Replace", 
               onPress: async () => {
-                await generateMealPlan(date, recipes, mealType);
-                Alert.alert(
-                  "Meal Generated",
-                  `Your ${mealType} has been automatically generated!`,
-                  [{ text: "OK" }]
-                );
+                const result = await generateMealPlan(date, recipes, mealType);
+                
+                if (result.success) {
+                  Alert.alert(
+                    "Meal Generated",
+                    `Your ${mealType} has been automatically generated!`,
+                    [{ text: "OK" }]
+                  );
+                } else {
+                  // Error will be shown in the error modal
+                  setShowErrorModal(true);
+                }
+                
                 setGeneratingMeal(null);
               }
             }
@@ -129,14 +149,19 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       }
       
       // Generate a meal plan for the specific date and meal type
-      await generateMealPlan(date, recipes, mealType);
+      const result = await generateMealPlan(date, recipes, mealType);
       
-      // Success message
-      Alert.alert(
-        "Meal Generated",
-        `Your ${mealType} has been automatically generated!`,
-        [{ text: "OK" }]
-      );
+      if (result.success) {
+        // Success message
+        Alert.alert(
+          "Meal Generated",
+          `Your ${mealType} has been automatically generated!`,
+          [{ text: "OK" }]
+        );
+      } else {
+        // Error will be shown in the error modal
+        setShowErrorModal(true);
+      }
     } catch (error) {
       console.error("Error generating meal:", error);
       Alert.alert(
@@ -172,13 +197,19 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 updateWeeklyUsedRecipeIds(weekDays[0].dateString, weekDays[6].dateString);
                 
                 // Generate weekly meal plan
-                await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
+                const result = await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
                 
-                Alert.alert(
-                  "Weekly Plan Generated",
-                  "Your weekly meal plan has been generated!",
-                  [{ text: "OK" }]
-                );
+                if (result.success) {
+                  Alert.alert(
+                    "Weekly Plan Generated",
+                    result.suggestions[0] || "Your weekly meal plan has been generated!",
+                    [{ text: "OK" }]
+                  );
+                } else {
+                  // Error will be shown in the error modal
+                  setShowErrorModal(true);
+                }
+                
                 setGeneratingWeeklyPlan(false);
               }
             }
@@ -189,13 +220,19 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         updateWeeklyUsedRecipeIds(weekDays[0].dateString, weekDays[6].dateString);
         
         // Generate weekly meal plan
-        await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
+        const result = await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
         
-        Alert.alert(
-          "Weekly Plan Generated",
-          "Your weekly meal plan has been generated!",
-          [{ text: "OK" }]
-        );
+        if (result.success) {
+          Alert.alert(
+            "Weekly Plan Generated",
+            result.suggestions[0] || "Your weekly meal plan has been generated!",
+            [{ text: "OK" }]
+          );
+        } else {
+          // Error will be shown in the error modal
+          setShowErrorModal(true);
+        }
+        
         setGeneratingWeeklyPlan(false);
       }
     } catch (error) {
@@ -617,6 +654,61 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           </View>
         </View>
       </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showErrorModal}
+        onRequestClose={() => {
+          setShowErrorModal(false);
+          clearGenerationError();
+        }}
+      >
+        <View style={styles.errorModalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={styles.errorModalHeader}>
+              <Info size={24} color={Colors.warning} />
+              <Text style={styles.errorModalTitle}>Generation Issue</Text>
+              <Pressable 
+                onPress={() => {
+                  setShowErrorModal(false);
+                  clearGenerationError();
+                }}
+                style={styles.closeButton}
+              >
+                <X size={24} color={Colors.text} />
+              </Pressable>
+            </View>
+            
+            <Text style={styles.errorModalMessage}>
+              {lastGenerationError || "There was an issue generating your meal plan."}
+            </Text>
+            
+            {generationSuggestions && generationSuggestions.length > 0 && (
+              <View style={styles.errorSuggestionsList}>
+                <Text style={styles.errorSuggestionsTitle}>Suggestions:</Text>
+                {generationSuggestions.map((suggestion, index) => (
+                  <View key={index} style={styles.errorSuggestionItem}>
+                    <View style={styles.errorBulletPoint} />
+                    <Text style={styles.errorSuggestionText}>{suggestion}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            <Pressable 
+              style={styles.errorModalButton}
+              onPress={() => {
+                setShowErrorModal(false);
+                clearGenerationError();
+              }}
+            >
+              <Text style={styles.errorModalButtonText}>Got it</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1029,5 +1121,82 @@ const styles = StyleSheet.create({
   captureFooterText: {
     fontSize: 18,
     color: Colors.textLight,
+  },
+  // Error Modal Styles
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorModal: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  errorModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  errorModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginLeft: 12,
+    flex: 1,
+  },
+  errorModalMessage: {
+    fontSize: 16,
+    color: Colors.text,
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  errorSuggestionsList: {
+    marginBottom: 16,
+  },
+  errorSuggestionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  errorSuggestionItem: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  errorBulletPoint: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+    marginRight: 8,
+    marginTop: 8,
+  },
+  errorSuggestionText: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+    lineHeight: 20,
+  },
+  errorModalButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  errorModalButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

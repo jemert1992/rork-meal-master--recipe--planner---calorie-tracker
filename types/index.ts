@@ -1,65 +1,15 @@
-// User types
-export interface UserProfile {
-  id?: string;
-  name: string;
-  email?: string;
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  weight?: number;
-  height?: number;
-  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
-  dietaryPreferences?: DietaryPreference[];
-  allergies?: string[];
-  excludedIngredients?: string[];
-  dietType?: DietType;
-  fitnessGoals?: FitnessGoal[];
-  calorieGoal?: number;
-  proteinGoal?: number;
-  carbsGoal?: number;
-  fatGoal?: number;
-  completedOnboarding?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type MealType = 'breakfast' | 'lunch' | 'dinner';
 
-// Recipe types
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | undefined;
-export type Complexity = 'simple' | 'complex' | undefined;
-export type DietaryPreference = 
-  | 'vegan' 
-  | 'vegetarian' 
-  | 'keto' 
-  | 'paleo' 
-  | 'gluten-free' 
-  | 'dairy-free' 
-  | 'low-carb'
-  | 'high-protein';
+export type DietType = 'any' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb';
 
-export type DietType = 
-  | 'any'
-  | 'vegetarian'
-  | 'vegan'
-  | 'pescatarian'
-  | 'keto'
-  | 'paleo'
-  | 'gluten-free'
-  | 'dairy-free'
-  | 'low-carb';
+export type FitnessGoal = 'weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost';
 
-export type FitnessGoal = 
-  | 'high-protein' 
-  | 'weight-loss' 
-  | 'muscle-gain' 
-  | 'general-health' 
-  | 'heart-health' 
-  | 'energy-boost';
-
-export interface Recipe {
+export type Recipe = {
   id: string;
   name: string;
-  image: string;
+  image?: string;
   prepTime: string;
-  cookTime: string;
+  cookTime?: string;
   servings: number;
   calories: number;
   protein: number;
@@ -69,20 +19,20 @@ export interface Recipe {
   ingredients: string[];
   instructions: string[];
   tags: string[];
-  mealType: MealType;
-  complexity: Complexity;
-  dietaryPreferences?: DietaryPreference[];
-  fitnessGoals?: FitnessGoal[];
+  mealType?: MealType;
+  complexity?: 'simple' | 'complex';
+  dietaryPreferences?: Array<'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein'>;
+  fitnessGoals?: Array<FitnessGoal>;
   source?: string;
-}
+};
 
-export interface RecipeIngredient {
+export type RecipeIngredient = {
   name: string;
   quantity: number;
   unit: string;
-}
+};
 
-export interface FirestoreRecipe {
+export type FirestoreRecipe = {
   name: string;
   ingredients: RecipeIngredient[];
   steps: string[];
@@ -91,46 +41,118 @@ export interface FirestoreRecipe {
     protein: number;
     carbs: number;
     fat: number;
-    fiber: number;
+    fiber?: number;
   };
   tags: {
-    meal_type: MealType;
-    complexity: Complexity;
-    diet: DietaryPreference[];
-    goal: FitnessGoal[];
+    meal_type?: MealType;
+    complexity?: 'simple' | 'complex';
+    diet?: string[];
+    goal?: string[];
     prep_time: number;
     servings: number;
   };
-  image_url: string;
+  image_url?: string;
   source?: string;
   created_at: any;
   updated_at: any;
-}
+};
 
-// Meal Plan types
-export interface MealPlan {
-  [date: string]: DailyMeals;
-}
-
-export interface DailyMeals {
-  breakfast?: MealItem;
-  lunch?: MealItem;
-  dinner?: MealItem;
-}
-
-export interface MealItem {
+export type MealItem = {
   recipeId?: string;
-  name?: string;
+  name: string;
   calories?: number;
   protein?: number;
   carbs?: number;
   fat?: number;
   fiber?: number;
-  customFood?: boolean;
-}
+};
 
-// Recipe Filters
-export interface RecipeFilters {
+export type DailyMeals = {
+  breakfast?: MealItem;
+  lunch?: MealItem;
+  dinner?: MealItem;
+};
+
+export type MealPlan = {
+  [date: string]: DailyMeals;
+};
+
+export type FoodLog = {
+  [date: string]: {
+    breakfast: FoodItem[];
+    lunch: FoodItem[];
+    dinner: FoodItem[];
+    snacks: FoodItem[];
+  };
+};
+
+export type FoodItem = {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  quantity: number;
+  unit: string;
+  recipeId?: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+  time?: string;
+};
+
+export type GroceryItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  category: string;
+  checked: boolean;
+  recipeIds: string[];
+};
+
+export type GroceryList = {
+  items: GroceryItem[];
+  lastGenerated: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type UserProfile = {
+  name: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  weight?: number;
+  weightUnit?: 'kg' | 'lb';
+  height?: number;
+  heightUnit?: 'cm' | 'ft';
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active';
+  dietaryPreferences?: string[];
+  dietType?: DietType;
+  allergies?: string[];
+  excludedIngredients?: string[];
+  fitnessGoals?: FitnessGoal[];
+  calorieGoal?: number;
+  proteinGoal?: number;
+  carbsGoal?: number;
+  fatGoal?: number;
+  fiberGoal?: number;
+  waterGoal?: number;
+  mealReminders?: boolean;
+  waterReminders?: boolean;
+  theme?: 'light' | 'dark' | 'system';
+  onboardingCompleted?: boolean;
+};
+
+export type RecipeCollection = {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  recipeIds: string[];
+};
+
+export type RecipeFilters = {
   mealType?: MealType;
   complexity?: 'simple' | 'complex';
   dietaryPreference?: string;
@@ -138,56 +160,17 @@ export interface RecipeFilters {
   searchQuery?: string;
   favorite?: boolean;
   excludeIds?: string[];
-}
+};
 
-// Pagination State
-export interface PaginationState {
+export type PaginationState = {
   lastDoc: any;
   hasMore: boolean;
   loading: boolean;
-}
+};
 
-// Recipe Collection
-export interface RecipeCollection {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  recipeIds: string[];
-}
-
-// Food Log types
-export interface FoodLogEntry {
-  id: string;
-  date: string;
-  mealType: MealType | 'snack';
-  recipe?: Recipe;
-  customFood?: {
-    name: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    servings: number;
-  };
-  timestamp: string;
-}
-
-// Grocery List types
-export interface GroceryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  checked: boolean;
-  category: 'produce' | 'dairy' | 'meat' | 'pantry' | 'frozen' | 'other';
-  recipeId?: string;
-}
-
-export interface GroceryList {
-  id: string;
-  name: string;
-  items: GroceryItem[];
-  createdAt: string;
-  updatedAt: string;
-}
+export type GenerationResult = {
+  success: boolean;
+  generatedMeals: string[];
+  error: string | null;
+  suggestions: string[];
+};
