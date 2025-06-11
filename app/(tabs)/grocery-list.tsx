@@ -6,6 +6,7 @@ import { useGroceryStore } from '@/store/groceryStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
+import { useRouter } from 'expo-router';
 import GroceryItem from '@/components/GroceryItem';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import FeatureGate from '@/components/FeatureGate';
@@ -15,6 +16,7 @@ import { PREMIUM_FEATURES } from '@/types/subscription';
 import { GroceryItem as GroceryItemType } from '@/types';
 
 export default function GroceryListScreen() {
+  const router = useRouter();
   const { groceryItems, setGroceryItems, toggleItemChecked, removeItem, addItem, clearList } = useGroceryStore();
   const { mealPlan } = useMealPlanStore();
   const { recipes } = useRecipeStore();
@@ -139,7 +141,6 @@ export default function GroceryListScreen() {
     }
     
     addItem({
-      id: `manual-${Date.now()}`,
       name: newItemName.trim(),
       quantity,
       unit: newItemUnit.trim(),

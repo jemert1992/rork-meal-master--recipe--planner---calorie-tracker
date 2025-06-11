@@ -13,9 +13,10 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
-import { Recipe, RecipeFilters } from '@/types';
+import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
 import { PREMIUM_FEATURES, FREE_TIER_LIMITS } from '@/types/subscription';
 import * as edamamService from '@/services/edamamService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Featured recipe collections
 const featuredCollections = [
@@ -299,7 +300,7 @@ export default function RecipesScreen() {
     router.push('/subscription');
   };
 
-  const renderCategoryItem = ({ item }) => (
+  const renderCategoryItem = ({ item }: { item: RecipeCategory }) => (
     <Pressable 
       style={[
         styles.categoryItem,
@@ -314,7 +315,7 @@ export default function RecipesScreen() {
     </Pressable>
   );
 
-  const renderCollectionItem = ({ item }) => (
+  const renderCollectionItem = ({ item }: { item: any }) => (
     <Pressable 
       style={styles.collectionItem}
       onPress={() => {

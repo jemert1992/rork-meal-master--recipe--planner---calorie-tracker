@@ -168,6 +168,7 @@ export type UserProfile = {
   waterReminders?: boolean;
   theme?: 'light' | 'dark' | 'system';
   onboardingCompleted?: boolean;
+  completedOnboarding?: boolean;
 };
 
 export type RecipeCollection = {

@@ -9,7 +9,9 @@ interface GroceryState {
   addItem: (item: Omit<GroceryItem, 'id'>) => void;
   removeItem: (id: string) => void;
   toggleChecked: (id: string) => void;
+  toggleItemChecked: (id: string) => void; // Alias for toggleChecked
   clearCheckedItems: () => void;
+  clearList: () => void; // New method to clear all items
   sortByCategory: () => GroceryItem[];
   setGroceryItems: (items: GroceryItem[]) => void;
   addGroceryItem: (item: Omit<GroceryItem, 'id'>) => void;
@@ -46,10 +48,24 @@ export const useGroceryStore = create<GroceryState>()(
         }));
       },
       
+      // Alias for toggleChecked
+      toggleItemChecked: (id) => {
+        set((state) => ({
+          groceryItems: state.groceryItems.map((item) =>
+            item.id === id ? { ...item, checked: !item.checked } : item
+          ),
+        }));
+      },
+      
       clearCheckedItems: () => {
         set((state) => ({
           groceryItems: state.groceryItems.filter((item) => !item.checked),
         }));
+      },
+      
+      // Clear all items
+      clearList: () => {
+        set({ groceryItems: [] });
       },
       
       sortByCategory: () => {
