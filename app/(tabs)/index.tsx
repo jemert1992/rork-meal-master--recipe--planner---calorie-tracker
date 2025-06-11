@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, RefreshCw, ChevronRight, Database, Cloud, Key } from 'lucide-react-native';
+import { Search, Filter, RefreshCw, ChevronRight, Database, Cloud, Key, Crown } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useGroceryStore } from '@/store/groceryStore';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
 import RecipeCard from '@/components/RecipeCard';
 import WeeklyMealPlanner from '@/components/WeeklyMealPlanner';
 import { generateGroceryList } from '@/utils/generateGroceryList';
@@ -11,7 +12,9 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
-import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
+import SubscriptionBanner from '@/components/SubscriptionBanner';
+import { Recipe, RecipeFilters } from '@/types';
+import { PREMIUM_FEATURES, FREE_TIER_LIMITS } from '@/types/subscription';
 import * as edamamService from '@/services/edamamService';
 
 // Featured recipe collections
@@ -37,7 +40,7 @@ const featuredCollections = [
 ];
 
 // Recipe categories with immutable structure
-const initialRecipeCategories: RecipeCategory[] = [
+const initialRecipeCategories = [
   { id: 'breakfast', name: 'Breakfast', count: 0, image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
   { id: 'lunch', name: 'Lunch', count: 0, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
   { id: 'dinner', name: 'Dinner', count: 0, image: 'https://images.unsplash.com/photo-1559847844-5315695dadae?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
@@ -66,6 +69,7 @@ export default function RecipesScreen() {
   
   const { mealPlan } = useMealPlanStore();
   const { setGroceryItems } = useGroceryStore();
+  const { checkFeatureAccess, subscription } = useSubscriptionStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<RecipeFilters>({});
@@ -73,10 +77,15 @@ export default function RecipesScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [recipeCategories, setRecipeCategories] = useState<RecipeCategory[]>(initialRecipeCategories);
+  const [recipeCategories, setRecipeCategories] = useState(initialRecipeCategories);
   const [displayedRecipes, setDisplayedRecipes] = useState<Recipe[]>([]);
   const [edamamConfigured, setEdamamConfigured] = useState(false);
+  const [showSubscriptionBanner, setShowSubscriptionBanner] = useState(false);
+  const [recipesShownToday, setRecipesShownToday] = useState(0);
 
+  // Check if user has access to unlimited recipes
+  const hasUnlimitedRecipes = checkFeatureAccess(PREMIUM_FEATURES.UNLIMITED_RECIPES);
+  
   // Check if Edamam credentials are configured
   useEffect(() => {
     const checkEdamamCredentials = async () => {
@@ -86,6 +95,25 @@ export default function RecipesScreen() {
     
     checkEdamamCredentials();
   }, []);
+
+  // Track recipes shown today for free tier limits
+  useEffect(() => {
+    if (!hasUnlimitedRecipes) {
+      const trackRecipesShown = async () => {
+        const today = new Date().toISOString().split('T')[0];
+        const storedCount = await AsyncStorage.getItem(`recipes_shown_${today}`);
+        
+        if (storedCount) {
+          setRecipesShownToday(parseInt(storedCount));
+        } else {
+          setRecipesShownToday(0);
+          await AsyncStorage.setItem(`recipes_shown_${today}`, '0');
+        }
+      };
+      
+      trackRecipesShown();
+    }
+  }, [hasUnlimitedRecipes]);
 
   // Update category counts
   useEffect(() => {
@@ -119,12 +147,33 @@ export default function RecipesScreen() {
         setDisplayedRecipes(searchResults);
       } else {
         const filteredRecipes = await filterRecipes(filters);
-        setDisplayedRecipes(filteredRecipes);
+        
+        // Apply free tier limits if needed
+        if (!hasUnlimitedRecipes && filteredRecipes.length > 0) {
+          // If user has seen the daily limit, show subscription banner
+          if (recipesShownToday >= FREE_TIER_LIMITS.RECIPES_PER_DAY) {
+            setShowSubscriptionBanner(true);
+            // Only show the first few recipes
+            setDisplayedRecipes(filteredRecipes.slice(0, FREE_TIER_LIMITS.RECIPES_PER_DAY));
+          } else {
+            setShowSubscriptionBanner(false);
+            setDisplayedRecipes(filteredRecipes);
+            
+            // Update the count of recipes shown today
+            const newCount = recipesShownToday + filteredRecipes.length;
+            setRecipesShownToday(newCount);
+            const today = new Date().toISOString().split('T')[0];
+            await AsyncStorage.setItem(`recipes_shown_${today}`, newCount.toString());
+          }
+        } else {
+          setShowSubscriptionBanner(false);
+          setDisplayedRecipes(filteredRecipes);
+        }
       }
     };
     
     updateDisplayedRecipes();
-  }, [searchResults, filters, filterRecipes]);
+  }, [searchResults, filters, filterRecipes, hasUnlimitedRecipes, recipesShownToday]);
 
   // Memoize the search function to prevent recreating it on every render
   const performSearch = useCallback(async (query: string) => {
@@ -176,6 +225,19 @@ export default function RecipesScreen() {
   };
 
   const handleGenerateGroceryList = () => {
+    // Check if user has access to grocery list generation
+    if (!checkFeatureAccess(PREMIUM_FEATURES.GROCERY_LIST)) {
+      Alert.alert(
+        'Premium Feature',
+        'Grocery list generation is a premium feature. Upgrade to Premium to unlock this feature.',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.push('/subscription') }
+        ]
+      );
+      return;
+    }
+    
     // Check if there are any meals planned
     const hasMeals = Object.values(mealPlan).some(day => 
       day.breakfast || day.lunch || day.dinner || (day.snacks && day.snacks.length > 0)
@@ -233,7 +295,11 @@ export default function RecipesScreen() {
     loadRecipesFromApi(false);
   };
 
-  const renderCategoryItem = ({ item }: { item: RecipeCategory }) => (
+  const handleSubscriptionPress = () => {
+    router.push('/subscription');
+  };
+
+  const renderCategoryItem = ({ item }) => (
     <Pressable 
       style={[
         styles.categoryItem,
@@ -248,7 +314,7 @@ export default function RecipesScreen() {
     </Pressable>
   );
 
-  const renderCollectionItem = ({ item }: { item: typeof featuredCollections[0] }) => (
+  const renderCollectionItem = ({ item }) => (
     <Pressable 
       style={styles.collectionItem}
       onPress={() => {
@@ -312,6 +378,30 @@ export default function RecipesScreen() {
       
       <SnacksBanner />
       
+      {/* Subscription Banner */}
+      {showSubscriptionBanner && (
+        <View style={styles.subscriptionBannerContainer}>
+          <View style={styles.subscriptionBanner}>
+            <View style={styles.subscriptionIconContainer}>
+              <Crown size={24} color={Colors.white} />
+            </View>
+            <View style={styles.subscriptionContent}>
+              <Text style={styles.subscriptionTitle}>Unlock Unlimited Recipes</Text>
+              <Text style={styles.subscriptionText}>
+                You've reached the free limit of {FREE_TIER_LIMITS.RECIPES_PER_DAY} recipes per day. 
+                Upgrade to Premium for unlimited access.
+              </Text>
+              <Pressable 
+                style={styles.subscriptionButton}
+                onPress={handleSubscriptionPress}
+              >
+                <Text style={styles.subscriptionButtonText}>Upgrade Now</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+      
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
           {searchQuery.trim().length >= 2 
@@ -364,6 +454,13 @@ export default function RecipesScreen() {
               <View style={styles.edamamBadge}>
                 <Key size={12} color={Colors.success} />
                 <Text style={styles.edamamBadgeText}>Edamam</Text>
+              </View>
+            )}
+            
+            {subscription.status === 'active' && (
+              <View style={styles.premiumBadge}>
+                <Crown size={12} color={Colors.white} />
+                <Text style={styles.premiumBadgeText}>Premium</Text>
               </View>
             )}
           </View>
@@ -483,6 +580,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.success,
     marginLeft: 4,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginLeft: 6,
+  },
+  premiumBadgeText: {
+    fontSize: 10,
+    color: Colors.white,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -693,5 +805,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginRight: 4,
+  },
+  subscriptionBannerContainer: {
+    marginVertical: 16,
+  },
+  subscriptionBanner: {
+    flexDirection: 'row',
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
+  subscriptionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  subscriptionContent: {
+    flex: 1,
+  },
+  subscriptionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  subscriptionText: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginBottom: 12,
+  },
+  subscriptionButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  subscriptionButtonText: {
+    color: Colors.white,
+    fontWeight: '500',
+    fontSize: 14,
   },
 });

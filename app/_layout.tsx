@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import { useUserStore } from "@/store/userStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -24,6 +25,8 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
+  const { initializeSubscription } = useSubscriptionStore();
+
   useEffect(() => {
     if (error) {
       console.error(error);
@@ -34,8 +37,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      
+      // Initialize subscription service
+      initializeSubscription();
     }
-  }, [loaded]);
+  }, [loaded, initializeSubscription]);
 
   if (!loaded) {
     return null;
@@ -125,6 +131,12 @@ function RootLayoutNav() {
               options={{ 
                 title: "Edit Profile",
                 presentation: "modal",
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="subscription" 
+              options={{ 
                 headerShown: false,
               }} 
             />

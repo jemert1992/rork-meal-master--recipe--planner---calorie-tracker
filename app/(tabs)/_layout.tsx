@@ -1,18 +1,27 @@
+import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { Home, Search, Calendar, ShoppingBag, User, Settings } from 'lucide-react-native';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+  const { refreshSubscriptionStatus } = useSubscriptionStore();
+  
+  // Refresh subscription status when tabs are loaded
+  useEffect(() => {
+    refreshSubscriptionStatus();
+  }, [refreshSubscriptionStatus]);
+  
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textLight,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? Colors.darkBackground : Colors.white,
+          borderTopWidth: 1,
+          borderTopColor: Colors.border,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         headerShown: false,
       }}
@@ -20,7 +29,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Recipes',
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
@@ -35,7 +44,7 @@ export default function TabLayout() {
         name="grocery-list"
         options={{
           title: 'Grocery',
-          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -43,13 +52,6 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="api-settings"
-        options={{
-          title: 'API Settings',
-          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
     </Tabs>

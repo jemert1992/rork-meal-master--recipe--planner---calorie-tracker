@@ -2,28 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Edit, Plus, RefreshCw, Key } from 'lucide-react-native';
+import { User, Edit, Plus, RefreshCw, Key, Crown } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useFoodLogStore } from '@/store/foodLogStore';
 import { useRecipeStore } from '@/store/recipeStore';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
 import DateSelector from '@/components/DateSelector';
 import NutritionBar from '@/components/NutritionBar';
 import FoodLogItem from '@/components/FoodLogItem';
 import Colors from '@/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as edamamService from '@/services/edamamService';
-import { FoodItem, DailyLog } from '@/types';
+import { FoodItem } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
   const { foodLog, removeFoodEntry } = useFoodLogStore();
   const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
+  const { subscription } = useSubscriptionStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [edamamConfigured, setEdamamConfigured] = useState(false);
   
   const dateString = selectedDate.toISOString().split('T')[0];
-  const dayLog: DailyLog = foodLog[dateString] || { 
+  const dayLog = foodLog[dateString] || { 
     totalCalories: 0, 
     totalProtein: 0, 
     totalCarbs: 0, 
@@ -138,6 +140,10 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleManageSubscription = () => {
+    router.push('/subscription');
+  };
+
   // Group meals by meal type
   const groupedMeals: Record<string, FoodItem[]> = {
     breakfast: [],
@@ -205,6 +211,44 @@ export default function ProfileScreen() {
           >
             <Edit size={16} color={Colors.white} />
             <Text style={styles.editButtonText}>Edit Profile</Text>
+          </Pressable>
+        </View>
+        
+        {/* Subscription Section */}
+        <View style={styles.subscriptionSection}>
+          <View style={styles.subscriptionHeader}>
+            <View style={styles.subscriptionIconContainer}>
+              <Crown size={24} color={Colors.white} />
+            </View>
+            <View style={styles.subscriptionInfo}>
+              <Text style={styles.subscriptionTitle}>
+                {subscription.status === 'active' || subscription.isLifetime
+                  ? 'Premium Subscription'
+                  : subscription.status === 'trial'
+                  ? 'Trial Subscription'
+                  : 'Free Plan'}
+              </Text>
+              <Text style={styles.subscriptionStatus}>
+                {subscription.status === 'active'
+                  ? `${subscription.plan?.charAt(0).toUpperCase()}${subscription.plan?.slice(1)} Plan`
+                  : subscription.isLifetime
+                  ? 'Lifetime Access'
+                  : subscription.status === 'trial'
+                  ? 'Trial Period'
+                  : 'Upgrade to unlock all features'}
+              </Text>
+            </View>
+          </View>
+          
+          <Pressable 
+            style={styles.subscriptionButton} 
+            onPress={handleManageSubscription}
+          >
+            <Text style={styles.subscriptionButtonText}>
+              {subscription.status === 'active' || subscription.isLifetime
+                ? 'Manage Subscription'
+                : 'Upgrade to Premium'}
+            </Text>
           </Pressable>
         </View>
         
@@ -360,6 +404,14 @@ export default function ProfileScreen() {
         
         <View style={styles.versionContainer}>
           <Text style={styles.versionText}>App Version 1.0.0</Text>
+          
+          {/* Debug button - remove in production */}
+          <Pressable 
+            style={styles.debugButton} 
+            onPress={() => router.push('/subscription/debug')}
+          >
+            <Text style={styles.debugButtonText}>Debug Subscription</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -465,6 +517,55 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  subscriptionSection: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  subscriptionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  subscriptionInfo: {
+    flex: 1,
+  },
+  subscriptionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  subscriptionStatus: {
+    fontSize: 14,
+    color: Colors.textLight,
+  },
+  subscriptionButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  subscriptionButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.white,
   },
   sectionHeader: {
     marginTop: 16,
@@ -651,5 +752,15 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 12,
     color: Colors.textLight,
+    marginBottom: 8,
+  },
+  debugButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  debugButtonText: {
+    fontSize: 12,
+    color: Colors.textLight,
+    textDecorationLine: 'underline',
   },
 });
