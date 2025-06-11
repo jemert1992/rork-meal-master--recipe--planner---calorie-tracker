@@ -11,7 +11,7 @@ const Colors = {
   textLight: '#718096',
   border: '#E2E8F0',
   success: '#48BB78',
-  successLight: '#E6F6EF', // Added missing color
+  successLight: '#E6F6EF',
   warning: '#F59E0B',
   error: '#E53E3E',
   info: '#3182CE',

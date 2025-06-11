@@ -58,7 +58,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const { isLoggedIn, profile } = useUserStore();
-  const showOnboarding = !isLoggedIn || !profile.onboardingCompleted;
+  const showOnboarding = !isLoggedIn || !(profile.onboardingCompleted || profile.completedOnboarding);
 
   return (
     <>

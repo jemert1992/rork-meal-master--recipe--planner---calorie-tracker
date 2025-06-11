@@ -13,7 +13,7 @@ import FoodLogItem from '@/components/FoodLogItem';
 import Colors from '@/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as edamamService from '@/services/edamamService';
-import { FoodItem } from '@/types';
+import { FoodItem, DailyLog } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
