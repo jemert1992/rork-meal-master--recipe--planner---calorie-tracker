@@ -17,7 +17,7 @@ import { GroceryItem as GroceryItemType } from '@/types';
 
 export default function GroceryListScreen() {
   const router = useRouter();
-  const { groceryItems, setGroceryItems, toggleItemChecked, removeItem, addItem, clearList } = useGroceryStore();
+  const { groceryItems, setGroceryItems, toggleChecked, removeItem, addItem, clearGroceryList } = useGroceryStore();
   const { mealPlan } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const { checkFeatureAccess } = useSubscriptionStore();
@@ -165,7 +165,7 @@ export default function GroceryListScreen() {
         { 
           text: "Clear", 
           style: "destructive",
-          onPress: () => clearList()
+          onPress: () => clearGroceryList()
         }
       ]
     );
@@ -199,7 +199,7 @@ export default function GroceryListScreen() {
   const renderItem = ({ item }: { item: GroceryItemType }) => (
     <GroceryItem
       item={item}
-      onToggle={() => toggleItemChecked(item.id)}
+      onToggle={() => toggleChecked(item.id)}
       onRemove={() => removeItem(item.id)}
     />
   );

@@ -9,13 +9,10 @@ interface GroceryState {
   addItem: (item: Omit<GroceryItem, 'id'>) => void;
   removeItem: (id: string) => void;
   toggleChecked: (id: string) => void;
-  toggleItemChecked: (id: string) => void; // Alias for toggleChecked
   clearCheckedItems: () => void;
-  clearList: () => void; // New method to clear all items
+  clearGroceryList: () => void;
   sortByCategory: () => GroceryItem[];
   setGroceryItems: (items: GroceryItem[]) => void;
-  addGroceryItem: (item: Omit<GroceryItem, 'id'>) => void;
-  clearGroceryList: () => void;
 }
 
 export const useGroceryStore = create<GroceryState>()(
@@ -48,23 +45,13 @@ export const useGroceryStore = create<GroceryState>()(
         }));
       },
       
-      // Alias for toggleChecked
-      toggleItemChecked: (id) => {
-        set((state) => ({
-          groceryItems: state.groceryItems.map((item) =>
-            item.id === id ? { ...item, checked: !item.checked } : item
-          ),
-        }));
-      },
-      
       clearCheckedItems: () => {
         set((state) => ({
           groceryItems: state.groceryItems.filter((item) => !item.checked),
         }));
       },
       
-      // Clear all items
-      clearList: () => {
+      clearGroceryList: () => {
         set({ groceryItems: [] });
       },
       
@@ -75,22 +62,6 @@ export const useGroceryStore = create<GroceryState>()(
       
       setGroceryItems: (items) => {
         set({ groceryItems: items });
-      },
-      
-      // Implementation for the missing methods
-      addGroceryItem: (item) => {
-        const newItem = {
-          ...item,
-          id: Date.now().toString(),
-        };
-        
-        set((state) => ({
-          groceryItems: [...state.groceryItems, newItem],
-        }));
-      },
-      
-      clearGroceryList: () => {
-        set({ groceryItems: [] });
       },
     }),
     {

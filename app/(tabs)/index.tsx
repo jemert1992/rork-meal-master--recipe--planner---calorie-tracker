@@ -315,7 +315,7 @@ export default function RecipesScreen() {
     </Pressable>
   );
 
-  const renderCollectionItem = ({ item }: { item: any }) => (
+  const renderCollectionItem = ({ item }: { item: typeof featuredCollections[0] }) => (
     <Pressable 
       style={styles.collectionItem}
       onPress={() => {
