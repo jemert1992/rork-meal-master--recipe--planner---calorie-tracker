@@ -1,29 +1,40 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { Check, X } from 'lucide-react-native';
-import { GroceryItem as GroceryItemType } from '@/types';
+import { Check, Trash2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { GroceryItem as GroceryItemType } from '@/types';
 
-type GroceryItemProps = {
+interface GroceryItemProps {
   item: GroceryItemType;
   onToggle: () => void;
   onRemove: () => void;
-};
+}
 
 export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemProps) {
   return (
     <View style={styles.container}>
-      <Pressable style={styles.checkboxContainer} onPress={onToggle}>
-        <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-          {item.checked && <Check size={16} color={Colors.white} />}
-        </View>
+      <Pressable 
+        style={[styles.checkbox, item.checked && styles.checkboxChecked]} 
+        onPress={onToggle}
+      >
+        {item.checked && <Check size={16} color={Colors.white} />}
       </Pressable>
+      
       <View style={styles.content}>
-        <Text style={[styles.name, item.checked && styles.nameChecked]}>{item.name}</Text>
-        <Text style={styles.category}>{item.category}</Text>
+        <Text 
+          style={[styles.name, item.checked && styles.nameChecked]}
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+        
+        <Text style={styles.details}>
+          {item.quantity} {item.unit && item.unit}
+        </Text>
       </View>
-      <Pressable style={styles.removeButton} onPress={onRemove} hitSlop={8}>
-        <X size={18} color={Colors.textLight} />
+      
+      <Pressable style={styles.removeButton} onPress={onRemove}>
+        <Trash2 size={18} color={Colors.danger} />
       </Pressable>
     </View>
   );
@@ -32,19 +43,11 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
     alignItems: 'center',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  checkboxContainer: {
-    marginRight: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.lightGray,
   },
   checkbox: {
     width: 24,
@@ -52,6 +55,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: Colors.primary,
+    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -64,16 +68,17 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     color: Colors.text,
+    marginBottom: 2,
   },
   nameChecked: {
     textDecorationLine: 'line-through',
     color: Colors.textLight,
   },
-  category: {
-    fontSize: 12,
+  details: {
+    fontSize: 14,
     color: Colors.textLight,
   },
   removeButton: {
-    padding: 4,
+    padding: 8,
   },
 });
