@@ -34,7 +34,7 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
       </View>
       
       <Pressable style={styles.removeButton} onPress={onRemove}>
-        <Trash2 size={18} color={Colors.danger} />
+        <Trash2 size={18} color={Colors.error} />
       </Pressable>
     </View>
   );

@@ -14,6 +14,7 @@ const Colors = {
   successLight: '#E6F6EF',
   warning: '#F59E0B',
   error: '#E53E3E',
+  danger: '#E53E3E', // Added danger color (same as error for consistency)
   info: '#3182CE',
   white: '#FFFFFF',
   black: '#000000',
