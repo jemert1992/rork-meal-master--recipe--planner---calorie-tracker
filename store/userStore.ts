@@ -17,7 +17,7 @@ interface UserState {
 
 const DEFAULT_PROFILE: UserProfile = {
   name: '',
-  completedOnboarding: false,
+  onboardingCompleted: false,
   dietaryPreferences: [],
   allergies: [],
   dietType: 'any',
