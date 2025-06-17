@@ -6,15 +6,11 @@ import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter, I
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
 import DateSelector from '@/components/DateSelector';
 import MealPlanItem from '@/components/MealPlanItem';
 import NutritionBar from '@/components/NutritionBar';
-import SubscriptionBanner from '@/components/SubscriptionBanner';
-import FeatureGate from '@/components/FeatureGate';
 import Colors from '@/constants/colors';
 import { DailyMeals, Recipe, RecipeFilters } from '@/types';
-import { PREMIUM_FEATURES } from '@/types/subscription';
 import * as firebaseService from '@/services/firebaseService';
 
 export default function MealPlanScreen() {
@@ -34,7 +30,6 @@ export default function MealPlanScreen() {
   } = useMealPlanStore();
   const { recipes, isLoading, useFirestore } = useRecipeStore();
   const { profile } = useUserStore();
-  const { checkFeatureAccess } = useSubscriptionStore();
   
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dailyNutrition, setDailyNutrition] = useState({
@@ -62,9 +57,6 @@ export default function MealPlanScreen() {
 
   const dateString = selectedDate.toISOString().split('T')[0];
   const dayPlan = mealPlan[dateString] || {};
-  
-  // Check if user has access to meal plan generation
-  const canGenerateMealPlan = checkFeatureAccess(PREMIUM_FEATURES.MEAL_PLAN_GENERATION);
 
   // Show error modal when generation error occurs
   useEffect(() => {
@@ -376,12 +368,6 @@ export default function MealPlanScreen() {
   };
 
   const handleGenerateMealPlan = async () => {
-    // Check if user has access to this premium feature
-    if (!canGenerateMealPlan) {
-      router.push('/subscription');
-      return;
-    }
-    
     setIsGenerating(true);
     try {
       // Update weekly used recipe IDs
@@ -557,37 +543,22 @@ export default function MealPlanScreen() {
         </View>
         
         <View style={styles.buttonGroup}>
-          <FeatureGate
-            featureId={PREMIUM_FEATURES.MEAL_PLAN_GENERATION}
-            showBanner={false}
-            fallback={
-              <Pressable 
-                style={[styles.actionButton, styles.generateButton]} 
-                onPress={() => router.push('/subscription')}
-                accessibilityLabel="Upgrade to generate meal plan"
-              >
+          <Pressable 
+            style={[styles.actionButton, styles.generateButton]} 
+            onPress={handleGenerateMealPlan}
+            disabled={isGenerating || isLoading}
+            accessibilityLabel="Generate meal plan"
+            accessibilityHint="Automatically generates a meal plan for the selected day"
+          >
+            {isGenerating ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <>
                 <RefreshCw size={16} color={Colors.white} />
                 <Text style={styles.generateButtonText}>Generate</Text>
-              </Pressable>
-            }
-          >
-            <Pressable 
-              style={[styles.actionButton, styles.generateButton]} 
-              onPress={handleGenerateMealPlan}
-              disabled={isGenerating || isLoading}
-              accessibilityLabel="Generate meal plan"
-              accessibilityHint="Automatically generates a meal plan for the selected day"
-            >
-              {isGenerating ? (
-                <ActivityIndicator size="small" color={Colors.white} />
-              ) : (
-                <>
-                  <RefreshCw size={16} color={Colors.white} />
-                  <Text style={styles.generateButtonText}>Generate</Text>
-                </>
-              )}
-            </Pressable>
-          </FeatureGate>
+              </>
+            )}
+          </Pressable>
           
           <Pressable 
             style={styles.clearButton} 
@@ -655,12 +626,6 @@ export default function MealPlanScreen() {
           onRemove={() => handleRemoveMeal('dinner')}
           onAdd={() => handleAddMeal('dinner')}
           hasAlternatives={alternativesAvailable.dinner}
-        />
-
-        {/* Subscription Banner for Meal Plan Generation */}
-        <SubscriptionBanner 
-          featureId={PREMIUM_FEATURES.MEAL_PLAN_GENERATION}
-          message="Upgrade to Premium to automatically generate personalized meal plans based on your preferences and nutrition goals."
         />
 
         {/* Meal Suggestions Section */}

@@ -14,26 +14,36 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
   return (
     <View style={styles.container}>
       <Pressable 
-        style={[styles.checkbox, item.checked && styles.checkboxChecked]} 
+        style={styles.checkboxContainer} 
         onPress={onToggle}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        {item.checked && <Check size={16} color={Colors.white} />}
+        <View style={[
+          styles.checkbox,
+          item.checked && styles.checkboxChecked
+        ]}>
+          {item.checked && <Check size={16} color={Colors.white} />}
+        </View>
       </Pressable>
       
-      <View style={styles.content}>
-        <Text 
-          style={[styles.name, item.checked && styles.nameChecked]}
-          numberOfLines={1}
-        >
+      <View style={styles.itemInfo}>
+        <Text style={[
+          styles.itemName,
+          item.checked && styles.itemNameChecked
+        ]}>
           {item.name}
         </Text>
         
-        <Text style={styles.details}>
-          {item.quantity} {item.unit && item.unit}
+        <Text style={styles.itemQuantity}>
+          {item.quantity} {item.unit}
         </Text>
       </View>
       
-      <Pressable style={styles.removeButton} onPress={onRemove}>
+      <Pressable 
+        style={styles.removeButton} 
+        onPress={onRemove}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
         <Trash2 size={18} color={Colors.error} />
       </Pressable>
     </View>
@@ -45,9 +55,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.lightGray,
+    borderBottomColor: Colors.border,
+  },
+  checkboxContainer: {
+    marginRight: 12,
   },
   checkbox: {
     width: 24,
@@ -55,26 +67,25 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: Colors.primary,
-    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
     backgroundColor: Colors.primary,
   },
-  content: {
+  itemInfo: {
     flex: 1,
   },
-  name: {
+  itemName: {
     fontSize: 16,
     color: Colors.text,
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  nameChecked: {
+  itemNameChecked: {
     textDecorationLine: 'line-through',
     color: Colors.textLight,
   },
-  details: {
+  itemQuantity: {
     fontSize: 14,
     color: Colors.textLight,
   },

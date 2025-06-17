@@ -38,7 +38,7 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hideAsync();
       
-      // Initialize subscription service
+      // Keep subscription initialization for future use
       initializeSubscription();
     }
   }, [loaded, initializeSubscription]);
@@ -134,6 +134,7 @@ function RootLayoutNav() {
                 headerShown: false,
               }} 
             />
+            {/* Keep subscription routes for future use */}
             <Stack.Screen 
               name="subscription" 
               options={{ 

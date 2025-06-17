@@ -1,7 +1,5 @@
 import React, { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
-import SubscriptionBanner from './SubscriptionBanner';
 
 interface FeatureGateProps {
   featureId: string;
@@ -12,6 +10,7 @@ interface FeatureGateProps {
   compact?: boolean;
 }
 
+// Temporarily modified to always allow access to features
 export default function FeatureGate({ 
   featureId, 
   children, 
@@ -20,26 +19,8 @@ export default function FeatureGate({
   bannerMessage,
   compact = false
 }: FeatureGateProps) {
-  const { checkFeatureAccess } = useSubscriptionStore();
-  
-  const hasAccess = checkFeatureAccess(featureId);
-  
-  if (hasAccess) {
-    return <>{children}</>;
-  }
-  
-  return (
-    <View style={styles.container}>
-      {showBanner && (
-        <SubscriptionBanner 
-          featureId={featureId} 
-          message={bannerMessage}
-          compact={compact}
-        />
-      )}
-      {fallback || null}
-    </View>
-  );
+  // Always return children for testing purposes
+  return <>{children}</>;
 }
 
 const styles = StyleSheet.create({

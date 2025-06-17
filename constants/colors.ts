@@ -1,25 +1,25 @@
+// Define app colors
 const Colors = {
-  primary: '#4A6FA5',
-  primaryLight: '#E8F0FB',
-  secondary: '#FF6B6B',
-  secondaryLight: '#FFE2E2',
+  primary: '#FF6B6B',
+  primaryLight: '#FFE2E2',
+  secondary: '#4ECDC4',
+  secondaryLight: '#DFFAF8',
   accent: '#FFD166',
   background: '#F8F9FA',
-  backgroundLight: '#F0F2F5',
+  backgroundLight: '#F1F3F5',
   card: '#FFFFFF',
-  text: '#2D3748',
-  textLight: '#718096',
-  border: '#E2E8F0',
-  success: '#48BB78',
-  successLight: '#E6F6EF',
-  warning: '#F59E0B',
-  error: '#E53E3E',
-  danger: '#E53E3E', // Added danger color (same as error for consistency)
-  info: '#3182CE',
+  text: '#343A40',
+  textLight: '#868E96',
+  border: '#DEE2E6',
+  success: '#51CF66',
+  successLight: '#EBFBEE',
+  warning: '#FFA94D',
+  warningBg: '#FFF4E6',
+  error: '#FF6B6B',
+  danger: '#FF6B6B', // Added danger color
   white: '#FFFFFF',
   black: '#000000',
-  gray: '#A0AEC0',
-  lightGray: '#E2E8F0',
+  lightGray: '#E9ECEF',
 };
 
 export default Colors;

@@ -54,6 +54,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
+      {/* Removed API settings tab */}
     </Tabs>
   );
 }

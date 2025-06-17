@@ -5,14 +5,10 @@ import { ShoppingCart, Plus, Trash2, RefreshCw, Check, Search, X } from 'lucide-
 import { useGroceryStore } from '@/store/groceryStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { useRouter } from 'expo-router';
 import GroceryItem from '@/components/GroceryItem';
-import SubscriptionBanner from '@/components/SubscriptionBanner';
-import FeatureGate from '@/components/FeatureGate';
 import { generateGroceryList } from '@/utils/generateGroceryList';
 import Colors from '@/constants/colors';
-import { PREMIUM_FEATURES } from '@/types/subscription';
 import { GroceryItem as GroceryItemType } from '@/types';
 
 export default function GroceryListScreen() {
@@ -20,7 +16,6 @@ export default function GroceryListScreen() {
   const { groceryItems, setGroceryItems, toggleChecked, removeItem, addItem, clearGroceryList } = useGroceryStore();
   const { mealPlan } = useMealPlanStore();
   const { recipes } = useRecipeStore();
-  const { checkFeatureAccess } = useSubscriptionStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [newItemName, setNewItemName] = useState('');
@@ -29,9 +24,6 @@ export default function GroceryListScreen() {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [filteredItems, setFilteredItems] = useState<GroceryItemType[]>([]);
-  
-  // Check if user has access to grocery list generation
-  const canGenerateGroceryList = checkFeatureAccess(PREMIUM_FEATURES.GROCERY_LIST);
   
   // Filter items based on search query
   useEffect(() => {
@@ -65,19 +57,6 @@ export default function GroceryListScreen() {
   });
   
   const handleGenerateList = () => {
-    // Check if user has access to this premium feature
-    if (!canGenerateGroceryList) {
-      Alert.alert(
-        'Premium Feature',
-        'Grocery list generation is a premium feature. Upgrade to Premium to unlock this feature.',
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/subscription') }
-        ]
-      );
-      return;
-    }
-    
     // Check if there are any meals planned
     const hasMeals = Object.values(mealPlan).some(day => 
       day.breakfast || day.lunch || day.dinner || (day.snacks && day.snacks.length > 0)
@@ -219,34 +198,20 @@ export default function GroceryListScreen() {
       </View>
       
       <View style={styles.actionsContainer}>
-        <FeatureGate
-          featureId={PREMIUM_FEATURES.GROCERY_LIST}
-          showBanner={false}
-          fallback={
-            <Pressable 
-              style={[styles.generateButton, styles.premiumButton]} 
-              onPress={() => router.push('/subscription')}
-            >
+        <Pressable 
+          style={styles.generateButton} 
+          onPress={handleGenerateList}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <>
               <RefreshCw size={16} color={Colors.white} />
               <Text style={styles.generateButtonText}>Generate from Meal Plan</Text>
-            </Pressable>
-          }
-        >
-          <Pressable 
-            style={styles.generateButton} 
-            onPress={handleGenerateList}
-            disabled={isGenerating}
-          >
-            {isGenerating ? (
-              <ActivityIndicator size="small" color={Colors.white} />
-            ) : (
-              <>
-                <RefreshCw size={16} color={Colors.white} />
-                <Text style={styles.generateButtonText}>Generate from Meal Plan</Text>
-              </>
-            )}
-          </Pressable>
-        </FeatureGate>
+            </>
+          )}
+        </Pressable>
         
         <View style={styles.buttonGroup}>
           <Pressable 
@@ -307,11 +272,6 @@ export default function GroceryListScreen() {
           <Text style={styles.emptySubtitle}>
             Add items manually or generate a list from your meal plan
           </Text>
-          
-          <SubscriptionBanner 
-            featureId={PREMIUM_FEATURES.GROCERY_LIST}
-            message="Upgrade to Premium to automatically generate grocery lists from your meal plans."
-          />
         </View>
       )}
       
@@ -412,9 +372,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-  },
-  premiumButton: {
-    backgroundColor: Colors.primary,
   },
   generateButtonText: {
     color: Colors.white,

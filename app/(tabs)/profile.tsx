@@ -2,25 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Edit, Plus, RefreshCw, Key, Crown } from 'lucide-react-native';
+import { User, Edit, Plus, RefreshCw, Key } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useFoodLogStore } from '@/store/foodLogStore';
 import { useRecipeStore } from '@/store/recipeStore';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
 import DateSelector from '@/components/DateSelector';
 import NutritionBar from '@/components/NutritionBar';
 import FoodLogItem from '@/components/FoodLogItem';
 import Colors from '@/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as edamamService from '@/services/edamamService';
-import { FoodItem, DailyLog } from '@/types';
+import { FoodItem } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
   const { foodLog, removeFoodEntry } = useFoodLogStore();
   const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
-  const { subscription } = useSubscriptionStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [edamamConfigured, setEdamamConfigured] = useState(false);
   
@@ -66,82 +64,6 @@ export default function ProfileScreen() {
       "Recipe data has been refreshed from the selected sources.",
       [{ text: "OK" }]
     );
-  };
-
-  const handleToggleSpoonacular = () => {
-    const newValue = !apiSources.useSpoonacular;
-    setApiSource('useSpoonacular', newValue);
-    
-    if (newValue) {
-      Alert.alert(
-        "Spoonacular API Enabled",
-        "The app will now use Spoonacular API to fetch recipes. Refresh recipes to see new content.",
-        [
-          {
-            text: "Refresh Now",
-            onPress: () => loadRecipesFromApi(false)
-          },
-          {
-            text: "Later",
-            style: "cancel"
-          }
-        ]
-      );
-    } else {
-      Alert.alert(
-        "Spoonacular API Disabled",
-        "The app will no longer use Spoonacular API to fetch recipes.",
-        [{ text: "OK" }]
-      );
-    }
-  };
-
-  const handleToggleEdamam = () => {
-    if (!apiSources.useEdamam) {
-      if (edamamConfigured) {
-        setApiSource('useEdamam', true);
-        Alert.alert(
-          "Edamam API Enabled",
-          "The app will now use Edamam API to fetch recipes. Refresh recipes to see new content.",
-          [
-            {
-              text: "Refresh Now",
-              onPress: () => loadRecipesFromApi(false)
-            },
-            {
-              text: "Later",
-              style: "cancel"
-            }
-          ]
-        );
-      } else {
-        Alert.alert(
-          "Edamam API Configuration Required",
-          "To use Edamam API, you need to configure your API credentials in the API Settings screen.",
-          [
-            {
-              text: "Configure Now",
-              onPress: () => router.push('/api-settings')
-            },
-            {
-              text: "Later",
-              style: "cancel"
-            }
-          ]
-        );
-      }
-    } else {
-      setApiSource('useEdamam', false);
-      Alert.alert(
-        "Edamam API Disabled",
-        "The app will no longer use Edamam API to fetch recipes.",
-        [{ text: "OK" }]
-      );
-    }
-  };
-
-  const handleManageSubscription = () => {
-    router.push('/subscription');
   };
 
   // Group meals by meal type
@@ -214,43 +136,7 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
         
-        {/* Subscription Section */}
-        <View style={styles.subscriptionSection}>
-          <View style={styles.subscriptionHeader}>
-            <View style={styles.subscriptionIconContainer}>
-              <Crown size={24} color={Colors.white} />
-            </View>
-            <View style={styles.subscriptionInfo}>
-              <Text style={styles.subscriptionTitle}>
-                {subscription.status === 'active' || subscription.isLifetime
-                  ? 'Premium Subscription'
-                  : subscription.status === 'trial'
-                  ? 'Trial Subscription'
-                  : 'Free Plan'}
-              </Text>
-              <Text style={styles.subscriptionStatus}>
-                {subscription.status === 'active'
-                  ? `${subscription.plan?.charAt(0).toUpperCase()}${subscription.plan?.slice(1)} Plan`
-                  : subscription.isLifetime
-                  ? 'Lifetime Access'
-                  : subscription.status === 'trial'
-                  ? 'Trial Period'
-                  : 'Upgrade to unlock all features'}
-              </Text>
-            </View>
-          </View>
-          
-          <Pressable 
-            style={styles.subscriptionButton} 
-            onPress={handleManageSubscription}
-          >
-            <Text style={styles.subscriptionButtonText}>
-              {subscription.status === 'active' || subscription.isLifetime
-                ? 'Manage Subscription'
-                : 'Upgrade to Premium'}
-            </Text>
-          </Pressable>
-        </View>
+        {/* Subscription Section Removed */}
         
         {/* Calorie Tracker Section */}
         <View style={styles.sectionHeader}>
@@ -332,86 +218,18 @@ export default function ProfileScreen() {
           })
         )}
         
-        {/* API Settings Section */}
+        {/* Recipe Data Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipe Data</Text>
-          
-          <View style={styles.apiInfoRow}>
-            <Text style={styles.apiInfoLabel}>MealDB API:</Text>
-            <Pressable 
-              style={styles.apiToggleButton} 
-              onPress={() => setApiSource('useMealDB', !apiSources.useMealDB)}
-            >
-              <Text style={[
-                styles.apiToggleText, 
-                apiSources.useMealDB ? styles.apiToggleTextEnabled : styles.apiToggleTextDisabled
-              ]}>
-                {apiSources.useMealDB ? 'Enabled' : 'Disabled'}
-              </Text>
-            </Pressable>
-          </View>
-          
-          <View style={styles.apiInfoRow}>
-            <Text style={styles.apiInfoLabel}>Spoonacular API:</Text>
-            <Pressable 
-              style={styles.apiToggleButton} 
-              onPress={handleToggleSpoonacular}
-            >
-              <Text style={[
-                styles.apiToggleText, 
-                apiSources.useSpoonacular ? styles.apiToggleTextEnabled : styles.apiToggleTextDisabled
-              ]}>
-                {apiSources.useSpoonacular ? 'Enabled' : 'Disabled'}
-              </Text>
-            </Pressable>
-          </View>
-          
-          <View style={styles.apiInfoRow}>
-            <View style={styles.apiInfoLabelContainer}>
-              <Text style={styles.apiInfoLabel}>Edamam API:</Text>
-              {edamamConfigured && (
-                <View style={styles.apiKeyBadge}>
-                  <Key size={12} color={Colors.success} />
-                  <Text style={styles.apiKeyBadgeText}>Configured</Text>
-                </View>
-              )}
-            </View>
-            <Pressable 
-              style={styles.apiToggleButton} 
-              onPress={handleToggleEdamam}
-            >
-              <Text style={[
-                styles.apiToggleText, 
-                apiSources.useEdamam ? styles.apiToggleTextEnabled : styles.apiToggleTextDisabled
-              ]}>
-                {apiSources.useEdamam ? 'Enabled' : 'Disabled'}
-              </Text>
-            </Pressable>
-          </View>
           
           <Pressable style={styles.refreshButton} onPress={handleRefreshRecipes}>
             <RefreshCw size={16} color={Colors.white} />
             <Text style={styles.refreshButtonText}>Refresh Recipes</Text>
           </Pressable>
-          
-          <Pressable 
-            style={styles.advancedButton} 
-            onPress={() => router.push('/api-settings')}
-          >
-            <Text style={styles.advancedButtonText}>Advanced API Settings</Text>
-          </Pressable>
         </View>
         
         <View style={styles.versionContainer}>
           <Text style={styles.versionText}>App Version 1.0.0</Text>
-          
-          {/* Debug button - remove in production */}
-          <Pressable 
-            style={styles.debugButton} 
-            onPress={() => router.push('/subscription/debug')}
-          >
-            <Text style={styles.debugButtonText}>Debug Subscription</Text>
-          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -517,55 +335,6 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '600',
     marginLeft: 8,
-  },
-  subscriptionSection: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  subscriptionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  subscriptionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  subscriptionInfo: {
-    flex: 1,
-  },
-  subscriptionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  subscriptionStatus: {
-    fontSize: 14,
-    color: Colors.textLight,
-  },
-  subscriptionButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  subscriptionButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.white,
   },
   sectionHeader: {
     marginTop: 16,
@@ -674,51 +443,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  apiInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  apiInfoLabel: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  apiInfoLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  apiKeyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.successLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  apiKeyBadgeText: {
-    fontSize: 10,
-    color: Colors.success,
-    marginLeft: 4,
-  },
-  apiToggleButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: Colors.background,
-  },
-  apiToggleText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  apiToggleTextEnabled: {
-    color: Colors.primary,
-  },
-  apiToggleTextDisabled: {
-    color: Colors.textLight,
-  },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -728,22 +452,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginTop: 8,
-    marginBottom: 12,
   },
   refreshButtonText: {
     color: Colors.white,
     fontWeight: '600',
     marginLeft: 8,
-  },
-  advancedButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  advancedButtonText: {
-    color: Colors.primary,
-    fontWeight: '500',
-    fontSize: 14,
   },
   versionContainer: {
     alignItems: 'center',
@@ -753,14 +466,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textLight,
     marginBottom: 8,
-  },
-  debugButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  debugButtonText: {
-    fontSize: 12,
-    color: Colors.textLight,
-    textDecorationLine: 'underline',
   },
 });
