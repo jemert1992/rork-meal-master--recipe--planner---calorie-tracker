@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MealPlan, MealItem, DailyMeals, Recipe, DietType, GenerationResult } from '@/types';
 import { mockMealPlan } from '@/constants/mockData';
-import { useUserStore } from '@/store/userStore';
 import * as firebaseService from '@/services/firebaseService';
 
 interface MealPlanState {
@@ -34,6 +33,24 @@ interface MealPlanState {
   clearAlternativeRecipes: () => void;
   clearGenerationError: () => void;
 }
+
+// Helper function to get user profile without causing circular dependencies
+const getUserProfile = () => {
+  try {
+    // Import dynamically to avoid circular dependencies
+    const { useUserStore } = require('@/store/userStore');
+    return useUserStore.getState().profile;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    return {
+      dietType: 'any',
+      allergies: [],
+      excludedIngredients: [],
+      calorieGoal: 2000,
+      fitnessGoals: []
+    };
+  }
+};
 
 export const useMealPlanStore = create<MealPlanState>()(
   persist(
@@ -453,7 +470,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           set({ isLoadingAlternatives: true });
           
           // Get user profile for personalization
-          const userProfile = useUserStore.getState().profile;
+          const userProfile = getUserProfile();
           const { 
             dietType = 'any', 
             allergies = [], 
@@ -552,7 +569,7 @@ export const useMealPlanStore = create<MealPlanState>()(
       
       generateMealPlan: async (date, recipes, specificMealType) => {
         // Get user profile for personalization
-        const userProfile = useUserStore.getState().profile;
+        const userProfile = getUserProfile();
         const { 
           dietType = 'any', 
           allergies = [], 
@@ -1308,7 +1325,7 @@ export const useMealPlanStore = create<MealPlanState>()(
       
       generateWeeklyMealPlan: async (startDate, endDate) => {
         // Get user profile for personalization
-        const userProfile = useUserStore.getState().profile;
+        const userProfile = getUserProfile();
         const { 
           dietType = 'any', 
           allergies = [], 

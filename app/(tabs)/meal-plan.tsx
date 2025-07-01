@@ -55,8 +55,8 @@ export default function MealPlanScreen() {
     dinner: false
   });
 
-  const dateString = selectedDate.toISOString().split('T')[0];
-  const dayPlan = mealPlan[dateString] || {};
+  const dateString = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+  const dayPlan = useMemo(() => mealPlan[dateString] || {}, [mealPlan, dateString]);
 
   // Show error modal when generation error occurs
   useEffect(() => {
@@ -151,12 +151,14 @@ export default function MealPlanScreen() {
     const dinnerOk = !dayPlan.dinner || checkMeal(dayPlan.dinner);
 
     setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk));
-  }, [dayPlan, profile, recipes, isRecipeSuitable]);
+  }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, recipes, isRecipeSuitable]);
 
   // Load recipes from Firestore when needed
   useEffect(() => {
+    let isMounted = true;
+    
     const loadFirestoreRecipes = async () => {
-      if (useFirestore && showSuggestions) {
+      if (useFirestore && showSuggestions && !isLoadingFirestoreRecipes) {
         setIsLoadingFirestoreRecipes(true);
         try {
           // Get weekly used recipe IDs to avoid suggesting already used recipes
@@ -178,29 +180,44 @@ export default function MealPlanScreen() {
           
           // Get recipes from Firestore
           const { recipes: firestoreRecipes } = await firebaseService.getRecipesFromFirestore(filters, 20);
-          setFirestoreRecipes(firestoreRecipes);
+          
+          if (isMounted) {
+            setFirestoreRecipes(firestoreRecipes);
+          }
         } catch (error) {
           console.error('Error loading recipes from Firestore:', error);
         } finally {
-          setIsLoadingFirestoreRecipes(false);
+          if (isMounted) {
+            setIsLoadingFirestoreRecipes(false);
+          }
         }
       }
     };
     
     loadFirestoreRecipes();
-  }, [useFirestore, showSuggestions, selectedDate, profile, updateWeeklyUsedRecipeIds]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [useFirestore, showSuggestions, selectedDate, profile.dietType, profile.fitnessGoals, updateWeeklyUsedRecipeIds]);
 
   // Check if alternatives are available for each meal type
   useEffect(() => {
+    let isMounted = true;
+    
     const checkAlternatives = async () => {
+      if (!useFirestore || Object.keys(dayPlan).length === 0) {
+        return;
+      }
+      
       const newAlternativesAvailable = {
         breakfast: false,
         lunch: false,
         dinner: false
       };
       
-      if (dayPlan.breakfast?.recipeId) {
-        try {
+      try {
+        if (dayPlan.breakfast?.recipeId) {
           const alternatives = await firebaseService.getAlternativeRecipes(
             'breakfast',
             dayPlan.breakfast.recipeId,
@@ -212,13 +229,9 @@ export default function MealPlanScreen() {
             1
           );
           newAlternativesAvailable.breakfast = alternatives.length > 0;
-        } catch (error) {
-          console.error('Error checking breakfast alternatives:', error);
         }
-      }
-      
-      if (dayPlan.lunch?.recipeId) {
-        try {
+        
+        if (dayPlan.lunch?.recipeId) {
           const alternatives = await firebaseService.getAlternativeRecipes(
             'lunch',
             dayPlan.lunch.recipeId,
@@ -230,13 +243,9 @@ export default function MealPlanScreen() {
             1
           );
           newAlternativesAvailable.lunch = alternatives.length > 0;
-        } catch (error) {
-          console.error('Error checking lunch alternatives:', error);
         }
-      }
-      
-      if (dayPlan.dinner?.recipeId) {
-        try {
+        
+        if (dayPlan.dinner?.recipeId) {
           const alternatives = await firebaseService.getAlternativeRecipes(
             'dinner',
             dayPlan.dinner.recipeId,
@@ -248,18 +257,22 @@ export default function MealPlanScreen() {
             1
           );
           newAlternativesAvailable.dinner = alternatives.length > 0;
-        } catch (error) {
-          console.error('Error checking dinner alternatives:', error);
         }
+        
+        if (isMounted) {
+          setAlternativesAvailable(newAlternativesAvailable);
+        }
+      } catch (error) {
+        console.error('Error checking alternatives:', error);
       }
-      
-      setAlternativesAvailable(newAlternativesAvailable);
     };
     
-    if (useFirestore && Object.keys(dayPlan).length > 0) {
-      checkAlternatives();
-    }
-  }, [dayPlan, profile, useFirestore]);
+    checkAlternatives();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, useFirestore]);
 
   // Memoize the function to generate meal suggestions
   const generateMealSuggestions = useCallback(() => {
@@ -326,7 +339,7 @@ export default function MealPlanScreen() {
     // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
-  }, [dayPlan, recipes, firestoreRecipes, profile, isRecipeSuitable, isRecipeUsedInMealPlan, useFirestore]);
+  }, [dayPlan, recipes, firestoreRecipes, profile.dietType, profile.allergies, profile.excludedIngredients, profile.dietaryPreferences, isRecipeSuitable, isRecipeUsedInMealPlan, useFirestore]);
 
   // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
@@ -336,20 +349,20 @@ export default function MealPlanScreen() {
     }
   }, [showSuggestions, generateMealSuggestions, isLoadingFirestoreRecipes]);
 
-  const handleDateChange = (date: Date) => {
+  const handleDateChange = useCallback((date: Date) => {
     setSelectedDate(date);
     setShowSuggestions(false);
-  };
+  }, []);
 
-  const handleAddMeal = (mealType: string) => {
+  const handleAddMeal = useCallback((mealType: string) => {
     router.push(`/add-meal/${dateString}?mealType=${mealType}`);
-  };
+  }, [router, dateString]);
 
-  const handleRemoveMeal = (mealType: string) => {
+  const handleRemoveMeal = useCallback((mealType: string) => {
     removeMeal(dateString, mealType as 'breakfast' | 'lunch' | 'dinner');
-  };
+  }, [removeMeal, dateString]);
 
-  const handleClearDay = () => {
+  const handleClearDay = useCallback(() => {
     Alert.alert(
       'Clear Day',
       'Are you sure you want to clear all meals for this day?',
@@ -365,9 +378,9 @@ export default function MealPlanScreen() {
         },
       ]
     );
-  };
+  }, [clearDay, dateString]);
 
-  const handleGenerateMealPlan = async () => {
+  const handleGenerateMealPlan = useCallback(async () => {
     setIsGenerating(true);
     try {
       // Update weekly used recipe IDs
@@ -468,13 +481,13 @@ export default function MealPlanScreen() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [selectedDate, updateWeeklyUsedRecipeIds, useFirestore, generateMealPlan, dateString, recipes, profile, isRecipeSuitable]);
 
-  const handleToggleSuggestions = () => {
+  const handleToggleSuggestions = useCallback(() => {
     setShowSuggestions(!showSuggestions);
-  };
+  }, [showSuggestions]);
 
-  const handleAddSuggestion = (recipeId: string, recipeName: string, mealType: string) => {
+  const handleAddSuggestion = useCallback((recipeId: string, recipeName: string, mealType: string) => {
     // Check if recipe is already used in meal plan
     if (isRecipeUsedInMealPlan(recipeId)) {
       Alert.alert(
@@ -512,7 +525,7 @@ export default function MealPlanScreen() {
     }
     
     addMeal(dateString, targetMealType as 'breakfast' | 'lunch' | 'dinner', { recipeId, name: recipeName });
-  };
+  }, [isRecipeUsedInMealPlan, dayPlan, addMeal, dateString]);
 
   // Calculate nutrition goal progress
   const calorieProgress = profile.calorieGoal ? (dailyNutrition.calories / profile.calorieGoal) * 100 : 0;

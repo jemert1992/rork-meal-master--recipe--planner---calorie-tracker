@@ -48,7 +48,18 @@ export const useUserStore = create<UserState>()(
       },
       
       updateProfile: (updates) => {
-        // First update the profile
+        const currentProfile = get().profile;
+        
+        // Check if we need to recalculate nutrition goals
+        const shouldRecalculate = 
+          updates.weight !== undefined ||
+          updates.height !== undefined ||
+          updates.age !== undefined ||
+          updates.gender !== undefined ||
+          updates.activityLevel !== undefined ||
+          updates.dietType !== undefined;
+        
+        // Update the profile first
         set((state) => ({
           profile: {
             ...state.profile,
@@ -56,24 +67,22 @@ export const useUserStore = create<UserState>()(
           },
         }));
         
-        // Then check if we need to recalculate nutrition goals
-        // This prevents the infinite loop by separating the state updates
-        if (
-          updates.weight !== undefined ||
-          updates.height !== undefined ||
-          updates.age !== undefined ||
-          updates.gender !== undefined ||
-          updates.activityLevel !== undefined
-        ) {
-          // Use setTimeout to ensure this runs after the state update
-          setTimeout(() => {
-            get().calculateNutritionGoals();
-          }, 0);
+        // Only recalculate if necessary and if we have the required fields
+        if (shouldRecalculate) {
+          const newProfile = { ...currentProfile, ...updates };
+          if (newProfile.gender && newProfile.weight && newProfile.height && newProfile.age && newProfile.activityLevel) {
+            // Use a microtask to avoid infinite loops
+            Promise.resolve().then(() => {
+              get().calculateNutritionGoals();
+            });
+          }
         }
       },
       
       updateHeightImperial: (feet, inches) => {
         const heightInCm = feetInchesToCm(feet, inches);
+        const currentProfile = get().profile;
+        
         set((state) => ({
           profile: {
             ...state.profile,
@@ -81,14 +90,18 @@ export const useUserStore = create<UserState>()(
           },
         }));
         
-        // Use setTimeout to ensure this runs after the state update
-        setTimeout(() => {
-          get().calculateNutritionGoals();
-        }, 0);
+        // Only recalculate if we have all required fields
+        if (currentProfile.gender && currentProfile.weight && currentProfile.age && currentProfile.activityLevel) {
+          Promise.resolve().then(() => {
+            get().calculateNutritionGoals();
+          });
+        }
       },
       
       updateWeightImperial: (pounds) => {
         const weightInKg = poundsToKg(pounds);
+        const currentProfile = get().profile;
+        
         set((state) => ({
           profile: {
             ...state.profile,
@@ -96,10 +109,12 @@ export const useUserStore = create<UserState>()(
           },
         }));
         
-        // Use setTimeout to ensure this runs after the state update
-        setTimeout(() => {
-          get().calculateNutritionGoals();
-        }, 0);
+        // Only recalculate if we have all required fields
+        if (currentProfile.gender && currentProfile.height && currentProfile.age && currentProfile.activityLevel) {
+          Promise.resolve().then(() => {
+            get().calculateNutritionGoals();
+          });
+        }
       },
       
       calculateNutritionGoals: () => {
@@ -108,6 +123,30 @@ export const useUserStore = create<UserState>()(
         // Skip calculation if required fields are missing
         if (!profile.gender || !profile.weight || !profile.height || !profile.age || !profile.activityLevel) {
           return;
+        }
+        
+        // Skip if goals are already calculated to prevent infinite loops
+        if (profile.calorieGoal && profile.proteinGoal && profile.carbsGoal && profile.fatGoal) {
+          // Only recalculate if the current goals seem outdated (basic check)
+          const expectedBMR = profile.gender === 'male' 
+            ? 10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5
+            : 10 * profile.weight + 6.25 * profile.height - 5 * profile.age - 161;
+          
+          const activityMultipliers: Record<string, number> = {
+            'sedentary': 1.2,
+            'light': 1.375,
+            'moderate': 1.55,
+            'active': 1.725,
+            'very-active': 1.9,
+          };
+          
+          const multiplier = activityMultipliers[profile.activityLevel] || 1.2;
+          const expectedCalories = Math.round(expectedBMR * multiplier);
+          
+          // If current calorie goal is within 10% of expected, don't recalculate
+          if (Math.abs(profile.calorieGoal - expectedCalories) / expectedCalories < 0.1) {
+            return;
+          }
         }
         
         // Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor Equation
@@ -127,7 +166,7 @@ export const useUserStore = create<UserState>()(
           'very-active': 1.9,    // Very hard exercise & physical job
         };
         
-        const multiplier = activityMultipliers[profile.activityLevel];
+        const multiplier = activityMultipliers[profile.activityLevel] || 1.2;
         let calorieGoal = Math.round(bmr * multiplier);
         
         // Adjust calorie goal based on diet type
