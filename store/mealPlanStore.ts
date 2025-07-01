@@ -317,7 +317,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           const requiredTags = dietTags[dietType];
           // Check if there are required tags for this diet type
-          if (requiredTags && requiredTags.length > 0) {
+          if (requiredTags.length > 0) {
             const hasMatchingTag = requiredTags.some(tag => 
               recipe.tags.some(recipeTag => 
                 recipeTag.toLowerCase() === tag.toLowerCase()
@@ -331,9 +331,9 @@ export const useMealPlanStore = create<MealPlanState>()(
         }
         
         // Check for allergies and excluded ingredients
-        const hasExclusions = (allergies && allergies.length > 0) || (excludedIngredients && excludedIngredients.length > 0);
+        const hasExclusions = allergies.length > 0 || excludedIngredients.length > 0;
         if (hasExclusions) {
-          const combinedExclusions = [...(allergies || []), ...(excludedIngredients || [])];
+          const combinedExclusions = [...allergies, ...excludedIngredients];
           
           // Check if any ingredient contains an excluded term
           for (const ingredient of recipe.ingredients) {
