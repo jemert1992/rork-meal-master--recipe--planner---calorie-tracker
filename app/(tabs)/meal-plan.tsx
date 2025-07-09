@@ -15,7 +15,6 @@ import * as firebaseService from '@/services/firebaseService';
 
 export default function MealPlanScreen() {
   const router = useRouter();
-  const mealPlanStore = useMealPlanStore();
   const { 
     mealPlan, 
     addMeal, 
@@ -28,7 +27,7 @@ export default function MealPlanScreen() {
     lastGenerationError,
     generationSuggestions,
     clearGenerationError
-  } = mealPlanStore;
+  } = useMealPlanStore();
   const { recipes, isLoading, useFirestore } = useRecipeStore();
   const { profile } = useUserStore();
   
@@ -152,7 +151,7 @@ export default function MealPlanScreen() {
     const dinnerOk = !dayPlan.dinner || checkMeal(dayPlan.dinner);
 
     setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk));
-  }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, recipes, isRecipeSuitable]);
+  }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, recipes]);
 
   // Load recipes from Firestore when needed
   useEffect(() => {
@@ -200,7 +199,7 @@ export default function MealPlanScreen() {
     return () => {
       isMounted = false;
     };
-  }, [useFirestore, showSuggestions, selectedDate, profile.dietType, profile.fitnessGoals, updateWeeklyUsedRecipeIds]);
+  }, [useFirestore, showSuggestions, selectedDate, profile.dietType, profile.fitnessGoals]);
 
   // Check if alternatives are available for each meal type
   useEffect(() => {
@@ -340,7 +339,7 @@ export default function MealPlanScreen() {
     // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
-  }, [dayPlan, recipes, firestoreRecipes, profile.dietType, profile.allergies, profile.excludedIngredients, profile.dietaryPreferences, isRecipeSuitable, isRecipeUsedInMealPlan, useFirestore]);
+  }, [dayPlan, recipes, firestoreRecipes, profile.dietType, profile.allergies, profile.excludedIngredients, profile.dietaryPreferences, useFirestore]);
 
   // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
@@ -482,7 +481,7 @@ export default function MealPlanScreen() {
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedDate, updateWeeklyUsedRecipeIds, useFirestore, generateMealPlan, dateString, recipes, profile, isRecipeSuitable]);
+  }, [selectedDate, useFirestore, dateString, recipes, profile]);
 
   const handleToggleSuggestions = useCallback(() => {
     setShowSuggestions(!showSuggestions);
@@ -526,7 +525,7 @@ export default function MealPlanScreen() {
     }
     
     addMeal(dateString, targetMealType as 'breakfast' | 'lunch' | 'dinner', { recipeId, name: recipeName });
-  }, [isRecipeUsedInMealPlan, dayPlan, addMeal, dateString]);
+  }, [dayPlan, dateString]);
 
   // Calculate nutrition goal progress
   const calorieProgress = profile.calorieGoal ? (dailyNutrition.calories / profile.calorieGoal) * 100 : 0;

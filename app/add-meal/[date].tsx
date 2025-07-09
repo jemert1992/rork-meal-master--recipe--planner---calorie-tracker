@@ -9,7 +9,7 @@ import RecipeCard from '@/components/RecipeCard';
 import Colors from '@/constants/colors';
 
 export default function AddMealScreen() {
-  const { date, mealType } = useLocalSearchParams<{ date: string; mealType: string }>();
+  const { date, mealType } = useLocalSearchParams<{ date: string; mealType?: string }>();
   const router = useRouter();
   const { recipes } = useRecipeStore();
   const { addMeal, isRecipeUsedInMealPlan } = useMealPlanStore();
@@ -35,10 +35,12 @@ export default function AddMealScreen() {
       return;
     }
     
-    addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
-      recipeId, 
-      name: recipeName 
-    });
+    if (mealType && ['breakfast', 'lunch', 'dinner'].includes(mealType)) {
+      addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
+        recipeId, 
+        name: recipeName 
+      });
+    }
     router.back();
   };
   
@@ -47,14 +49,27 @@ export default function AddMealScreen() {
     
     const calories = parseInt(customCalories);
     
-    addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
-      name: customName.trim(),
-      calories: isNaN(calories) ? undefined : calories
-    });
+    if (mealType && ['breakfast', 'lunch', 'dinner'].includes(mealType)) {
+      addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
+        name: customName.trim(),
+        calories: isNaN(calories) ? undefined : calories
+      });
+    }
     router.back();
   };
 
   const formattedMealType = mealType ? mealType.charAt(0).toUpperCase() + mealType.slice(1) : "Meal";
+  
+  // Handle undefined mealType
+  if (!mealType) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Invalid meal type</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -64,7 +79,7 @@ export default function AddMealScreen() {
             <X size={24} color={Colors.text} />
           </Pressable>
           <Text style={styles.title}>
-            Add {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+            Add {formattedMealType}
           </Text>
           <View style={styles.placeholder} />
         </View>
