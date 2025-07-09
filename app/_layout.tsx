@@ -40,7 +40,7 @@ export default function RootLayout() {
       
 
     }
-  }, [loaded, initializeSubscription]);
+  }, [loaded]);
 
   if (!loaded) {
     return null;
