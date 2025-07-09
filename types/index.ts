@@ -2,7 +2,9 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner';
 
 export type DietType = 'any' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb';
 
-export type FitnessGoal = 'weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost';
+export type FitnessGoal = 'weight-loss' | 'muscle-gain' | 'general-health' | 'heart-health' | 'energy-boost' | 'high-protein';
+
+export type DietaryPreference = 'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein';
 
 export type Recipe = {
   id: string;

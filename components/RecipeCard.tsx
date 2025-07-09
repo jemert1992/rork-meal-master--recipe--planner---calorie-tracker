@@ -21,7 +21,7 @@ const isDietaryPreference = (value: string): value is DietaryPreference => {
 
 const isFitnessGoal = (value: string): value is FitnessGoal => {
   const validFitnessGoals: FitnessGoal[] = [
-    'high-protein', 'weight-loss', 'muscle-gain', 'general-health', 'heart-health', 'energy-boost'
+    'weight-loss', 'muscle-gain', 'general-health', 'heart-health', 'energy-boost', 'high-protein'
   ];
   return validFitnessGoals.includes(value as FitnessGoal);
 };
