@@ -341,7 +341,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           {['breakfast', 'lunch', 'dinner'].map((mealType) => {
             const meal = dayPlan[mealType as keyof typeof dayPlan];
             
-            const recipeId = Array.isArray(meal) ? undefined : meal?.recipeId;
+            const recipeId = meal?.recipeId;
             const { name, image } = getRecipeDetails(recipeId);
             
             const isGenerating = generatingMeal && 
@@ -626,7 +626,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                       <View style={styles.captureMealsColumn}>
                         {['breakfast', 'lunch', 'dinner'].map((mealType) => {
                           const meal = dayPlan[mealType as keyof typeof dayPlan];
-                          const { name } = getRecipeDetails(Array.isArray(meal) ? undefined : meal?.recipeId);
+                          const { name } = getRecipeDetails(meal?.recipeId);
                           
                           return (
                             <View key={`${day.dateString}-${mealType}`} style={styles.captureMealItem}>

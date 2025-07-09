@@ -8,7 +8,7 @@ import Colors from "@/constants/colors";
 import { useUserStore } from "@/store/userStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
-import { useSubscriptionStore } from "@/store/subscriptionStore";
+
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -25,7 +25,7 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const { initializeSubscription } = useSubscriptionStore();
+
 
   useEffect(() => {
     if (error) {
@@ -38,8 +38,7 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hideAsync();
       
-      // Keep subscription initialization for future use
-      initializeSubscription();
+
     }
   }, [loaded, initializeSubscription]);
 
@@ -134,13 +133,7 @@ function RootLayoutNav() {
                 headerShown: false,
               }} 
             />
-            {/* Keep subscription routes for future use */}
-            <Stack.Screen 
-              name="subscription" 
-              options={{ 
-                headerShown: false,
-              }} 
-            />
+
           </>
         )}
       </Stack>

@@ -1,16 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
+
 
 export default function TabLayout() {
-  const { refreshSubscriptionStatus } = useSubscriptionStore();
-  
-  // Refresh subscription status when tabs are loaded
-  useEffect(() => {
-    refreshSubscriptionStatus();
-  }, [refreshSubscriptionStatus]);
+
   
   return (
     <Tabs

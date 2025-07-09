@@ -14,7 +14,7 @@ type RecipeCardProps = {
 // Type guard functions to check if a string is a valid dietary preference or fitness goal
 const isDietaryPreference = (value: string): value is DietaryPreference => {
   const validDietaryPreferences: DietaryPreference[] = [
-    'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 'dairy-free', 'low-carb'
+    'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 'dairy-free', 'low-carb', 'high-protein'
   ];
   return validDietaryPreferences.includes(value as DietaryPreference);
 };

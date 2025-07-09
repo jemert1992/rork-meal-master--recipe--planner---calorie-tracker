@@ -15,6 +15,7 @@ import * as firebaseService from '@/services/firebaseService';
 
 export default function MealPlanScreen() {
   const router = useRouter();
+  const mealPlanStore = useMealPlanStore();
   const { 
     mealPlan, 
     addMeal, 
@@ -27,7 +28,7 @@ export default function MealPlanScreen() {
     lastGenerationError,
     generationSuggestions,
     clearGenerationError
-  } = useMealPlanStore();
+  } = mealPlanStore;
   const { recipes, isLoading, useFirestore } = useRecipeStore();
   const { profile } = useUserStore();
   

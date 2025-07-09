@@ -1584,6 +1584,10 @@ export const useMealPlanStore = create<MealPlanState>()(
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        mealPlan: state.mealPlan,
+        // Don't persist complex objects that might cause issues
+      }),
     }
   )
 );
