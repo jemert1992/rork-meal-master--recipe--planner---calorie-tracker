@@ -404,7 +404,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           // Update the meal plan
           set((state) => {
-            const updatedDayPlan = { ...state.mealPlan[date] } || {};
+            const updatedDayPlan = { ...(state.mealPlan[date] || {}) };
             updatedDayPlan[mealType] = newMeal;
             
             // Remove the old recipe ID from weekly used IDs if it's not used elsewhere
