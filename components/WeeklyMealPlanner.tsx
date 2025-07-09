@@ -689,7 +689,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               <View style={styles.errorSuggestionsList}>
                 <Text style={styles.errorSuggestionsTitle}>Suggestions:</Text>
                 {generationSuggestions.map((suggestion, index) => (
-                  <View key={index} style={styles.errorSuggestionItem}>
+                  <View key={`error-suggestion-${index}`} style={styles.errorSuggestionItem}>
                     <View style={styles.errorBulletPoint} />
                     <Text style={styles.errorSuggestionText}>{suggestion}</Text>
                   </View>

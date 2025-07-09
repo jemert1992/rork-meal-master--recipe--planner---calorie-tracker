@@ -685,7 +685,7 @@ export default function MealPlanScreen() {
                         {recipe.tags.length > 0 && (
                           <View style={styles.tagContainer}>
                             {recipe.tags.slice(0, 3).map((tag, index) => (
-                              <Text key={index} style={styles.tagText}>
+                              <Text key={`${recipe.id}-tag-${index}`} style={styles.tagText}>
                                 {tag}
                               </Text>
                             ))}
@@ -828,7 +828,7 @@ export default function MealPlanScreen() {
               <View style={styles.suggestionsList}>
                 <Text style={styles.suggestionsTitle}>Suggestions:</Text>
                 {generationSuggestions.map((suggestion, index) => (
-                  <View key={index} style={styles.suggestionItem}>
+                  <View key={`suggestion-${index}`} style={styles.suggestionItem}>
                     <View style={styles.bulletPoint} />
                     <Text style={styles.suggestionText}>{suggestion}</Text>
                   </View>

@@ -136,7 +136,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         
         <View style={styles.tagsContainer}>
           {displayTags.slice(0, 3).map((tag, index) => (
-            <View key={index} style={styles.tag}>
+            <View key={`${recipe.id}-display-tag-${index}`} style={styles.tag}>
               <Text style={styles.tagText}>{tag}</Text>
             </View>
           ))}

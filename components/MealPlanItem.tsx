@@ -155,7 +155,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             {recipe && recipe.tags.length > 0 && (
               <View style={styles.tagsContainer}>
                 {recipe.tags.slice(0, 3).map((tag, index) => (
-                  <View key={index} style={styles.tag}>
+                  <View key={`${recipe.id}-tag-${index}`} style={styles.tag}>
                     <Text style={styles.tagText}>{tag}</Text>
                   </View>
                 ))}
@@ -266,7 +266,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                       {item.tags.length > 0 && (
                         <View style={styles.tagsContainer}>
                           {item.tags.slice(0, 3).map((tag, index) => (
-                            <View key={index} style={styles.tag}>
+                            <View key={`${item.id}-tag-${index}`} style={styles.tag}>
                               <Text style={styles.tagText}>{tag}</Text>
                             </View>
                           ))}
