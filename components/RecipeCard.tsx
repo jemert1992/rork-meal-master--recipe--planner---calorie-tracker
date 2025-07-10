@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Heart, Clock, Users } from 'lucide-react-native';
-import { Recipe, FitnessGoal } from '@/types';
+import { Recipe, FitnessGoal, DietaryPreference } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import Colors from '@/constants/colors';
 
@@ -12,11 +12,11 @@ type RecipeCardProps = {
 };
 
 // Type guard functions to check if a string is a valid dietary preference or fitness goal
-const isDietaryPreference = (value: string): value is Recipe['dietaryPreferences'][0] => {
-  const validDietaryPreferences = [
+const isDietaryPreference = (value: string): value is DietaryPreference => {
+  const validDietaryPreferences: DietaryPreference[] = [
     'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 'dairy-free', 'low-carb', 'high-protein'
-  ] as const;
-  return validDietaryPreferences.includes(value as any);
+  ];
+  return validDietaryPreferences.includes(value as DietaryPreference);
 };
 
 const isFitnessGoal = (value: string): value is FitnessGoal => {
