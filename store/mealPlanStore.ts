@@ -1586,8 +1586,19 @@ export const useMealPlanStore = create<MealPlanState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         mealPlan: state.mealPlan,
-        // Don't persist complex objects that might cause issues
+        // Don't persist Sets or complex objects that might cause issues
+        // weeklyUsedRecipeIds will be recalculated on load
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Ensure weeklyUsedRecipeIds is a proper Set after rehydration
+          state.weeklyUsedRecipeIds = new Set<string>();
+          state.alternativeRecipes = {};
+          state.isLoadingAlternatives = false;
+          state.lastGenerationError = null;
+          state.generationSuggestions = [];
+        }
+      },
     }
   )
 );

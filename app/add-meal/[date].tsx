@@ -144,7 +144,7 @@ export default function AddMealScreen() {
           
           <FlatList
             data={filteredRecipes}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.id || `recipe-${index}`}
             renderItem={({ item }) => (
               <Pressable onPress={() => handleSelectRecipe(item.id, item.name)}>
                 <RecipeCard recipe={item} compact />
