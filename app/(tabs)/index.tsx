@@ -283,10 +283,12 @@ export default function RecipesScreen() {
   );
 
   const renderListHeader = () => (
-    <>
-      <WeeklyMealPlanner onGenerateGroceryList={handleGenerateGroceryList} />
+    <View>
+      <View style={{ marginHorizontal: 20, marginBottom: 8 }}>
+        <WeeklyMealPlanner onGenerateGroceryList={handleGenerateGroceryList} />
+      </View>
       
-      <View style={styles.sectionHeader}>
+      <View style={[styles.sectionHeader, { marginHorizontal: 20 }]}>
         <Text style={styles.sectionTitle}>Featured Collections</Text>
       </View>
       
@@ -299,7 +301,7 @@ export default function RecipesScreen() {
         contentContainerStyle={styles.collectionsContainer}
       />
       
-      <View style={styles.sectionHeader}>
+      <View style={[styles.sectionHeader, { marginHorizontal: 20 }]}>
         <Text style={styles.sectionTitle}>Categories</Text>
       </View>
       
@@ -312,9 +314,11 @@ export default function RecipesScreen() {
         contentContainerStyle={styles.categoriesContainer}
       />
       
-      <SnacksBanner />
+      <View style={{ marginHorizontal: 20, marginVertical: 12 }}>
+        <SnacksBanner />
+      </View>
       
-      <View style={styles.sectionHeader}>
+      <View style={[styles.sectionHeader, { marginHorizontal: 20 }]}>
         <Text style={styles.sectionTitle}>
           {searchQuery.trim().length >= 2 
             ? 'Search Results' 
@@ -327,7 +331,7 @@ export default function RecipesScreen() {
                   : 'All Recipes'}
         </Text>
       </View>
-    </>
+    </View>
   );
 
   const renderFooter = () => {
@@ -429,28 +433,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
     backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 4,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 6,
-    letterSpacing: -0.5,
+    marginBottom: 4,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: 16,
     color: Colors.textSecondary,
-    marginBottom: 0,
     fontWeight: '400',
+    flex: 1,
   },
   dataSourceContainer: {
     flexDirection: 'row',
@@ -460,37 +467,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   dataSourceText: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.primary,
-    marginLeft: 4,
+    marginLeft: 3,
+    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
+    backgroundColor: Colors.surface,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
   },
   searchIcon: {
     marginRight: 8,
@@ -504,32 +507,28 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   filterButton: {
-    marginLeft: 16,
-    backgroundColor: Colors.surface,
-    width: 56,
-    height: 56,
-    borderRadius: 20,
+    marginLeft: 12,
+    backgroundColor: Colors.backgroundLight,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
   },
   filterButtonActive: {
     backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   listContent: {
-    padding: 24,
-    paddingTop: 0,
+    paddingBottom: 20,
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 40,
   },
   loaderText: {
     marginTop: 12,
@@ -548,31 +547,34 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: Colors.text,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: Colors.textLight,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
+    lineHeight: 20,
   },
   refreshButton: {
     flexDirection: 'row',
     backgroundColor: Colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
   },
   refreshButtonText: {
     color: Colors.white,
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: 8,
   },
   sectionHeader: {
@@ -580,34 +582,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    marginTop: 32,
+    marginTop: 24,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   seeAllText: {
     fontSize: 14,
     color: Colors.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   categoriesContainer: {
+    paddingLeft: 20,
     paddingRight: 20,
   },
   categoryItem: {
-    width: 130,
-    height: 110,
-    marginRight: 16,
-    borderRadius: 16,
+    width: 120,
+    height: 100,
+    marginRight: 12,
+    borderRadius: 12,
     overflow: 'hidden',
     justifyContent: 'flex-end',
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   categoryItemSelected: {
     borderWidth: 2,
@@ -622,42 +625,43 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   categoryName: {
     color: Colors.white,
     fontWeight: '700',
-    fontSize: 15,
-    padding: 12,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    fontSize: 13,
+    padding: 10,
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   categoryCount: {
     color: Colors.white,
-    fontSize: 12,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    fontSize: 11,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
     opacity: 0.9,
     fontWeight: '500',
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   collectionsContainer: {
+    paddingLeft: 20,
     paddingRight: 20,
   },
   collectionItem: {
-    width: 300,
-    height: 180,
-    marginRight: 20,
-    borderRadius: 20,
+    width: 280,
+    height: 160,
+    marginRight: 16,
+    borderRadius: 16,
     overflow: 'hidden',
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
   collectionImage: {
     position: 'absolute',
@@ -673,42 +677,42 @@ const styles = StyleSheet.create({
   collectionContent: {
     flex: 1,
     justifyContent: 'flex-end',
-    padding: 20,
+    padding: 16,
   },
   collectionName: {
     color: Colors.white,
     fontWeight: '700',
-    fontSize: 20,
-    marginBottom: 6,
-    textShadowColor: 'rgba(0,0,0,0.4)',
+    fontSize: 18,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   collectionDescription: {
     color: Colors.white,
-    fontSize: 15,
-    marginBottom: 16,
+    fontSize: 13,
+    marginBottom: 12,
     opacity: 0.95,
     fontWeight: '400',
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   collectionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 24,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
   collectionButtonText: {
     color: Colors.white,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    marginRight: 6,
+    marginRight: 4,
   },
 });

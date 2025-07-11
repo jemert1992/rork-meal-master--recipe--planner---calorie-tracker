@@ -176,43 +176,41 @@ const SnacksBanner = () => {
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    marginBottom: 20,
-    marginHorizontal: 4,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 5,
-    // Updated styling to make it more bubble-like
-    transform: [{ scale: 0.98 }],
-    borderWidth: 0,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
   },
   bannerImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25, // Make image fully rounded
-    marginRight: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
   },
   bannerTextContainer: {
     flex: 1,
   },
   bannerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   bannerSubtitle: {
-    fontSize: 14,
-    color: Colors.textLight,
+    fontSize: 13,
+    color: Colors.textSecondary,
   },
   modalContainer: {
     flex: 1,
