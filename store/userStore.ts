@@ -22,6 +22,7 @@ const DEFAULT_PROFILE: UserProfile = {
   allergies: [],
   dietType: 'any',
   fitnessGoals: [],
+  autoGenerateMeals: true,
 };
 
 export const useUserStore = create<UserState>()(

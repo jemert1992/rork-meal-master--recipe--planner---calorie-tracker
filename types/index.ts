@@ -183,6 +183,7 @@ export type UserProfile = {
   waterGoal?: number;
   mealReminders?: boolean;
   waterReminders?: boolean;
+  autoGenerateMeals?: boolean;
   theme?: 'light' | 'dark' | 'system';
   onboardingCompleted?: boolean;
 };

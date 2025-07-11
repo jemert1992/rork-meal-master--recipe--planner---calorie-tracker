@@ -16,6 +16,7 @@ export default function EditProfileScreen() {
   const [dietType, setDietType] = useState<DietType>(profile.dietType || 'any');
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [allergies, setAllergies] = useState(profile.allergies?.join(', ') || '');
+  const [autoGenerateMeals, setAutoGenerateMeals] = useState(profile.autoGenerateMeals ?? true);
   
   const handleSave = () => {
     // Validate calorie goal
@@ -37,6 +38,7 @@ export default function EditProfileScreen() {
       dietType,
       calorieGoal: parsedCalorieGoal || undefined,
       allergies: allergyList,
+      autoGenerateMeals,
     });
     
     // Navigate back
@@ -110,6 +112,29 @@ export default function EditProfileScreen() {
             placeholder="e.g., nuts, dairy, gluten"
           />
           <Text style={styles.helperText}>Separate with commas</Text>
+          
+          <Text style={styles.inputLabel}>Meal Planning</Text>
+          <Pressable 
+            style={[
+              styles.toggleOption,
+              autoGenerateMeals && styles.selectedToggleOption
+            ]}
+            onPress={() => setAutoGenerateMeals(!autoGenerateMeals)}
+          >
+            <View style={styles.toggleContent}>
+              <Text style={[
+                styles.toggleText,
+                autoGenerateMeals && styles.selectedToggleText
+              ]}>Auto-Generate Meals</Text>
+              <Text style={[
+                styles.toggleDescription,
+                autoGenerateMeals && styles.selectedToggleDescription
+              ]}>Show quick buttons to generate all meals for a day</Text>
+            </View>
+            {autoGenerateMeals && (
+              <Check size={20} color={Colors.white} />
+            )}
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -210,5 +235,39 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginLeft: 6,
+  },
+  toggleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
+  },
+  selectedToggleOption: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  toggleContent: {
+    flex: 1,
+  },
+  toggleText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  selectedToggleText: {
+    color: Colors.white,
+  },
+  toggleDescription: {
+    fontSize: 14,
+    color: Colors.textLight,
+  },
+  selectedToggleDescription: {
+    color: Colors.white,
+    opacity: 0.9,
   },
 });

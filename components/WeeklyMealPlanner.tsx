@@ -47,6 +47,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const { 
     mealPlan, 
     generateMealPlan, 
+    generateAllMealsForDay,
     isRecipeUsedInMealPlan, 
     generateWeeklyMealPlan, 
     updateWeeklyUsedRecipeIds,
@@ -63,6 +64,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     mealType: 'breakfast' | 'lunch' | 'dinner';
     loading: boolean;
   } | null>(null);
+  const [generatingDayPlan, setGeneratingDayPlan] = useState<string | null>(null);
   const [generatingWeeklyPlan, setGeneratingWeeklyPlan] = useState(false);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [sharingPlan, setSharingPlan] = useState(false);
@@ -171,6 +173,66 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       );
     } finally {
       setGeneratingMeal(null);
+    }
+  };
+
+  const handleGenerateAllMealsForDay = async (date: string) => {
+    try {
+      setGeneratingDayPlan(date);
+      
+      // Check if the day already has meals
+      const dayPlan = mealPlan[date] || {};
+      const hasExistingMeals = dayPlan.breakfast || dayPlan.lunch || dayPlan.dinner;
+      
+      if (hasExistingMeals) {
+        Alert.alert(
+          "Replace Existing Meals?",
+          "This will replace any existing meals for this day. Continue?",
+          [
+            { text: "Cancel", style: "cancel", onPress: () => setGeneratingDayPlan(null) },
+            { 
+              text: "Continue", 
+              onPress: async () => {
+                const result = await generateAllMealsForDay(date, recipes);
+                
+                if (result.success) {
+                  Alert.alert(
+                    "Day Plan Generated",
+                    result.suggestions[0] || "All meals for the day have been generated!",
+                    [{ text: "OK" }]
+                  );
+                } else {
+                  setShowErrorModal(true);
+                }
+                
+                setGeneratingDayPlan(null);
+              }
+            }
+          ]
+        );
+      } else {
+        const result = await generateAllMealsForDay(date, recipes);
+        
+        if (result.success) {
+          Alert.alert(
+            "Day Plan Generated",
+            result.suggestions[0] || "All meals for the day have been generated!",
+            [{ text: "OK" }]
+          );
+        } else {
+          setShowErrorModal(true);
+        }
+        
+        setGeneratingDayPlan(null);
+      }
+    } catch (error) {
+      console.error("Error generating day plan:", error);
+      Alert.alert(
+        "Generation Failed",
+        "Could not generate meals for the day. Please try again.",
+        [{ text: "OK" }]
+      );
+      setGeneratingDayPlan(null);
     }
   };
 
@@ -335,6 +397,25 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             <Text style={styles.dayName}>{item.dayName}</Text>
             <Text style={styles.dayDate}>{format(item.date, 'MMMM d, yyyy')}</Text>
           </View>
+          {profile.autoGenerateMeals && (
+            <Pressable 
+              style={[
+                styles.generateDayButton,
+                generatingDayPlan === item.dateString && styles.generatingDayButton
+              ]}
+              onPress={() => handleGenerateAllMealsForDay(item.dateString)}
+              disabled={generatingDayPlan === item.dateString}
+              accessibilityLabel={`Generate all meals for ${item.dayName}`}
+              accessibilityHint="Automatically generate breakfast, lunch, and dinner for this day"
+              accessibilityRole="button"
+            >
+              {generatingDayPlan === item.dateString ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Sparkles size={16} color={Colors.white} />
+              )}
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.mealsContainer}>
@@ -1199,5 +1280,17 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  generateDayButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  generatingDayButton: {
+    backgroundColor: Colors.primary,
+    opacity: 0.7,
   },
 });
