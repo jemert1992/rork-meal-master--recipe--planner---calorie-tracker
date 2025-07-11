@@ -472,7 +472,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 
                 {!name && !isGenerating && (
                   <Pressable 
-                    style={styles.pickForMeButton}
+                    style={({ pressed }) => [
+                      styles.pickForMeButton,
+                      pressed && styles.pickForMeButtonPressed
+                    ]}
                     onPress={() => handleAutoGenerateMeal(
                       item.dateString, 
                       mealType as 'breakfast' | 'lunch' | 'dinner'
@@ -481,8 +484,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                     accessibilityHint="Let the app pick a recipe for you"
                     accessibilityRole="button"
                   >
-                    <Sparkles size={14} color={Colors.white} />
-                    <Text style={styles.pickForMeText}>Pick for me</Text>
+                    <View style={styles.pickForMeContent}>
+                      <Sparkles size={18} color={Colors.white} />
+                      <Text style={styles.pickForMeText}>✨ Pick for me ✨</Text>
+                    </View>
                   </Pressable>
                 )}
               </View>
@@ -1093,21 +1098,39 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   pickForMeButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginTop: 4,
-    alignSelf: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginTop: 8,
+    alignSelf: 'stretch',
+    shadowColor: Colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+
+  },
+  pickForMeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pickForMeText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '700',
     color: Colors.white,
-    marginLeft: 4,
+    marginLeft: 8,
+    letterSpacing: 0.5,
+  },
+  pickForMeButtonPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.8,
   },
   generatingText: {
     fontSize: 14,
