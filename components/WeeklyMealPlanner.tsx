@@ -132,11 +132,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 const result = await generateMealPlan(date, recipes, mealType);
                 
                 if (result.success) {
-                  Alert.alert(
-                    "Meal Generated",
-                    `Your ${mealType} has been automatically generated!`,
-                    [{ text: "OK" }]
-                  );
+                  // Success - no alert needed, user can see the meal was replaced
+                  // The modal stays open so they can continue adding more meals
                 } else {
                   // Error will be shown in the error modal
                   setShowErrorModal(true);
@@ -154,12 +151,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       const result = await generateMealPlan(date, recipes, mealType);
       
       if (result.success) {
-        // Success message
-        Alert.alert(
-          "Meal Generated",
-          `Your ${mealType} has been automatically generated!`,
-          [{ text: "OK" }]
-        );
+        // Success - no alert needed, user can see the meal was added
+        // The modal stays open so they can continue adding more meals
       } else {
         // Error will be shown in the error modal
         setShowErrorModal(true);
@@ -196,11 +189,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 const result = await generateAllMealsForDay(date, recipes);
                 
                 if (result.success) {
-                  Alert.alert(
-                    "Day Plan Generated",
-                    result.suggestions[0] || "All meals for the day have been generated!",
-                    [{ text: "OK" }]
-                  );
+                  // Success - no alert needed, user can see the meals were generated
+                  // The modal stays open so they can continue planning
                 } else {
                   setShowErrorModal(true);
                 }
@@ -214,11 +204,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         const result = await generateAllMealsForDay(date, recipes);
         
         if (result.success) {
-          Alert.alert(
-            "Day Plan Generated",
-            result.suggestions[0] || "All meals for the day have been generated!",
-            [{ text: "OK" }]
-          );
+          // Success - no alert needed, user can see the meals were generated
+          // The modal stays open so they can continue planning
         } else {
           setShowErrorModal(true);
         }
