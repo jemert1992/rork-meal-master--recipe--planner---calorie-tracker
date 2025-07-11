@@ -10,6 +10,7 @@ import GroceryItem from '@/components/GroceryItem';
 import { generateGroceryList } from '@/utils/generateGroceryList';
 import Colors from '@/constants/colors';
 import { GroceryItem as GroceryItemType } from '@/types';
+import TutorialOverlay from '@/components/TutorialOverlay';
 
 export default function GroceryListScreen() {
   const router = useRouter();
@@ -192,6 +193,7 @@ export default function GroceryListScreen() {
   
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TutorialOverlay currentScreen="grocery-list" />
       <View style={styles.header}>
         <Text style={styles.title}>Grocery List</Text>
         <Text style={styles.subtitle}>Manage your shopping items</Text>

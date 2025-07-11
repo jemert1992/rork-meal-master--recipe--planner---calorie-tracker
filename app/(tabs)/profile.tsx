@@ -13,10 +13,13 @@ import Colors from '@/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as edamamService from '@/services/edamamService';
 import { FoodItem } from '@/types';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorialStore } from '@/store/tutorialStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
+  const { resetTutorial } = useTutorialStore();
   const { foodLog, removeFoodEntry } = useFoodLogStore();
   const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -93,6 +96,7 @@ export default function ProfileScreen() {
   
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TutorialOverlay currentScreen="profile" />
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
       </View>
@@ -225,6 +229,19 @@ export default function ProfileScreen() {
           <Pressable style={styles.refreshButton} onPress={handleRefreshRecipes}>
             <RefreshCw size={16} color={Colors.white} />
             <Text style={styles.refreshButtonText}>Refresh Recipes</Text>
+          </Pressable>
+        </View>
+        
+        {/* Tutorial Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Help & Tutorial</Text>
+          
+          <Pressable style={styles.tutorialButton} onPress={resetTutorial}>
+            <Text style={styles.tutorialButtonText}>Restart Tutorial</Text>
+          </Pressable>
+          
+          <Pressable style={styles.helpButton} onPress={() => router.push('/help')}>
+            <Text style={styles.helpButtonText}>Help & FAQ</Text>
           </Pressable>
         </View>
         
@@ -485,6 +502,34 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  tutorialButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  tutorialButtonText: {
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  helpButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  helpButtonText: {
+    color: Colors.text,
+    fontWeight: '600',
   },
   versionContainer: {
     alignItems: 'center',

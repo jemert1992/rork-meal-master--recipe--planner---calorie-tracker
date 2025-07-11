@@ -4,11 +4,13 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Check } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
+import { useTutorialStore } from '@/store/tutorialStore';
 import Colors from '@/constants/colors';
 
 export default function NutritionGoalsScreen() {
   const router = useRouter();
   const { profile, updateProfile, calculateNutritionGoals, login } = useUserStore();
+  const { startTutorial } = useTutorialStore();
   
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [proteinGoal, setProteinGoal] = useState(profile.proteinGoal?.toString() || '');
@@ -60,6 +62,11 @@ export default function NutritionGoalsScreen() {
     
     // Navigate to main app
     router.replace('/(tabs)');
+    
+    // Start the tutorial after a brief delay
+    setTimeout(() => {
+      startTutorial();
+    }, 1000);
   };
   
   return (

@@ -11,6 +11,7 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
+import TutorialOverlay from '@/components/TutorialOverlay';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
 import * as edamamService from '@/services/edamamService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -342,6 +343,7 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TutorialOverlay currentScreen="home" />
       <View style={styles.header}>
         <Text style={styles.title}>Discover Recipes</Text>
         <View style={styles.headerRow}>

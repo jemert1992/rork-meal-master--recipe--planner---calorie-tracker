@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import { useUserStore } from "@/store/userStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import TutorialWelcome from "@/components/TutorialWelcome";
 
 
 export const unstable_settings = {
@@ -48,6 +49,7 @@ export default function RootLayout() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <RootLayoutNav />
+        <TutorialWelcome />
       </QueryClientProvider>
     </trpc.Provider>
   );
@@ -128,6 +130,13 @@ function RootLayoutNav() {
               options={{ 
                 title: "Edit Profile",
                 presentation: "modal",
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="help/index" 
+              options={{ 
+                title: "Help & Support",
                 headerShown: false,
               }} 
             />

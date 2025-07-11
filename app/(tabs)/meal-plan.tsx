@@ -12,6 +12,7 @@ import NutritionBar from '@/components/NutritionBar';
 import Colors from '@/constants/colors';
 import { DailyMeals, Recipe, RecipeFilters } from '@/types';
 import * as firebaseService from '@/services/firebaseService';
+import TutorialOverlay from '@/components/TutorialOverlay';
 
 export default function MealPlanScreen() {
   const router = useRouter();
@@ -535,6 +536,7 @@ export default function MealPlanScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TutorialOverlay currentScreen="meal-plan" />
       <View style={styles.header}>
         <Text style={styles.title}>Meal Plan</Text>
         <Text style={styles.subtitle}>Plan your meals for the day</Text>
@@ -562,6 +564,7 @@ export default function MealPlanScreen() {
             disabled={isGenerating || isLoading}
             accessibilityLabel="Generate meal plan"
             accessibilityHint="Automatically generates a meal plan for the selected day"
+            testID="pick-for-me-button"
           >
             {isGenerating ? (
               <ActivityIndicator size="small" color={Colors.white} />
