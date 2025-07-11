@@ -13,10 +13,10 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     // If user is already logged in and completed onboarding, redirect to main app
-    if (isLoggedIn && profile.completedOnboarding) {
+    if (isLoggedIn && profile.onboardingCompleted) {
       router.replace('/(tabs)');
     }
-  }, [isLoggedIn, profile.completedOnboarding]);
+  }, [isLoggedIn, profile.onboardingCompleted]);
 
   const handleGetStarted = () => {
     router.push('/onboarding/personal-info');
