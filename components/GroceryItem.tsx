@@ -54,17 +54,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.borderLight,
   },
   checkboxContainer: {
-    marginRight: 12,
+    marginRight: 16,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
@@ -77,19 +77,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 17,
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: '600',
+    letterSpacing: -0.1,
   },
   itemNameChecked: {
     textDecorationLine: 'line-through',
-    color: Colors.textLight,
+    color: Colors.textMuted,
+    opacity: 0.7,
   },
   itemQuantity: {
-    fontSize: 14,
-    color: Colors.textLight,
+    fontSize: 15,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   removeButton: {
-    padding: 8,
+    padding: 12,
   },
 });
