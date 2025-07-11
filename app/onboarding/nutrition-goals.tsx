@@ -51,13 +51,13 @@ export default function NutritionGoalsScreen() {
       proteinGoal: parseInt(proteinGoal) || profile.proteinGoal,
       carbsGoal: parseInt(carbsGoal) || profile.carbsGoal,
       fatGoal: parseInt(fatGoal) || profile.fatGoal,
-      completedOnboarding: true,
+      onboardingCompleted: true,
     });
     
     // Complete login process
     login({
       ...profile,
-      completedOnboarding: true,
+      onboardingCompleted: true,
     });
     
     // Navigate to main app
