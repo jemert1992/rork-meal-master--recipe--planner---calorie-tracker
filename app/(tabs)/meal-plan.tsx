@@ -914,12 +914,21 @@ const styles = StyleSheet.create({
   },
   generateButton: {
     backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   generateButtonText: {
     color: Colors.white,
-    fontWeight: '600',
-    fontSize: 15,
-    marginLeft: 6,
+    fontWeight: '700',
+    fontSize: 16,
+    marginLeft: 8,
+    letterSpacing: 0.5,
   },
   clearButton: {
     flexDirection: 'row',
