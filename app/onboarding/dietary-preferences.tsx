@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   selectedOption: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.success,
+    backgroundColor: Colors.successLight,
   },
   optionContent: {
     flex: 1,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   selectedAllergyOption: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
   },
   allergyLabel: {
     fontSize: 14,
