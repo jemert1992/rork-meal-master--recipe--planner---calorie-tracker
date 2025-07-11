@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, Alert, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, X } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import RecipeCard from '@/components/RecipeCard';
+import CustomMealForm from '@/components/CustomMealForm';
 import Colors from '@/constants/colors';
+import { MealItem } from '@/types';
 
 export default function AddMealScreen() {
   const { date, mealType } = useLocalSearchParams<{ date: string; mealType?: string }>();
@@ -15,8 +17,6 @@ export default function AddMealScreen() {
   const { addMeal, isRecipeUsedInMealPlan } = useMealPlanStore();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [customName, setCustomName] = useState('');
-  const [customCalories, setCustomCalories] = useState('');
   const [showCustomForm, setShowCustomForm] = useState(false);
   
   const filteredRecipes = recipes.filter(recipe => 
@@ -44,16 +44,9 @@ export default function AddMealScreen() {
     router.back();
   };
   
-  const handleAddCustomMeal = () => {
-    if (!customName.trim()) return;
-    
-    const calories = parseInt(customCalories);
-    
+  const handleAddCustomMeal = (customMeal: MealItem) => {
     if (mealType && ['breakfast', 'lunch', 'dinner'].includes(mealType)) {
-      addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
-        name: customName.trim(),
-        calories: isNaN(calories) ? undefined : calories
-      });
+      addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', customMeal);
     }
     router.back();
   };
@@ -86,41 +79,20 @@ export default function AddMealScreen() {
         <Text style={styles.subtitle}>Select a recipe or add a custom meal</Text>
       </View>
       
-      {showCustomForm ? (
-        <View style={styles.customFormContainer}>
-          <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>Add Custom Meal</Text>
-            <Pressable onPress={() => setShowCustomForm(false)}>
-              <X size={24} color={Colors.textLight} />
-            </Pressable>
-          </View>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Meal name"
-            value={customName}
-            onChangeText={setCustomName}
-            placeholderTextColor={Colors.textLight}
+      <Modal
+        visible={showCustomForm}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <CustomMealForm
+            onSubmit={handleAddCustomMeal}
+            onCancel={() => setShowCustomForm(false)}
           />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Calories (optional)"
-            value={customCalories}
-            onChangeText={setCustomCalories}
-            keyboardType="numeric"
-            placeholderTextColor={Colors.textLight}
-          />
-          
-          <Pressable 
-            style={[styles.addButton, !customName.trim() && styles.addButtonDisabled]} 
-            onPress={handleAddCustomMeal}
-            disabled={!customName.trim()}
-          >
-            <Text style={styles.addButtonText}>Add to Meal Plan</Text>
-          </Pressable>
-        </View>
-      ) : (
+        </SafeAreaView>
+      </Modal>
+      
+      {!showCustomForm && (
         <>
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
@@ -258,49 +230,5 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
   },
-  customFormContainer: {
-    margin: 20,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  formHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    color: Colors.text,
-  },
-  addButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addButtonDisabled: {
-    backgroundColor: Colors.primaryLight,
-  },
-  addButtonText: {
-    color: Colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+
 });

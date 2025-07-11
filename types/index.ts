@@ -74,6 +74,21 @@ export type MealItem = {
   carbs?: number;
   fat?: number;
   fiber?: number;
+  ingredients?: CustomIngredient[];
+  servings?: number;
+  notes?: string;
+};
+
+export type CustomIngredient = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
 };
 
 export type DailyMeals = {

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, Clock, Users, RefreshCw, Check, AlertCircle } from 'lucide-react-native';
+import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
+import MealDetailView from '@/components/MealDetailView';
 import Colors from '@/constants/colors';
 
 type MealPlanItemProps = {
@@ -27,6 +28,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [swappingRecipe, setSwappingRecipe] = useState(false);
   const [alternativesError, setAlternativesError] = useState<string | null>(null);
+  const [showMealDetails, setShowMealDetails] = useState(false);
 
   const formatMealType = (type: string) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
@@ -36,7 +38,8 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
     if (meal?.recipeId) {
       router.push(`/recipe/${meal.recipeId}`);
     } else if (meal) {
-      // Show food details if it's not a recipe
+      // Show custom meal details
+      setShowMealDetails(true);
     } else {
       onAdd();
     }
@@ -149,6 +152,21 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   <Users size={12} color={Colors.textLight} />
                   <Text style={styles.detailText}>{recipe.servings} servings</Text>
                 </View>
+              </View>
+            )}
+            
+            {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
+              <View style={styles.customMealInfo}>
+                <View style={styles.recipeDetail}>
+                  <Info size={12} color={Colors.textLight} />
+                  <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
+                </View>
+                {meal.servings && meal.servings > 1 && (
+                  <View style={styles.recipeDetail}>
+                    <Users size={12} color={Colors.textLight} />
+                    <Text style={styles.detailText}>{meal.servings} servings</Text>
+                  </View>
+                )}
               </View>
             )}
             
@@ -298,6 +316,30 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               </View>
             )}
           </View>
+        </View>
+      </Modal>
+      
+      {/* Custom Meal Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={showMealDetails}
+        onRequestClose={() => setShowMealDetails(false)}
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.mealDetailModal}>
+          <View style={styles.mealDetailHeader}>
+            <Text style={styles.mealDetailTitle}>Meal Details</Text>
+            <Pressable 
+              style={styles.closeButton} 
+              onPress={() => setShowMealDetails(false)}
+              accessibilityLabel="Close"
+              accessibilityRole="button"
+            >
+              <X size={24} color={Colors.text} />
+            </Pressable>
+          </View>
+          {meal && <MealDetailView meal={meal} />}
         </View>
       </Modal>
     </View>
@@ -541,5 +583,28 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  customMealInfo: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  mealDetailModal: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  mealDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  mealDetailTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
   },
 });
