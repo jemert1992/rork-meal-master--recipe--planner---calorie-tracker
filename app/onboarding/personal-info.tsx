@@ -1,10 +1,57 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+
+// Validation constants
+const VALIDATION_RANGES = {
+  age: { min: 13, max: 120 },
+  weight: { min: 50, max: 1000 }, // pounds
+  height: {
+    feet: { min: 3, max: 8 },
+    inches: { min: 0, max: 11 }
+  }
+};
+
+// Validation functions
+const validateAge = (age: string): { isValid: boolean; error?: string } => {
+  const ageNum = parseInt(age);
+  if (isNaN(ageNum)) return { isValid: false, error: 'Please enter a valid age' };
+  if (ageNum < VALIDATION_RANGES.age.min) return { isValid: false, error: `Age must be at least ${VALIDATION_RANGES.age.min}` };
+  if (ageNum > VALIDATION_RANGES.age.max) return { isValid: false, error: `Age must be less than ${VALIDATION_RANGES.age.max}` };
+  return { isValid: true };
+};
+
+const validateWeight = (weight: string): { isValid: boolean; error?: string } => {
+  const weightNum = parseInt(weight);
+  if (isNaN(weightNum)) return { isValid: false, error: 'Please enter a valid weight' };
+  if (weightNum < VALIDATION_RANGES.weight.min) return { isValid: false, error: `Weight must be at least ${VALIDATION_RANGES.weight.min} lbs` };
+  if (weightNum > VALIDATION_RANGES.weight.max) return { isValid: false, error: `Weight must be less than ${VALIDATION_RANGES.weight.max} lbs` };
+  return { isValid: true };
+};
+
+const validateHeight = (feet: string, inches: string): { isValid: boolean; error?: string } => {
+  const feetNum = parseInt(feet);
+  const inchesNum = parseInt(inches);
+  
+  if (isNaN(feetNum)) return { isValid: false, error: 'Please enter valid feet' };
+  if (isNaN(inchesNum)) return { isValid: false, error: 'Please enter valid inches' };
+  
+  if (feetNum < VALIDATION_RANGES.height.feet.min) return { isValid: false, error: `Height must be at least ${VALIDATION_RANGES.height.feet.min} feet` };
+  if (feetNum > VALIDATION_RANGES.height.feet.max) return { isValid: false, error: `Height must be less than ${VALIDATION_RANGES.height.feet.max + 1} feet` };
+  if (inchesNum < VALIDATION_RANGES.height.inches.min) return { isValid: false, error: 'Inches must be 0 or more' };
+  if (inchesNum > VALIDATION_RANGES.height.inches.max) return { isValid: false, error: 'Inches must be 11 or less' };
+  
+  // Additional check for extremely short heights
+  const totalInches = feetNum * 12 + inchesNum;
+  if (totalInches < 36) return { isValid: false, error: 'Height must be at least 3 feet' };
+  if (totalInches > 108) return { isValid: false, error: 'Height must be less than 9 feet' };
+  
+  return { isValid: true };
+};
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
@@ -18,16 +65,39 @@ export default function PersonalInfoScreen() {
   const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [activityLevel, setActivityLevel] = useState<'sedentary' | 'light' | 'moderate' | 'active' | 'very-active' | ''>('');
   
+  // Validation state
+  const ageValidation = validateAge(age);
+  const weightValidation = validateWeight(weightPounds);
+  const heightValidation = validateHeight(heightFeet, heightInches);
+  
   const isFormValid = name.trim() !== '' && 
                       age.trim() !== '' && 
                       weightPounds.trim() !== '' && 
                       heightFeet.trim() !== '' && 
                       heightInches.trim() !== '' && 
                       gender !== '' && 
-                      activityLevel !== '';
+                      activityLevel !== '' &&
+                      ageValidation.isValid &&
+                      weightValidation.isValid &&
+                      heightValidation.isValid;
   
   const handleNext = () => {
-    if (!isFormValid) return;
+    if (!isFormValid) {
+      // Show specific validation errors
+      if (!ageValidation.isValid) {
+        Alert.alert('Invalid Age', ageValidation.error!);
+        return;
+      }
+      if (!weightValidation.isValid) {
+        Alert.alert('Invalid Weight', weightValidation.error!);
+        return;
+      }
+      if (!heightValidation.isValid) {
+        Alert.alert('Invalid Height', heightValidation.error!);
+        return;
+      }
+      return;
+    }
     
     // Update profile with name, age, gender, and activity level
     updateProfile({
@@ -73,25 +143,31 @@ export default function PersonalInfoScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Age</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Your age"
+              style={[styles.input, !ageValidation.isValid && age.trim() !== '' && styles.inputError]}
+              placeholder="Your age (13-120)"
               value={age}
               onChangeText={setAge}
               keyboardType="numeric"
               placeholderTextColor={Colors.textLight}
             />
+            {!ageValidation.isValid && age.trim() !== '' && (
+              <Text style={styles.errorText}>{ageValidation.error}</Text>
+            )}
           </View>
           
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Weight (lbs)</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Weight in pounds"
+              style={[styles.input, !weightValidation.isValid && weightPounds.trim() !== '' && styles.inputError]}
+              placeholder="Weight in pounds (50-1000)"
               value={weightPounds}
               onChangeText={setWeightPounds}
               keyboardType="numeric"
               placeholderTextColor={Colors.textLight}
             />
+            {!weightValidation.isValid && weightPounds.trim() !== '' && (
+              <Text style={styles.errorText}>{weightValidation.error}</Text>
+            )}
           </View>
           
           <View style={styles.inputGroup}>
@@ -99,8 +175,8 @@ export default function PersonalInfoScreen() {
             <View style={styles.heightInputContainer}>
               <View style={styles.heightInput}>
                 <TextInput
-                  style={styles.input}
-                  placeholder="Feet"
+                  style={[styles.input, !heightValidation.isValid && heightFeet.trim() !== '' && heightInches.trim() !== '' && styles.inputError]}
+                  placeholder="Feet (3-8)"
                   value={heightFeet}
                   onChangeText={setHeightFeet}
                   keyboardType="numeric"
@@ -111,8 +187,8 @@ export default function PersonalInfoScreen() {
               
               <View style={styles.heightInput}>
                 <TextInput
-                  style={styles.input}
-                  placeholder="Inches"
+                  style={[styles.input, !heightValidation.isValid && heightFeet.trim() !== '' && heightInches.trim() !== '' && styles.inputError]}
+                  placeholder="Inches (0-11)"
                   value={heightInches}
                   onChangeText={setHeightInches}
                   keyboardType="numeric"
@@ -121,6 +197,9 @@ export default function PersonalInfoScreen() {
                 <Text style={styles.heightUnit}>in</Text>
               </View>
             </View>
+            {!heightValidation.isValid && heightFeet.trim() !== '' && heightInches.trim() !== '' && (
+              <Text style={styles.errorText}>{heightValidation.error}</Text>
+            )}
           </View>
           
           <View style={styles.inputGroup}>
@@ -358,5 +437,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
     marginRight: 8,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
