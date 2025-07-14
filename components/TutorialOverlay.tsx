@@ -37,7 +37,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   
   const currentStepData = steps[currentStep];
   const isCurrentScreen = currentStepData?.screen === currentScreen;
-  const shouldShow = showTutorial && isCurrentScreen;
+  const shouldShow = showTutorial && isCurrentScreen && !tutorialCompleted;
   
   console.log('TutorialOverlay render:', { 
     showTutorial, 
@@ -46,7 +46,8 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
     currentStepScreen: currentStepData?.screen,
     isCurrentScreen, 
     shouldShow,
-    tutorialCompleted
+    tutorialCompleted,
+    stepsLength: steps.length
   });
   
   useEffect(() => {
@@ -71,8 +72,11 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   }, [shouldShow, fadeAnim, scaleAnim]);
   
   if (!shouldShow || !currentStepData) {
+    console.log('TutorialOverlay not showing because:', { shouldShow, hasCurrentStepData: !!currentStepData });
     return null;
   }
+  
+  console.log('TutorialOverlay WILL SHOW with step:', currentStepData);
   
   // Safety check - don't show if tutorial is completed
   if (tutorialCompleted) {
@@ -101,9 +105,9 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   return (
     <Modal
       visible={shouldShow}
-      transparent
-      animationType="none"
-      statusBarTranslucent
+      transparent={true}
+      animationType="fade"
+      statusBarTranslucent={true}
       presentationStyle="overFullScreen"
     >
       <Animated.View
@@ -207,6 +211,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 9999,
   },
   androidBlur: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',

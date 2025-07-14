@@ -38,6 +38,11 @@ export default function WelcomeScreen() {
     }
   }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome]);
   
+  // Debug effect to monitor tutorial state changes
+  useEffect(() => {
+    console.log('Tutorial state changed:', { showTutorial, currentStep: useTutorialStore.getState().currentStep });
+  }, [showTutorial]);
+  
   // Handle redirect to onboarding after tutorial completion
   useEffect(() => {
     if (shouldRedirectToOnboarding && tutorialCompleted) {
@@ -59,8 +64,19 @@ export default function WelcomeScreen() {
   const handleGetStarted = () => {
     console.log('handleGetStarted called');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, isFirstLaunch });
-    // Always start tutorial first on first launch
+    
+    // Add alert to confirm button press
+    alert('Starting tutorial...');
+    
+    // Start tutorial immediately
     startTutorial();
+    
+    // Check state after a delay
+    setTimeout(() => {
+      const state = useTutorialStore.getState();
+      console.log('Tutorial state after start:', state);
+      alert(`Tutorial state: showTutorial=${state.showTutorial}, currentStep=${state.currentStep}`);
+    }, 500);
   };
 
   const handleSkipToOnboarding = () => {
@@ -141,10 +157,6 @@ onPress={() => {
               console.log('Start Tutorial button pressed');
               console.log('Tutorial store state before start:', { showTutorial, tutorialCompleted, isFirstLaunch });
               handleGetStarted();
-              // Add a small delay to check if state changed
-              setTimeout(() => {
-                console.log('Tutorial store state after start:', { showTutorial, tutorialCompleted, isFirstLaunch });
-              }, 100);
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >

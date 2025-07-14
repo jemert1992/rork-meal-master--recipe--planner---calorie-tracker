@@ -172,12 +172,19 @@ export const useTutorialStore = create<TutorialState>()(
         console.log('Starting tutorial');
         const currentState = get();
         console.log('Current state before starting tutorial:', currentState);
+        
+        // Force reset to ensure clean state
+        const resetSteps = TUTORIAL_STEPS.map(step => ({ ...step, completed: false }));
+        
         set({
           showTutorial: true,
           showWelcome: false,
           currentStep: 0,
           isFirstLaunch: false,
+          tutorialCompleted: false,
+          steps: resetSteps,
         });
+        
         // Log state after setting
         setTimeout(() => {
           const newState = get();
