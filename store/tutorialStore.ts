@@ -39,25 +39,49 @@ interface TutorialState {
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    id: 'app-welcome',
+    id: 'welcome-intro',
     title: 'Welcome to Zestora! 🎉',
-    description: 'Your personal meal planning and nutrition tracking companion. Let\'s explore what makes Zestora special!',
+    description: 'Your personal meal planning and nutrition tracking companion. We\'re here to make healthy eating simple and enjoyable!',
     screen: 'welcome',
     position: 'center',
     completed: false,
   },
   {
-    id: 'features-overview',
-    title: 'Powerful Features Await',
-    description: 'Smart nutrition tracking, meal planning, auto grocery lists, and AI recommendations - all designed to make healthy eating effortless.',
+    id: 'features-nutrition',
+    title: 'Smart Nutrition Tracking 📊',
+    description: 'Track calories, macros, and nutrients effortlessly. Our AI analyzes your eating patterns and provides personalized insights.',
+    screen: 'welcome',
+    position: 'center',
+    completed: false,
+  },
+  {
+    id: 'features-planning',
+    title: 'Weekly Meal Planning 📅',
+    description: 'Plan your entire week with drag-and-drop simplicity. Get personalized recipe recommendations based on your goals.',
+    screen: 'welcome',
+    position: 'center',
+    completed: false,
+  },
+  {
+    id: 'features-grocery',
+    title: 'Auto Grocery Lists 🛒',
+    description: 'Never forget ingredients again! Your shopping list is automatically generated from your meal plans.',
+    screen: 'welcome',
+    position: 'center',
+    completed: false,
+  },
+  {
+    id: 'features-ai',
+    title: 'AI Recommendations ✨',
+    description: 'Get personalized meal suggestions, recipe modifications, and nutrition advice tailored to your preferences and goals.',
     screen: 'welcome',
     position: 'center',
     completed: false,
   },
   {
     id: 'ready-to-start',
-    title: 'Ready to Begin?',
-    description: 'Now let\'s set up your profile and explore your new recipe dashboard. The journey to better nutrition starts here!',
+    title: 'Ready to Transform Your Health? 🚀',
+    description: 'Let\'s set up your profile and start your journey to better nutrition. Your healthiest self is just a few steps away!',
     screen: 'welcome',
     position: 'center',
     completed: false,
@@ -248,9 +272,11 @@ export const useTutorialStore = create<TutorialState>()(
         const { isFirstLaunch, tutorialCompleted, showTutorial, showWelcome } = get();
         console.log('Checking if should start tutorial:', { isFirstLaunch, tutorialCompleted, showTutorial, showWelcome });
         
-        if (isFirstLaunch && !tutorialCompleted && !showTutorial && !showWelcome) {
-          console.log('Auto-starting tutorial');
-          set({ showTutorial: true });
+        // On first launch, don't auto-start tutorial - let user choose
+        // The welcome screen will handle tutorial initiation
+        if (isFirstLaunch && !tutorialCompleted) {
+          console.log('First launch detected - welcome screen will handle tutorial');
+          // Don't auto-start, let the welcome screen handle it
         }
       },
     }),
