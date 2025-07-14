@@ -169,27 +169,23 @@ export const useTutorialStore = create<TutorialState>()(
       shouldRedirectToOnboarding: false,
       
       startTutorial: () => {
-        console.log('Starting tutorial');
-        const currentState = get();
-        console.log('Current state before starting tutorial:', currentState);
-        
-        // Force reset to ensure clean state
-        const resetSteps = TUTORIAL_STEPS.map(step => ({ ...step, completed: false }));
+        console.log('Starting tutorial - setting showTutorial to true');
         
         set({
           showTutorial: true,
           showWelcome: false,
           currentStep: 0,
-          isFirstLaunch: false,
           tutorialCompleted: false,
-          steps: resetSteps,
+          isFirstLaunch: false,
         });
         
-        // Log state after setting
-        setTimeout(() => {
-          const newState = get();
-          console.log('State after starting tutorial:', newState);
-        }, 50);
+        // Log the state immediately after setting
+        const newState = get();
+        console.log('Tutorial started - new state:', {
+          showTutorial: newState.showTutorial,
+          currentStep: newState.currentStep,
+          tutorialCompleted: newState.tutorialCompleted
+        });
       },
       
       nextStep: () => {
@@ -283,15 +279,7 @@ export const useTutorialStore = create<TutorialState>()(
       },
       
       checkAndStartTutorial: () => {
-        const { isFirstLaunch, tutorialCompleted, showTutorial, showWelcome } = get();
-        console.log('Checking if should start tutorial:', { isFirstLaunch, tutorialCompleted, showTutorial, showWelcome });
-        
-        // On first launch, don't auto-start tutorial - let user choose
-        // The welcome screen will handle tutorial initiation
-        if (isFirstLaunch && !tutorialCompleted) {
-          console.log('First launch detected - welcome screen will handle tutorial');
-          // Don't auto-start, let the welcome screen handle it
-        }
+        // No auto-start - user must manually start tutorial
       },
     }),
     {

@@ -21,6 +21,7 @@ export default function WelcomeScreen() {
     tutorialCompleted, 
     showWelcome, 
     showTutorial, 
+    currentStep,
     startTutorial,
     skipTutorial,
     setShowTutorial,
@@ -38,10 +39,18 @@ export default function WelcomeScreen() {
     }
   }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome]);
   
-  // Debug effect to monitor tutorial state changes
+  // Debug tutorial state
   useEffect(() => {
-    console.log('Tutorial state changed:', { showTutorial, currentStep: useTutorialStore.getState().currentStep });
-  }, [showTutorial]);
+    console.log('Tutorial debug:', {
+      showTutorial,
+      currentStep,
+      tutorialCompleted,
+      stepsLength: useTutorialStore.getState().steps.length,
+      firstStep: useTutorialStore.getState().steps[0]
+    });
+  }, [showTutorial, currentStep, tutorialCompleted]);
+  
+
   
   // Handle redirect to onboarding after tutorial completion
   useEffect(() => {
@@ -51,32 +60,11 @@ export default function WelcomeScreen() {
     }
   }, [shouldRedirectToOnboarding, tutorialCompleted, setShouldRedirectToOnboarding, router]);
 
-  // Show tutorial on first launch
-  useEffect(() => {
-    // Small delay to ensure everything is loaded
-    const timer = setTimeout(() => {
-      checkAndStartTutorial();
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [checkAndStartTutorial]);
+  // Don't auto-start tutorial - let user choose
 
   const handleGetStarted = () => {
-    console.log('handleGetStarted called');
-    console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, isFirstLaunch });
-    
-    // Add alert to confirm button press
-    alert('Starting tutorial...');
-    
-    // Start tutorial immediately
+    console.log('Starting tutorial...');
     startTutorial();
-    
-    // Check state after a delay
-    setTimeout(() => {
-      const state = useTutorialStore.getState();
-      console.log('Tutorial state after start:', state);
-      alert(`Tutorial state: showTutorial=${state.showTutorial}, currentStep=${state.currentStep}`);
-    }, 500);
   };
 
   const handleSkipToOnboarding = () => {
@@ -153,11 +141,7 @@ export default function WelcomeScreen() {
               styles.startButton,
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
-onPress={() => {
-              console.log('Start Tutorial button pressed');
-              console.log('Tutorial store state before start:', { showTutorial, tutorialCompleted, isFirstLaunch });
-              handleGetStarted();
-            }}
+onPress={handleGetStarted}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <LinearGradient

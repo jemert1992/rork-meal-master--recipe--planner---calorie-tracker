@@ -35,9 +35,9 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   
-  const currentStepData = steps[currentStep];
+  const currentStepData = steps[currentStep] || steps[0];
   const isCurrentScreen = currentStepData?.screen === currentScreen;
-  const shouldShow = showTutorial && isCurrentScreen && !tutorialCompleted;
+  const shouldShow = showTutorial && isCurrentScreen && !tutorialCompleted && currentStepData;
   
   console.log('TutorialOverlay render:', { 
     showTutorial, 
@@ -72,7 +72,14 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   }, [shouldShow, fadeAnim, scaleAnim]);
   
   if (!shouldShow || !currentStepData) {
-    console.log('TutorialOverlay not showing because:', { shouldShow, hasCurrentStepData: !!currentStepData });
+    console.log('TutorialOverlay not showing because:', { 
+      shouldShow, 
+      hasCurrentStepData: !!currentStepData,
+      showTutorial,
+      isCurrentScreen,
+      tutorialCompleted,
+      currentStepData: currentStepData ? { id: currentStepData.id, screen: currentStepData.screen } : null
+    });
     return null;
   }
   
