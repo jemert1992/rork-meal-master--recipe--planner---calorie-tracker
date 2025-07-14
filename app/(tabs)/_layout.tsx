@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-
+import { useUserStore } from '@/store/userStore';
+import { useTutorialStore } from '@/store/tutorialStore';
 
 export default function TabLayout() {
-
+  const { profile } = useUserStore();
+  const { checkShouldShowWelcome } = useTutorialStore();
+  
+  useEffect(() => {
+    // Check if we should show the welcome tutorial after onboarding is completed
+    if (profile.onboardingCompleted) {
+      checkShouldShowWelcome(true);
+    }
+  }, [profile.onboardingCompleted, checkShouldShowWelcome]);
   
   return (
     <Tabs

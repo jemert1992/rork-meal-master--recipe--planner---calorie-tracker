@@ -15,13 +15,15 @@ import { useTutorialStore } from '@/store/tutorialStore';
 import Colors from '@/constants/colors';
 
 export default function TutorialWelcome() {
-  const { isFirstLaunch, startTutorial, skipTutorial } = useTutorialStore();
+  const { showWelcome, startTutorial, skipTutorial } = useTutorialStore();
+  
+  console.log('TutorialWelcome render:', { showWelcome });
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   
   useEffect(() => {
-    if (isFirstLaunch) {
+    if (showWelcome) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -35,23 +37,25 @@ export default function TutorialWelcome() {
         }),
       ]).start();
     }
-  }, [isFirstLaunch, fadeAnim, slideAnim]);
+  }, [showWelcome, fadeAnim, slideAnim]);
   
-  if (!isFirstLaunch) {
+  if (!showWelcome) {
     return null;
   }
   
   const handleStartTutorial = () => {
+    console.log('Starting tutorial from welcome screen');
     startTutorial();
   };
   
   const handleSkip = () => {
+    console.log('Skipping tutorial from welcome screen');
     skipTutorial();
   };
   
   return (
     <Modal
-      visible={isFirstLaunch}
+      visible={showWelcome}
       animationType="none"
       statusBarTranslucent
     >

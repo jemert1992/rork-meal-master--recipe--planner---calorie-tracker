@@ -18,6 +18,7 @@ interface TutorialState {
   currentStep: number;
   tutorialCompleted: boolean;
   showTutorial: boolean;
+  showWelcome: boolean;
   steps: TutorialStep[];
   
   // Actions
@@ -29,6 +30,7 @@ interface TutorialState {
   resetTutorial: () => void;
   setShowTutorial: (show: boolean) => void;
   markStepCompleted: (stepId: string) => void;
+  checkShouldShowWelcome: (onboardingCompleted: boolean) => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -118,11 +120,14 @@ export const useTutorialStore = create<TutorialState>()(
       currentStep: 0,
       tutorialCompleted: false,
       showTutorial: false,
+      showWelcome: false,
       steps: TUTORIAL_STEPS,
       
       startTutorial: () => {
+        console.log('Starting tutorial');
         set({
           showTutorial: true,
+          showWelcome: false,
           currentStep: 0,
           isFirstLaunch: false,
         });
@@ -147,6 +152,7 @@ export const useTutorialStore = create<TutorialState>()(
       skipTutorial: () => {
         set({
           showTutorial: false,
+          showWelcome: false,
           tutorialCompleted: true,
           isFirstLaunch: false,
         });
@@ -155,16 +161,20 @@ export const useTutorialStore = create<TutorialState>()(
       completeTutorial: () => {
         set({
           showTutorial: false,
+          showWelcome: false,
           tutorialCompleted: true,
           currentStep: 0,
         });
       },
       
       resetTutorial: () => {
+        console.log('Resetting tutorial');
         set({
           currentStep: 0,
           tutorialCompleted: false,
           showTutorial: false,
+          showWelcome: true,
+          isFirstLaunch: true,
           steps: TUTORIAL_STEPS.map(step => ({ ...step, completed: false })),
         });
       },
@@ -179,6 +189,15 @@ export const useTutorialStore = create<TutorialState>()(
             step.id === stepId ? { ...step, completed: true } : step
           ),
         }));
+      },
+      
+      checkShouldShowWelcome: (onboardingCompleted: boolean) => {
+        const { isFirstLaunch, tutorialCompleted, showWelcome } = get();
+        console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome });
+        if (onboardingCompleted && isFirstLaunch && !tutorialCompleted && !showWelcome) {
+          console.log('Setting showWelcome to true');
+          set({ showWelcome: true });
+        }
       },
     }),
     {

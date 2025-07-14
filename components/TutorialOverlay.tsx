@@ -38,6 +38,15 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   const isCurrentScreen = currentStepData?.screen === currentScreen;
   const shouldShow = showTutorial && isCurrentScreen;
   
+  console.log('TutorialOverlay render:', { 
+    showTutorial, 
+    currentScreen, 
+    currentStep, 
+    currentStepScreen: currentStepData?.screen,
+    isCurrentScreen, 
+    shouldShow 
+  });
+  
   useEffect(() => {
     if (shouldShow) {
       Animated.parallel([
@@ -69,8 +78,8 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   
   const getModalPosition = () => {
     const isSmallScreen = screenHeight < 700;
-    const topPadding = isSmallScreen ? 80 : 120;
-    const bottomPadding = isSmallScreen ? 80 : 120;
+    const topPadding = isSmallScreen ? 120 : 160;
+    const bottomPadding = isSmallScreen ? 120 : 160;
     
     switch (currentStepData.position) {
       case 'top':
@@ -78,7 +87,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
       case 'bottom':
         return { justifyContent: 'flex-end', paddingBottom: bottomPadding };
       default:
-        return { justifyContent: 'center' };
+        return { justifyContent: 'center', paddingHorizontal: 20 };
     }
   };
   
@@ -194,7 +203,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   tutorialCard: {
     backgroundColor: Colors.white,
@@ -205,10 +214,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
-    maxWidth: screenWidth < 380 ? screenWidth - 40 : 380,
+    maxWidth: screenWidth < 380 ? screenWidth - 40 : 400,
     alignSelf: 'center',
     width: '100%',
-    marginHorizontal: 20,
+    minHeight: 220,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -278,6 +287,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+    marginTop: 8,
   },
   buttonSpacer: {
     flex: 1,
@@ -286,11 +296,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 12,
-    minWidth: 100,
+    minWidth: 120,
     justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   primaryButtonText: {
     color: Colors.white,
@@ -301,11 +316,12 @@ const styles = StyleSheet.create({
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.primary,
+    backgroundColor: Colors.white,
   },
   secondaryButtonText: {
     color: Colors.primary,
