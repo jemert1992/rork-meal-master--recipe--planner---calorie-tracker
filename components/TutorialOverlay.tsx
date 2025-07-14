@@ -37,7 +37,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   
   const currentStepData = steps[currentStep] || steps[0];
   const isCurrentScreen = currentStepData?.screen === currentScreen;
-  const shouldShow = showTutorial && isCurrentScreen && !tutorialCompleted && currentStepData;
+  const shouldShow = showTutorial && isCurrentScreen && !tutorialCompleted && !!currentStepData;
   
   console.log('TutorialOverlay render:', { 
     showTutorial, 
