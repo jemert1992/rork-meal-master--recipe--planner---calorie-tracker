@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
+    paddingRight: 40, // Add padding to avoid overlap with close button
   },
   progressBar: {
     flex: 1,
@@ -302,10 +303,16 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 8,
+    top: 20,
+    right: 20,
+    padding: 4,
     zIndex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
