@@ -19,17 +19,22 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenHeight < 700;
 
 export default function TutorialWelcome() {
-  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial } = useTutorialStore();
+  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial } = useTutorialStore();
   
-  console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted });
+  console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial });
   
-  // Don't render if tutorial is completed or not first launch
-  if (tutorialCompleted || !isFirstLaunch) {
+  // Don't render if tutorial is completed
+  if (tutorialCompleted) {
     return null;
   }
   
-  // Safety check - if showWelcome is false, don't render
-  if (!showWelcome) {
+  // Don't render if tutorial overlay is showing
+  if (showTutorial) {
+    return null;
+  }
+  
+  // Don't render if not first launch and welcome is not explicitly shown
+  if (!isFirstLaunch && !showWelcome) {
     return null;
   }
   
@@ -79,9 +84,16 @@ export default function TutorialWelcome() {
     skipTutorial();
   };
   
+  // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
+  const shouldShow = showWelcome && !showTutorial;
+  
+  if (!shouldShow) {
+    return null;
+  }
+  
   return (
     <Modal
-      visible={showWelcome}
+      visible={shouldShow}
       animationType="none"
       statusBarTranslucent
     >

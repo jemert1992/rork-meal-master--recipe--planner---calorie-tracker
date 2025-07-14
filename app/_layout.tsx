@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import Colors from "@/constants/colors";
 import { useUserStore } from "@/store/userStore";
+import { useTutorialStore } from "@/store/tutorialStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const { isLoggedIn, profile } = useUserStore();
+  const { tutorialCompleted } = useTutorialStore();
   const showOnboarding = !isLoggedIn || !profile.onboardingCompleted;
 
   return (

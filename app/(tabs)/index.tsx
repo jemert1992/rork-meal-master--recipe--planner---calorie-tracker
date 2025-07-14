@@ -94,10 +94,11 @@ export default function RecipesScreen() {
     checkEdamamCredentials();
   }, []);
 
-  // Check if tutorial welcome should be shown
+  // Check if tutorial welcome should be shown after onboarding
   useEffect(() => {
     console.log('Home screen tutorial check:', { isLoggedIn, onboardingCompleted: profile.onboardingCompleted, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch });
-    if (isLoggedIn && profile.onboardingCompleted) {
+    if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted) {
+      // Show tutorial welcome after onboarding is completed
       checkShouldShowWelcome(profile.onboardingCompleted);
     }
   }, [isLoggedIn, profile.onboardingCompleted, checkShouldShowWelcome, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch]);

@@ -20,6 +20,7 @@ interface TutorialState {
   showTutorial: boolean;
   showWelcome: boolean;
   steps: TutorialStep[];
+  shouldRedirectToOnboarding: boolean;
   
   // Actions
   startTutorial: () => void;
@@ -32,21 +33,39 @@ interface TutorialState {
   markStepCompleted: (stepId: string) => void;
   checkShouldShowWelcome: (onboardingCompleted: boolean) => void;
   forceHideTutorial: () => void;
+  setShouldRedirectToOnboarding: (should: boolean) => void;
+  checkAndStartTutorial: () => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    id: 'welcome',
+    id: 'app-welcome',
     title: 'Welcome to Zestora! 🎉',
-    description: 'Your personal meal planning and nutrition tracking companion. Let\'s take a quick tour!',
-    screen: 'home',
+    description: 'Your personal meal planning and nutrition tracking companion. Let\'s explore what makes Zestora special!',
+    screen: 'welcome',
     position: 'center',
     completed: false,
   },
   {
-    id: 'home-overview',
+    id: 'features-overview',
+    title: 'Powerful Features Await',
+    description: 'Smart nutrition tracking, meal planning, auto grocery lists, and AI recommendations - all designed to make healthy eating effortless.',
+    screen: 'welcome',
+    position: 'center',
+    completed: false,
+  },
+  {
+    id: 'ready-to-start',
+    title: 'Ready to Begin?',
+    description: 'Now let\'s set up your profile and explore your new recipe dashboard. The journey to better nutrition starts here!',
+    screen: 'welcome',
+    position: 'center',
+    completed: false,
+  },
+  {
+    id: 'home-welcome',
     title: 'Your Recipe Dashboard',
-    description: 'Discover thousands of recipes, browse by categories, and find meals that match your dietary preferences and fitness goals.',
+    description: 'Welcome to your recipe hub! Discover thousands of recipes, browse by categories, and find meals that match your goals.',
     screen: 'home',
     position: 'center',
     completed: false,
@@ -123,6 +142,7 @@ export const useTutorialStore = create<TutorialState>()(
       showTutorial: false,
       showWelcome: false,
       steps: TUTORIAL_STEPS,
+      shouldRedirectToOnboarding: false,
       
       startTutorial: () => {
         console.log('Starting tutorial');
@@ -160,11 +180,20 @@ export const useTutorialStore = create<TutorialState>()(
       },
       
       completeTutorial: () => {
+        console.log('Completing tutorial');
+        const { steps, currentStep } = get();
+        const currentStepData = steps[currentStep];
+        
+        // If completing tutorial on welcome screen, set redirect flag
+        const shouldRedirect = currentStepData?.screen === 'welcome';
+        
         set({
           showTutorial: false,
           showWelcome: false,
           tutorialCompleted: true,
           currentStep: 0,
+          isFirstLaunch: false,
+          shouldRedirectToOnboarding: shouldRedirect,
         });
       },
       
@@ -181,6 +210,7 @@ export const useTutorialStore = create<TutorialState>()(
       },
       
       setShowTutorial: (show: boolean) => {
+        console.log('Setting showTutorial to:', show);
         set({ showTutorial: show });
       },
       
@@ -195,8 +225,9 @@ export const useTutorialStore = create<TutorialState>()(
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
         const { isFirstLaunch, tutorialCompleted, showWelcome } = get();
         console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome });
-        if (onboardingCompleted && isFirstLaunch && !tutorialCompleted) {
-          console.log('Setting showWelcome to true');
+        // Only show welcome after onboarding is completed, if tutorial hasn't been completed
+        if (onboardingCompleted && !tutorialCompleted && !showWelcome) {
+          console.log('Setting showWelcome to true after onboarding');
           set({ showWelcome: true });
         }
       },
@@ -207,6 +238,20 @@ export const useTutorialStore = create<TutorialState>()(
           showTutorial: false,
           showWelcome: false,
         });
+      },
+      
+      setShouldRedirectToOnboarding: (should: boolean) => {
+        set({ shouldRedirectToOnboarding: should });
+      },
+      
+      checkAndStartTutorial: () => {
+        const { isFirstLaunch, tutorialCompleted, showTutorial, showWelcome } = get();
+        console.log('Checking if should start tutorial:', { isFirstLaunch, tutorialCompleted, showTutorial, showWelcome });
+        
+        if (isFirstLaunch && !tutorialCompleted && !showTutorial && !showWelcome) {
+          console.log('Auto-starting tutorial');
+          set({ showTutorial: true });
+        }
       },
     }),
     {

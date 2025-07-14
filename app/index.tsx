@@ -5,6 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Target, Calendar, ShoppingCart, Sparkles, ArrowRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
+import { useTutorialStore } from '@/store/tutorialStore';
+import TutorialWelcome from '@/components/TutorialWelcome';
+import TutorialOverlay from '@/components/TutorialOverlay';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -13,21 +16,65 @@ const isSmallScreen = screenHeight < 700;
 export default function WelcomeScreen() {
   const router = useRouter();
   const { isLoggedIn, profile } = useUserStore();
+  const { 
+    isFirstLaunch, 
+    tutorialCompleted, 
+    showWelcome, 
+    showTutorial, 
+    startTutorial,
+    skipTutorial,
+    setShowTutorial,
+    shouldRedirectToOnboarding,
+    setShouldRedirectToOnboarding,
+    checkAndStartTutorial
+  } = useTutorialStore();
 
   useEffect(() => {
     // If user is already logged in and completed onboarding, redirect to main app
-    if (isLoggedIn && profile.onboardingCompleted) {
+    if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted) {
       router.replace('/(tabs)');
     }
-  }, [isLoggedIn, profile.onboardingCompleted]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted]);
+  
+  // Handle redirect to onboarding after tutorial completion
+  useEffect(() => {
+    if (shouldRedirectToOnboarding && tutorialCompleted) {
+      setShouldRedirectToOnboarding(false);
+      router.push('/onboarding/personal-info');
+    }
+  }, [shouldRedirectToOnboarding, tutorialCompleted, setShouldRedirectToOnboarding, router]);
+
+  // Show tutorial on first launch
+  useEffect(() => {
+    // Small delay to ensure everything is loaded
+    const timer = setTimeout(() => {
+      checkAndStartTutorial();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [checkAndStartTutorial]);
 
   const handleGetStarted = () => {
+    // If tutorial is not completed, start tutorial first
+    if (!tutorialCompleted) {
+      startTutorial();
+    } else {
+      router.push('/onboarding/personal-info');
+    }
+  };
+
+  const handleSkipToOnboarding = () => {
+    skipTutorial();
     router.push('/onboarding/personal-info');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
+      
+      {/* Tutorial Components */}
+      <TutorialWelcome />
+      <TutorialOverlay currentScreen="welcome" />
       
       <LinearGradient
         colors={[Colors.background, Colors.primaryLight]}
@@ -96,7 +143,9 @@ export default function WelcomeScreen() {
             Ready to transform your eating habits?
           </Text>
           <Text style={styles.ctaSubtitle}>
-            Let's take a quick tour to get you started!
+            {tutorialCompleted 
+              ? "Let's set up your profile to get started!" 
+              : "Let's take a quick tour to get you started!"}
           </Text>
         </View>
       </ScrollView>
@@ -108,10 +157,18 @@ export default function WelcomeScreen() {
             colors={[Colors.primary, Colors.primaryDark]}
             style={styles.buttonGradient}
           >
-            <Text style={styles.buttonText}>Start Tutorial</Text>
+            <Text style={styles.buttonText}>
+              {tutorialCompleted ? "Get Started" : "Start Tutorial"}
+            </Text>
             <ArrowRight size={20} color={Colors.white} />
           </LinearGradient>
         </Pressable>
+        
+        {!tutorialCompleted && (
+          <Pressable style={styles.skipButton} onPress={handleSkipToOnboarding}>
+            <Text style={styles.skipButtonText}>Skip Tutorial</Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -272,5 +329,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 18,
     marginRight: 8,
+  },
+  skipButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  skipButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    textDecorationLine: 'underline',
   },
 });

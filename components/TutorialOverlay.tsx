@@ -177,7 +177,9 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
               
               {isLastStep ? (
                 <Pressable style={styles.primaryButton} onPress={completeTutorial}>
-                  <Text style={styles.primaryButtonText}>Get Started</Text>
+                  <Text style={styles.primaryButtonText}>
+                    {currentScreen === 'welcome' ? 'Continue to App' : 'Get Started'}
+                  </Text>
                   <ArrowRight size={16} color={Colors.white} />
                 </Pressable>
               ) : (
