@@ -13,6 +13,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { ArrowRight, Sparkles, Target, Calendar, ShoppingCart } from 'lucide-react-native';
 import { useTutorialStore } from '@/store/tutorialStore';
+import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -20,8 +21,9 @@ const isSmallScreen = screenHeight < 700;
 
 export default function TutorialWelcome() {
   const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial } = useTutorialStore();
+  const { isLoggedIn, profile } = useUserStore();
   
-  console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial });
+  console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
   
   // Don't render if tutorial is completed
   if (tutorialCompleted) {
@@ -30,6 +32,11 @@ export default function TutorialWelcome() {
   
   // Don't render if tutorial overlay is showing
   if (showTutorial) {
+    return null;
+  }
+  
+  // Don't render if user hasn't completed onboarding yet (main welcome screen handles this)
+  if (!isLoggedIn || !profile.onboardingCompleted) {
     return null;
   }
   

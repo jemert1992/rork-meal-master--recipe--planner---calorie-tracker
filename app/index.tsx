@@ -26,15 +26,17 @@ export default function WelcomeScreen() {
     setShowTutorial,
     shouldRedirectToOnboarding,
     setShouldRedirectToOnboarding,
-    checkAndStartTutorial
+    checkAndStartTutorial,
+    resetTutorial
   } = useTutorialStore();
 
   useEffect(() => {
+    console.log('Welcome screen state:', { isLoggedIn, onboardingCompleted: profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome });
     // If user is already logged in and completed onboarding, redirect to main app
     if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted) {
       router.replace('/(tabs)');
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome]);
   
   // Handle redirect to onboarding after tutorial completion
   useEffect(() => {
@@ -55,6 +57,8 @@ export default function WelcomeScreen() {
   }, [checkAndStartTutorial]);
 
   const handleGetStarted = () => {
+    console.log('handleGetStarted called');
+    console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, isFirstLaunch });
     // Always start tutorial first on first launch
     startTutorial();
   };
@@ -67,9 +71,6 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      
-      {/* Tutorial Components */}
-      <TutorialOverlay currentScreen="welcome" />
       
       {/* Background with subtle pattern */}
       <LinearGradient
@@ -131,7 +132,17 @@ export default function WelcomeScreen() {
             Ready to transform your eating habits?
           </Text>
           
-          <Pressable style={styles.startButton} onPress={handleGetStarted}>
+          <Pressable 
+            style={({ pressed }) => [
+              styles.startButton,
+              pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+            ]}
+            onPress={() => {
+              console.log('Start Tutorial button pressed');
+              handleGetStarted();
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <LinearGradient
               colors={[Colors.primary, Colors.primaryDark]}
               style={styles.buttonGradient}
@@ -144,8 +155,22 @@ export default function WelcomeScreen() {
           <Pressable style={styles.skipButton} onPress={handleSkipToOnboarding}>
             <Text style={styles.skipButtonText}>Skip to Setup</Text>
           </Pressable>
+          
+          {/* Debug button - temporary */}
+          <Pressable 
+            style={[styles.skipButton, { backgroundColor: 'red', marginTop: 10, padding: 10 }]} 
+            onPress={() => {
+              console.log('DEBUG: Button press works!');
+              alert('Button press works!');
+            }}
+          >
+            <Text style={[styles.skipButtonText, { color: 'white' }]}>DEBUG: Test Button</Text>
+          </Pressable>
         </View>
       </View>
+      
+      {/* Tutorial Components - moved to end to avoid blocking */}
+      <TutorialOverlay currentScreen="welcome" />
     </SafeAreaView>
   );
 }

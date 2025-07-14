@@ -45,7 +45,8 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
     currentStep, 
     currentStepScreen: currentStepData?.screen,
     isCurrentScreen, 
-    shouldShow 
+    shouldShow,
+    tutorialCompleted
   });
   
   useEffect(() => {
@@ -103,6 +104,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
       transparent
       animationType="none"
       statusBarTranslucent
+      presentationStyle="overFullScreen"
     >
       <Animated.View
         style={[
