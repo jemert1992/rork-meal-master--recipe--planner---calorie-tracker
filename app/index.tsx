@@ -137,9 +137,14 @@ export default function WelcomeScreen() {
               styles.startButton,
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
-            onPress={() => {
+onPress={() => {
               console.log('Start Tutorial button pressed');
+              console.log('Tutorial store state before start:', { showTutorial, tutorialCompleted, isFirstLaunch });
               handleGetStarted();
+              // Add a small delay to check if state changed
+              setTimeout(() => {
+                console.log('Tutorial store state after start:', { showTutorial, tutorialCompleted, isFirstLaunch });
+              }, 100);
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -154,17 +159,6 @@ export default function WelcomeScreen() {
           
           <Pressable style={styles.skipButton} onPress={handleSkipToOnboarding}>
             <Text style={styles.skipButtonText}>Skip to Setup</Text>
-          </Pressable>
-          
-          {/* Debug button - temporary */}
-          <Pressable 
-            style={[styles.skipButton, { backgroundColor: 'red', marginTop: 10, padding: 10 }]} 
-            onPress={() => {
-              console.log('DEBUG: Button press works!');
-              alert('Button press works!');
-            }}
-          >
-            <Text style={[styles.skipButtonText, { color: 'white' }]}>DEBUG: Test Button</Text>
           </Pressable>
         </View>
       </View>

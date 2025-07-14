@@ -170,12 +170,19 @@ export const useTutorialStore = create<TutorialState>()(
       
       startTutorial: () => {
         console.log('Starting tutorial');
+        const currentState = get();
+        console.log('Current state before starting tutorial:', currentState);
         set({
           showTutorial: true,
           showWelcome: false,
           currentStep: 0,
           isFirstLaunch: false,
         });
+        // Log state after setting
+        setTimeout(() => {
+          const newState = get();
+          console.log('State after starting tutorial:', newState);
+        }, 50);
       },
       
       nextStep: () => {
