@@ -8,16 +8,20 @@ import {
   Animated,
   Image,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { ArrowRight, Sparkles, Target, Calendar, ShoppingCart } from 'lucide-react-native';
 import { useTutorialStore } from '@/store/tutorialStore';
 import Colors from '@/constants/colors';
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const isSmallScreen = screenHeight < 700;
+
 export default function TutorialWelcome() {
-  const { showWelcome, startTutorial, skipTutorial } = useTutorialStore();
+  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted } = useTutorialStore();
   
-  console.log('TutorialWelcome render:', { showWelcome });
+  console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted });
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -71,87 +75,91 @@ export default function TutorialWelcome() {
           <View style={[styles.overlay, styles.androidOverlay]} />
         )}
         
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Sparkles size={40} color={Colors.primary} />
+        <View style={styles.safeContainer}>
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Sparkles size={40} color={Colors.primary} />
+              </View>
+              <Text style={styles.title}>Zestora</Text>
+              <Text style={styles.subtitle}>
+                Your personal meal planning and nutrition tracking companion
+              </Text>
             </View>
-            <Text style={styles.title}>Welcome to Zestora!</Text>
-            <Text style={styles.subtitle}>
-              Your personal meal planning and nutrition tracking companion
-            </Text>
-          </View>
-          
-          {/* Features Preview */}
-          <View style={styles.featuresContainer}>
-            <View style={styles.featureRow}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Target size={24} color={Colors.primary} />
+            
+            {/* Features Preview */}
+            <View style={styles.featuresContainer}>
+              <View style={styles.featureRow}>
+                <View style={styles.featureItem}>
+                  <View style={styles.featureIcon}>
+                    <Target size={24} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.featureTitle}>Smart Nutrition</Text>
+                  <Text style={styles.featureDescription}>Track calories and macros effortlessly</Text>
                 </View>
-                <Text style={styles.featureTitle}>Smart Nutrition</Text>
-                <Text style={styles.featureDescription}>Track calories and macros effortlessly</Text>
+                
+                <View style={styles.featureItem}>
+                  <View style={styles.featureIcon}>
+                    <Calendar size={24} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.featureTitle}>Meal Planning</Text>
+                  <Text style={styles.featureDescription}>Plan your week with personalized recipes</Text>
+                </View>
               </View>
               
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Calendar size={24} color={Colors.primary} />
+              <View style={styles.featureRow}>
+                <View style={styles.featureItem}>
+                  <View style={styles.featureIcon}>
+                    <ShoppingCart size={24} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.featureTitle}>Auto Grocery Lists</Text>
+                  <Text style={styles.featureDescription}>Never forget ingredients again</Text>
                 </View>
-                <Text style={styles.featureTitle}>Meal Planning</Text>
-                <Text style={styles.featureDescription}>Plan your week with personalized recipes</Text>
+                
+                <View style={styles.featureItem}>
+                  <View style={styles.featureIcon}>
+                    <Sparkles size={24} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.featureTitle}>AI Recommendations</Text>
+                  <Text style={styles.featureDescription}>Get meals picked just for you</Text>
+                </View>
               </View>
             </View>
             
-            <View style={styles.featureRow}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <ShoppingCart size={24} color={Colors.primary} />
-                </View>
-                <Text style={styles.featureTitle}>Auto Grocery Lists</Text>
-                <Text style={styles.featureDescription}>Never forget ingredients again</Text>
+            {/* Call to Action & Buttons */}
+            <View style={styles.bottomSection}>
+              <View style={styles.ctaContainer}>
+                <Text style={styles.ctaText}>
+                  Ready to transform your eating habits?
+                </Text>
+                <Text style={styles.ctaSubtext}>
+                  Let's take a quick tour to get you started!
+                </Text>
               </View>
               
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Sparkles size={24} color={Colors.primary} />
-                </View>
-                <Text style={styles.featureTitle}>AI Recommendations</Text>
-                <Text style={styles.featureDescription}>Get meals picked just for you</Text>
+              {/* Buttons */}
+              <View style={styles.buttonContainer}>
+                <Pressable style={styles.primaryButton} onPress={handleStartTutorial}>
+                  <Text style={styles.primaryButtonText}>Get Started</Text>
+                  <ArrowRight size={20} color={Colors.white} />
+                </Pressable>
+                
+                <Pressable style={styles.skipButton} onPress={handleSkip}>
+                  <Text style={styles.skipButtonText}>Skip for now</Text>
+                </Pressable>
               </View>
             </View>
-          </View>
-          
-          {/* Call to Action */}
-          <View style={styles.ctaContainer}>
-            <Text style={styles.ctaText}>
-              Ready to transform your eating habits?
-            </Text>
-            <Text style={styles.ctaSubtext}>
-              Let's take a quick tour to get you started!
-            </Text>
-          </View>
-          
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.primaryButton} onPress={handleStartTutorial}>
-              <Text style={styles.primaryButtonText}>Start Tutorial</Text>
-              <ArrowRight size={20} color={Colors.white} />
-            </Pressable>
-            
-            <Pressable style={styles.skipButton} onPress={handleSkip}>
-              <Text style={styles.skipButtonText}>Skip for now</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -174,14 +182,19 @@ const styles = StyleSheet.create({
   androidOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
+  safeContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? (isSmallScreen ? 50 : 60) : (isSmallScreen ? 30 : 40),
+    paddingBottom: Platform.OS === 'ios' ? (isSmallScreen ? 30 : 40) : (isSmallScreen ? 15 : 20),
+  },
   content: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: isSmallScreen ? 16 : 20,
   },
   logoContainer: {
     width: 80,
@@ -193,20 +206,22 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 32,
+    fontSize: isSmallScreen ? 28 : 32,
     fontWeight: 'bold',
     color: Colors.white,
     textAlign: 'center',
     marginBottom: 12,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    lineHeight: 26,
+    lineHeight: isSmallScreen ? 22 : 26,
   },
   featuresContainer: {
-    marginBottom: 40,
+    marginBottom: isSmallScreen ? 16 : 20,
+    flex: 1,
+    justifyContent: 'center',
   },
   featureRow: {
     flexDirection: 'row',
@@ -216,10 +231,10 @@ const styles = StyleSheet.create({
   featureItem: {
     flex: 1,
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
   },
   featureIcon: {
     width: 48,
@@ -238,40 +253,45 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   featureDescription: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 14,
   },
   ctaContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: isSmallScreen ? 20 : 24,
   },
   ctaText: {
-    fontSize: 20,
+    fontSize: isSmallScreen ? 18 : 20,
     fontWeight: '600',
     color: Colors.white,
     textAlign: 'center',
     marginBottom: 8,
   },
   ctaSubtext: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
+  bottomSection: {
+    alignItems: 'center',
+  },
   buttonContainer: {
     alignItems: 'center',
+    width: '100%',
   },
   primaryButton: {
     flexDirection: 'row',
     backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    minWidth: 200,
+    width: '80%',
+    maxWidth: 280,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
