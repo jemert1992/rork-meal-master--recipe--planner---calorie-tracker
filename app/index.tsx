@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView } from 'react-native';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Target, Calendar, ShoppingCart, Sparkles } from 'lucide-react-native';
+import { Target, Calendar, ShoppingCart, Sparkles, ArrowRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+
+const { height: screenHeight } = Dimensions.get('window');
+const isSmallScreen = screenHeight < 700;
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -31,14 +34,19 @@ export default function WelcomeScreen() {
         style={styles.gradient}
       />
       
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <LinearGradient
               colors={[Colors.primary, Colors.secondary]}
               style={styles.logo}
             >
-              <Sparkles size={32} color={Colors.white} />
+              <Sparkles size={isSmallScreen ? 28 : 32} color={Colors.white} />
             </LinearGradient>
           </View>
           <Text style={styles.title}>Zestora</Text>
@@ -47,66 +55,63 @@ export default function WelcomeScreen() {
           </Text>
         </View>
         
-        <View style={styles.featuresGrid}>
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.primaryLight }]}>
-              <Target size={24} color={Colors.primary} />
+        {/* Features Section - Compact Grid */}
+        <View style={styles.featuresSection}>
+          <View style={styles.featuresRow}>
+            <View style={styles.featureCard}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.primaryLight }]}>
+                <Target size={20} color={Colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Smart Nutrition</Text>
             </View>
-            <Text style={styles.featureTitle}>Smart Nutrition</Text>
-            <Text style={styles.featureDescription}>
-              Track calories and macros effortlessly
-            </Text>
+            
+            <View style={styles.featureCard}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.secondaryLight }]}>
+                <Calendar size={20} color={Colors.secondary} />
+              </View>
+              <Text style={styles.featureTitle}>Meal Planning</Text>
+            </View>
           </View>
           
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.secondaryLight }]}>
-              <Calendar size={24} color={Colors.secondary} />
+          <View style={styles.featuresRow}>
+            <View style={styles.featureCard}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.accentLight }]}>
+                <ShoppingCart size={20} color={Colors.accent} />
+              </View>
+              <Text style={styles.featureTitle}>Auto Grocery Lists</Text>
             </View>
-            <Text style={styles.featureTitle}>Meal Planning</Text>
-            <Text style={styles.featureDescription}>
-              Plan your week with personalized recipes
-            </Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.accentLight }]}>
-              <ShoppingCart size={24} color={Colors.accent} />
+            
+            <View style={styles.featureCard}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.infoLight }]}>
+                <Sparkles size={20} color={Colors.info} />
+              </View>
+              <Text style={styles.featureTitle}>AI Recommendations</Text>
             </View>
-            <Text style={styles.featureTitle}>Auto Grocery Lists</Text>
-            <Text style={styles.featureDescription}>
-              Never forget ingredients again
-            </Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.infoLight }]}>
-              <Sparkles size={24} color={Colors.info} />
-            </View>
-            <Text style={styles.featureTitle}>AI Recommendations</Text>
-            <Text style={styles.featureDescription}>
-              Get meals picked just for you
-            </Text>
           </View>
         </View>
         
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
+        {/* Call to Action */}
+        <View style={styles.ctaSection}>
+          <Text style={styles.ctaTitle}>
             Ready to transform your eating habits?
           </Text>
-          <Text style={styles.footerSubtext}>
+          <Text style={styles.ctaSubtitle}>
             Let's take a quick tour to get you started!
           </Text>
-          
-          <Pressable style={styles.button} onPress={handleGetStarted}>
-            <LinearGradient
-              colors={[Colors.primary, Colors.primaryDark]}
-              style={styles.buttonGradient}
-            >
-              <Text style={styles.buttonText}>Start Tutorial</Text>
-              <Sparkles size={20} color={Colors.white} />
-            </LinearGradient>
-          </Pressable>
         </View>
+      </ScrollView>
+      
+      {/* Fixed Bottom Button */}
+      <View style={styles.bottomContainer}>
+        <Pressable style={styles.startButton} onPress={handleGetStarted}>
+          <LinearGradient
+            colors={[Colors.primary, Colors.primaryDark]}
+            style={styles.buttonGradient}
+          >
+            <Text style={styles.buttonText}>Start Tutorial</Text>
+            <ArrowRight size={20} color={Colors.white} />
+          </LinearGradient>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -124,22 +129,25 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: isSmallScreen ? 20 : 40,
+    paddingBottom: 120, // Space for fixed button
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: isSmallScreen ? 32 : 40,
   },
   logoContainer: {
-    marginBottom: 24,
+    marginBottom: isSmallScreen ? 16 : 24,
   },
   logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: isSmallScreen ? 70 : 80,
+    height: isSmallScreen ? 70 : 80,
+    borderRadius: isSmallScreen ? 35 : 40,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.shadow,
@@ -152,31 +160,33 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 36,
+    fontSize: isSmallScreen ? 32 : 36,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: isSmallScreen ? 16 : 17,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: isSmallScreen ? 22 : 24,
     paddingHorizontal: 20,
   },
-  featuresGrid: {
+  featuresSection: {
+    marginBottom: isSmallScreen ? 32 : 40,
+  },
+  featuresRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 48,
+    marginBottom: 16,
   },
   featureCard: {
-    width: '48%',
+    flex: 1,
     backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: isSmallScreen ? 16 : 20,
+    marginHorizontal: 6,
     alignItems: 'center',
     shadowColor: Colors.shadow,
     shadowOffset: {
@@ -188,45 +198,57 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: isSmallScreen ? 44 : 48,
+    height: isSmallScreen ? 44 : 48,
+    borderRadius: isSmallScreen ? 22 : 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   featureTitle: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '600',
     color: Colors.text,
-    marginBottom: 8,
     textAlign: 'center',
   },
-  featureDescription: {
-    fontSize: 13,
-    color: Colors.textLight,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  footer: {
+  ctaSection: {
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingHorizontal: 20,
   },
-  footerText: {
-    fontSize: 20,
+  ctaTitle: {
+    fontSize: isSmallScreen ? 18 : 20,
     fontWeight: '600',
     color: Colors.text,
     textAlign: 'center',
     marginBottom: 8,
   },
-  footerSubtext: {
-    fontSize: 16,
+  ctaSubtitle: {
+    fontSize: isSmallScreen ? 15 : 16,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
+    lineHeight: isSmallScreen ? 20 : 22,
   },
-  button: {
-    width: '100%',
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 34, // Safe area padding
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    shadowColor: Colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  startButton: {
     borderRadius: 16,
     shadowColor: Colors.primary,
     shadowOffset: {
