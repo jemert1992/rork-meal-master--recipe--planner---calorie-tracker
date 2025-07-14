@@ -31,6 +31,7 @@ interface TutorialState {
   setShowTutorial: (show: boolean) => void;
   markStepCompleted: (stepId: string) => void;
   checkShouldShowWelcome: (onboardingCompleted: boolean) => void;
+  forceHideTutorial: () => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -194,10 +195,18 @@ export const useTutorialStore = create<TutorialState>()(
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
         const { isFirstLaunch, tutorialCompleted, showWelcome } = get();
         console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome });
-        if (onboardingCompleted && isFirstLaunch && !tutorialCompleted && !showWelcome) {
+        if (onboardingCompleted && isFirstLaunch && !tutorialCompleted) {
           console.log('Setting showWelcome to true');
           set({ showWelcome: true });
         }
+      },
+      
+      forceHideTutorial: () => {
+        console.log('Force hiding tutorial');
+        set({
+          showTutorial: false,
+          showWelcome: false,
+        });
       },
     }),
     {

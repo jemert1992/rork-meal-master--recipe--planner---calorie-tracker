@@ -29,6 +29,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
     previousStep,
     skipTutorial,
     completeTutorial,
+    tutorialCompleted,
   } = useTutorialStore();
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -69,6 +70,11 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   }, [shouldShow, fadeAnim, scaleAnim]);
   
   if (!shouldShow || !currentStepData) {
+    return null;
+  }
+  
+  // Safety check - don't show if tutorial is completed
+  if (tutorialCompleted) {
     return null;
   }
   

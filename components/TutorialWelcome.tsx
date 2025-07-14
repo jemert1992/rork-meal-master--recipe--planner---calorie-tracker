@@ -19,9 +19,31 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenHeight < 700;
 
 export default function TutorialWelcome() {
-  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted } = useTutorialStore();
+  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial } = useTutorialStore();
   
   console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted });
+  
+  // Don't render if tutorial is completed or not first launch
+  if (tutorialCompleted || !isFirstLaunch) {
+    return null;
+  }
+  
+  // Safety check - if showWelcome is false, don't render
+  if (!showWelcome) {
+    return null;
+  }
+  
+  // Safety timeout - auto-hide after 30 seconds if stuck
+  useEffect(() => {
+    if (showWelcome) {
+      const timeout = setTimeout(() => {
+        console.log('Tutorial welcome timeout - force hiding');
+        forceHideTutorial();
+      }, 30000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [showWelcome, forceHideTutorial]);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;

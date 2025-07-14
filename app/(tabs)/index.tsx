@@ -12,6 +12,9 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
 import TutorialOverlay from '@/components/TutorialOverlay';
+import TutorialWelcome from '@/components/TutorialWelcome';
+import { useTutorialStore } from '@/store/tutorialStore';
+import { useUserStore } from '@/store/userStore';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
 import * as edamamService from '@/services/edamamService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,6 +54,8 @@ const initialRecipeCategories = [
 export default function RecipesScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
+  const { checkShouldShowWelcome, forceHideTutorial, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch, resetTutorial } = useTutorialStore();
+  const { isLoggedIn, profile } = useUserStore();
   
   const { 
     recipes, 
@@ -88,6 +93,14 @@ export default function RecipesScreen() {
     
     checkEdamamCredentials();
   }, []);
+
+  // Check if tutorial welcome should be shown
+  useEffect(() => {
+    console.log('Home screen tutorial check:', { isLoggedIn, onboardingCompleted: profile.onboardingCompleted, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch });
+    if (isLoggedIn && profile.onboardingCompleted) {
+      checkShouldShowWelcome(profile.onboardingCompleted);
+    }
+  }, [isLoggedIn, profile.onboardingCompleted, checkShouldShowWelcome, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch]);
 
   // Update category counts
   useEffect(() => {
@@ -347,12 +360,30 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TutorialWelcome />
       <TutorialOverlay currentScreen="home" />
       <View style={styles.header}>
         <Text style={styles.title}>Discover Recipes</Text>
         <View style={styles.headerRow}>
           <Text style={styles.subtitle}>Find and save your favorite meals</Text>
           <View style={styles.dataSourceContainer}>
+            {/* Debug buttons - remove after fixing */}
+            {(showWelcome || showTutorial) && (
+              <>
+                <Pressable 
+                  style={[styles.dataSourceButton, { backgroundColor: Colors.error, marginRight: 4 }]} 
+                  onPress={forceHideTutorial}
+                >
+                  <Text style={[styles.dataSourceText, { color: Colors.white, fontSize: 10 }]}>Hide</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.dataSourceButton, { backgroundColor: Colors.warning, marginRight: 8 }]} 
+                  onPress={resetTutorial}
+                >
+                  <Text style={[styles.dataSourceText, { color: Colors.white, fontSize: 10 }]}>Reset</Text>
+                </Pressable>
+              </>
+            )}
             <Pressable 
               style={styles.dataSourceButton} 
               onPress={toggleDataSource}
