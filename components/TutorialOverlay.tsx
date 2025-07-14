@@ -68,11 +68,15 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   const progress = ((currentStep + 1) / steps.length) * 100;
   
   const getModalPosition = () => {
+    const isSmallScreen = screenHeight < 700;
+    const topPadding = isSmallScreen ? 80 : 120;
+    const bottomPadding = isSmallScreen ? 80 : 120;
+    
     switch (currentStepData.position) {
       case 'top':
-        return { justifyContent: 'flex-start', paddingTop: 100 };
+        return { justifyContent: 'flex-start', paddingTop: topPadding };
       case 'bottom':
-        return { justifyContent: 'flex-end', paddingBottom: 100 };
+        return { justifyContent: 'flex-end', paddingBottom: bottomPadding };
       default:
         return { justifyContent: 'center' };
     }
@@ -190,20 +194,21 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
   },
   tutorialCard: {
     backgroundColor: Colors.white,
     borderRadius: 20,
-    padding: 24,
+    padding: screenWidth < 380 ? 20 : 24,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
-    maxWidth: 400,
+    maxWidth: screenWidth < 380 ? screenWidth - 40 : 380,
     alignSelf: 'center',
     width: '100%',
+    marginHorizontal: 20,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -243,17 +248,19 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 22,
+    fontSize: screenWidth < 380 ? 18 : 20,
     fontWeight: 'bold',
     color: Colors.text,
     textAlign: 'center',
     marginBottom: 12,
+    paddingHorizontal: 8,
   },
   description: {
-    fontSize: 16,
+    fontSize: screenWidth < 380 ? 14 : 16,
     color: Colors.textLight,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: screenWidth < 380 ? 20 : 24,
+    paddingHorizontal: 8,
   },
   actionHint: {
     backgroundColor: Colors.primaryLight,
