@@ -95,7 +95,7 @@ const SnackCard = ({ snack }: SnackCardProps) => {
         </View>
         
         <View style={styles.tagContainer}>
-          {snack.tags.slice(0, 3).map((tag, index) => (
+          {snack.tags.slice(0, 3).map((tag: string, index: number) => (
             <View key={index} style={styles.tag}>
               <Text style={styles.tagText}>{tag}</Text>
             </View>

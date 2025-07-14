@@ -219,3 +219,15 @@ export type GenerationResult = {
   error: string | null;
   suggestions: string[];
 };
+
+export type SnackItem = {
+  id: string;
+  name: string;
+  image: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  tags: string[];
+  description: string;
+};
