@@ -39,6 +39,13 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   const isCurrentScreen = currentStepData?.screen === currentScreen;
   const shouldShow = showTutorial && isCurrentScreen && !tutorialCompleted && !!currentStepData;
   
+  // Force re-render on web when state changes
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      console.log('Web tutorial overlay state change:', { shouldShow, showTutorial, isCurrentScreen, tutorialCompleted });
+    }
+  }, [shouldShow, showTutorial, isCurrentScreen, tutorialCompleted]);
+  
   console.log('TutorialOverlay render:', { 
     showTutorial, 
     currentScreen, 
@@ -109,13 +116,102 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
     }
   };
   
+  // Web fallback - render as absolute positioned overlay instead of modal
+  if (Platform.OS === 'web' && shouldShow) {
+    return (
+      <View style={[styles.overlay, styles.webOverlay]}>
+        <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
+        
+        <View style={[styles.container, getModalPosition()]}>
+          <Animated.View
+            style={[
+              styles.tutorialCard,
+              {
+                transform: [{ scale: scaleAnim }],
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
+              <Text style={styles.progressText}>
+                {currentStep + 1} of {steps.length}
+              </Text>
+            </View>
+            
+            {/* Close Button */}
+            <Pressable style={styles.closeButton} onPress={skipTutorial}>
+              <X size={20} color={Colors.textLight} />
+            </Pressable>
+            
+            {/* Icon */}
+            <View style={styles.iconContainer}>
+              <Lightbulb size={32} color={Colors.primary} />
+            </View>
+            
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.title}>{currentStepData.title}</Text>
+              <Text style={styles.description}>{currentStepData.description}</Text>
+            </View>
+            
+            {/* Action Hint */}
+            {currentStepData.action && (
+              <View style={styles.actionHint}>
+                <Text style={styles.actionText}>
+                  {currentStepData.action === 'tap' && '👆 Tap to try it'}
+                  {currentStepData.action === 'swipe' && '👈 Swipe to explore'}
+                  {currentStepData.action === 'scroll' && '📜 Scroll to see more'}
+                </Text>
+              </View>
+            )}
+            
+            {/* Navigation Buttons */}
+            <View style={styles.buttonContainer}>
+              {!isFirstStep && (
+                <Pressable style={styles.secondaryButton} onPress={previousStep}>
+                  <ArrowLeft size={16} color={Colors.primary} />
+                  <Text style={styles.secondaryButtonText}>Back</Text>
+                </Pressable>
+              )}
+              
+              <View style={styles.buttonSpacer} />
+              
+              {isLastStep ? (
+                <Pressable style={styles.primaryButton} onPress={completeTutorial}>
+                  <Text style={styles.primaryButtonText}>
+                    {currentScreen === 'welcome' ? 'Set Up Profile' : 'Get Started'}
+                  </Text>
+                  <ArrowRight size={16} color={Colors.white} />
+                </Pressable>
+              ) : (
+                <Pressable style={styles.primaryButton} onPress={nextStep}>
+                  <Text style={styles.primaryButtonText}>Next</Text>
+                  <ArrowRight size={16} color={Colors.white} />
+                </Pressable>
+              )}
+            </View>
+            
+            {/* Skip Button */}
+            <Pressable style={styles.skipButton} onPress={skipTutorial}>
+              <Text style={styles.skipButtonText}>Skip Tutorial</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </View>
+    );
+  }
+  
   return (
     <Modal
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={true}
-      presentationStyle="overFullScreen"
+      statusBarTranslucent={Platform.OS !== 'web'}
+      presentationStyle={Platform.OS === 'web' ? undefined : 'overFullScreen'}
     >
       <Animated.View
         style={[
@@ -127,8 +223,10 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
       >
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (
+        ) : Platform.OS === 'android' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
         )}
         
         <View style={[styles.container, getModalPosition()]}>
@@ -220,8 +318,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     zIndex: 9999,
   },
+  webOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10000,
+  },
   androidBlur: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  webBlur: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backdropFilter: 'blur(10px)',
   },
   container: {
     flex: 1,
@@ -240,6 +350,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     minHeight: 220,
+    ...(Platform.OS === 'web' && {
+      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+    }),
   },
   progressContainer: {
     flexDirection: 'row',
@@ -269,6 +382,9 @@ const styles = StyleSheet.create({
     right: 16,
     padding: 8,
     zIndex: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   iconContainer: {
     alignItems: 'center',
@@ -328,6 +444,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    }),
   },
   primaryButtonText: {
     color: Colors.white,
@@ -344,6 +464,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary,
     backgroundColor: Colors.white,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   secondaryButtonText: {
     color: Colors.primary,
@@ -354,6 +477,9 @@ const styles = StyleSheet.create({
   skipButton: {
     alignItems: 'center',
     paddingVertical: 8,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   skipButtonText: {
     color: Colors.textLight,

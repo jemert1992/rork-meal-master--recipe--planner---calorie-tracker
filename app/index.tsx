@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Image } from 'react-native';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -46,9 +46,23 @@ export default function WelcomeScreen() {
       currentStep,
       tutorialCompleted,
       stepsLength: useTutorialStore.getState().steps.length,
-      firstStep: useTutorialStore.getState().steps[0]
+      firstStep: useTutorialStore.getState().steps[0],
+      platform: Platform.OS
     });
   }, [showTutorial, currentStep, tutorialCompleted]);
+  
+  // Additional web debugging
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      console.log('Web-specific tutorial state:', {
+        showTutorial,
+        tutorialCompleted,
+        currentStep,
+        isLoggedIn,
+        onboardingCompleted: profile.onboardingCompleted
+      });
+    }
+  }, [showTutorial, tutorialCompleted, currentStep, isLoggedIn, profile.onboardingCompleted]);
   
 
   
@@ -63,8 +77,19 @@ export default function WelcomeScreen() {
   // Don't auto-start tutorial - let user choose
 
   const handleGetStarted = () => {
-    console.log('Starting tutorial...');
+    console.log('Starting tutorial... Platform:', Platform.OS);
+    console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     startTutorial();
+    
+    // Force a re-render check after a short delay
+    setTimeout(() => {
+      const newState = useTutorialStore.getState();
+      console.log('Tutorial state after start:', {
+        showTutorial: newState.showTutorial,
+        currentStep: newState.currentStep,
+        tutorialCompleted: newState.tutorialCompleted
+      });
+    }, 100);
   };
 
   const handleSkipToOnboarding = () => {
@@ -142,7 +167,9 @@ export default function WelcomeScreen() {
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
 onPress={handleGetStarted}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Start Tutorial"
           >
             <LinearGradient
               colors={[Colors.primary, Colors.primaryDark]}
@@ -330,6 +357,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 280,
     marginBottom: 16,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
+    }),
   },
   buttonGradient: {
     flexDirection: 'row',
@@ -349,6 +380,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 24,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   skipButtonText: {
     color: 'rgba(255, 255, 255, 0.5)',

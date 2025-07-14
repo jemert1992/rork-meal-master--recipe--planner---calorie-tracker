@@ -186,6 +186,17 @@ export const useTutorialStore = create<TutorialState>()(
           currentStep: newState.currentStep,
           tutorialCompleted: newState.tutorialCompleted
         });
+        
+        // Force a state update for web compatibility
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            const currentState = get();
+            if (!currentState.showTutorial) {
+              console.log('Web fallback: Re-setting tutorial state');
+              set({ showTutorial: true });
+            }
+          }, 50);
+        }
       },
       
       nextStep: () => {
