@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Image } fr
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Target, Calendar, ShoppingCart, Sparkles, ArrowRight, ChefHat } from 'lucide-react-native';
+import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
@@ -71,95 +71,66 @@ export default function WelcomeScreen() {
       {/* Tutorial Components */}
       <TutorialOverlay currentScreen="welcome" />
       
-      {/* Background Image */}
-      <Image 
-        source={{ uri: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }} 
-        style={styles.backgroundImage} 
+      {/* Background with subtle pattern */}
+      <LinearGradient
+        colors={['#0F0F23', '#1A1A2E', '#16213E']}
+        style={styles.backgroundGradient}
       />
       
-      {/* Gradient Overlay */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
-        style={styles.gradient}
-      />
+      {/* Floating elements for visual interest */}
+      <View style={styles.floatingElements}>
+        <View style={[styles.floatingCircle, styles.circle1]} />
+        <View style={[styles.floatingCircle, styles.circle2]} />
+        <View style={[styles.floatingCircle, styles.circle3]} />
+      </View>
       
       {/* Content */}
       <View style={styles.content}>
-        {/* Header Section */}
-        <View style={styles.header}>
+        {/* Main Logo and Branding */}
+        <View style={styles.heroSection}>
           <View style={styles.logoContainer}>
             <LinearGradient
               colors={[Colors.primary, Colors.secondary]}
               style={styles.logo}
             >
-              <ChefHat size={isSmallScreen ? 32 : 36} color={Colors.white} />
+              <ChefHat size={isSmallScreen ? 40 : 48} color={Colors.white} />
             </LinearGradient>
+            <View style={styles.sparkleContainer}>
+              <Sparkles size={16} color={Colors.primary} style={styles.sparkle1} />
+              <Sparkles size={12} color={Colors.secondary} style={styles.sparkle2} />
+              <Sparkles size={14} color={Colors.primary} style={styles.sparkle3} />
+            </View>
           </View>
-          <Text style={styles.title}>Welcome to Zestora</Text>
-          <Text style={styles.subtitle}>
-            Your personal meal planning and nutrition tracking companion
+          
+          <Text style={styles.welcomeText}>Welcome to</Text>
+          <Text style={styles.brandName}>Zestora</Text>
+          <Text style={styles.tagline}>
+            Your AI-powered meal planning & nutrition companion
           </Text>
         </View>
         
-        {/* Features Section */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.featuresTitle}>What makes Zestora special?</Text>
-          
-          <View style={styles.featuresList}>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <Target size={24} color={Colors.primary} />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Smart Nutrition Tracking</Text>
-                <Text style={styles.featureDescription}>Track calories and macros effortlessly with AI-powered insights</Text>
-              </View>
-            </View>
-            
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <Calendar size={24} color={Colors.primary} />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Weekly Meal Planning</Text>
-                <Text style={styles.featureDescription}>Plan your entire week with personalized recipe recommendations</Text>
-              </View>
-            </View>
-            
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <ShoppingCart size={24} color={Colors.primary} />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Auto Grocery Lists</Text>
-                <Text style={styles.featureDescription}>Never forget ingredients with automatically generated shopping lists</Text>
-              </View>
-            </View>
-            
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <Sparkles size={24} color={Colors.primary} />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>AI Recommendations</Text>
-                <Text style={styles.featureDescription}>Get personalized meal suggestions based on your goals and preferences</Text>
-              </View>
-            </View>
+        {/* Feature highlights */}
+        <View style={styles.featuresPreview}>
+          <View style={styles.featureHighlight}>
+            <Text style={styles.featureEmoji}>🎯</Text>
+            <Text style={styles.featureText}>Smart Nutrition Tracking</Text>
+          </View>
+          <View style={styles.featureHighlight}>
+            <Text style={styles.featureEmoji}>📅</Text>
+            <Text style={styles.featureText}>Weekly Meal Planning</Text>
+          </View>
+          <View style={styles.featureHighlight}>
+            <Text style={styles.featureEmoji}>🛒</Text>
+            <Text style={styles.featureText}>Auto Grocery Lists</Text>
           </View>
         </View>
         
         {/* Call to Action */}
         <View style={styles.ctaSection}>
-          <Text style={styles.ctaTitle}>
+          <Text style={styles.ctaText}>
             Ready to transform your eating habits?
           </Text>
-          <Text style={styles.ctaSubtitle}>
-            Let's take a quick tour to get you started!
-          </Text>
-        </View>
-        
-        {/* Buttons */}
-        <View style={styles.buttonContainer}>
+          
           <Pressable style={styles.startButton} onPress={handleGetStarted}>
             <LinearGradient
               colors={[Colors.primary, Colors.primaryDark]}
@@ -182,158 +153,181 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: '#0F0F23',
   },
-  backgroundImage: {
-    position: 'absolute',
-    width: screenWidth,
-    height: screenHeight,
-    opacity: 0.4,
-  },
-  gradient: {
+  backgroundGradient: {
     position: 'absolute',
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
   },
+  floatingElements: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  floatingCircle: {
+    position: 'absolute',
+    borderRadius: 50,
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 120,
+    height: 120,
+    backgroundColor: Colors.primary,
+    top: '15%',
+    right: -30,
+  },
+  circle2: {
+    width: 80,
+    height: 80,
+    backgroundColor: Colors.secondary,
+    top: '60%',
+    left: -20,
+  },
+  circle3: {
+    width: 60,
+    height: 60,
+    backgroundColor: Colors.primary,
+    top: '35%',
+    left: '20%',
+  },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: isSmallScreen ? 50 : 70,
+    paddingHorizontal: 32,
+    paddingTop: isSmallScreen ? 60 : 80,
     paddingBottom: isSmallScreen ? 40 : 50,
     justifyContent: 'space-between',
   },
-  header: {
+  heroSection: {
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 20 : 30,
+    flex: 1,
+    justifyContent: 'center',
+    marginTop: isSmallScreen ? -40 : -60,
   },
   logoContainer: {
-    marginBottom: isSmallScreen ? 16 : 20,
+    position: 'relative',
+    marginBottom: isSmallScreen ? 24 : 32,
   },
   logo: {
-    width: isSmallScreen ? 80 : 90,
-    height: isSmallScreen ? 80 : 90,
-    borderRadius: isSmallScreen ? 40 : 45,
+    width: isSmallScreen ? 100 : 120,
+    height: isSmallScreen ? 100 : 120,
+    borderRadius: isSmallScreen ? 50 : 60,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primary,
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 12,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 16,
   },
-  title: {
-    fontSize: isSmallScreen ? 28 : 32,
-    fontWeight: '700',
-    color: Colors.white,
-    marginBottom: 12,
+  sparkleContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  sparkle1: {
+    position: 'absolute',
+    top: -8,
+    right: 10,
+  },
+  sparkle2: {
+    position: 'absolute',
+    bottom: 5,
+    left: -5,
+  },
+  sparkle3: {
+    position: 'absolute',
+    top: 20,
+    left: -10,
+  },
+  welcomeText: {
+    fontSize: isSmallScreen ? 18 : 20,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '400',
+    marginBottom: 4,
     textAlign: 'center',
   },
-  subtitle: {
+  brandName: {
+    fontSize: isSmallScreen ? 42 : 48,
+    fontWeight: '800',
+    color: Colors.white,
+    marginBottom: isSmallScreen ? 12 : 16,
+    textAlign: 'center',
+    letterSpacing: -1,
+  },
+  tagline: {
     fontSize: isSmallScreen ? 16 : 18,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     lineHeight: isSmallScreen ? 22 : 26,
     paddingHorizontal: 20,
+    fontWeight: '400',
   },
-  featuresSection: {
+  featuresPreview: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: isSmallScreen ? 32 : 40,
+    paddingHorizontal: 10,
+  },
+  featureHighlight: {
+    alignItems: 'center',
     flex: 1,
-    justifyContent: 'center',
-    marginVertical: isSmallScreen ? 16 : 24,
-    maxHeight: isSmallScreen ? 300 : 400,
+    paddingHorizontal: 8,
   },
-  featuresTitle: {
+  featureEmoji: {
+    fontSize: isSmallScreen ? 24 : 28,
+    marginBottom: 8,
+  },
+  featureText: {
+    fontSize: isSmallScreen ? 12 : 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  ctaSection: {
+    alignItems: 'center',
+    paddingBottom: isSmallScreen ? 20 : 30,
+  },
+  ctaText: {
     fontSize: isSmallScreen ? 18 : 20,
     fontWeight: '600',
     color: Colors.white,
     textAlign: 'center',
-    marginBottom: isSmallScreen ? 20 : 24,
-  },
-  featuresList: {
-    gap: isSmallScreen ? 12 : 16,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 16,
-    padding: isSmallScreen ? 14 : 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  featureIconContainer: {
-    width: isSmallScreen ? 44 : 48,
-    height: isSmallScreen ? 44 : 48,
-    borderRadius: isSmallScreen ? 22 : 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: isSmallScreen ? 12 : 16,
-  },
-  featureTextContainer: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: isSmallScreen ? 15 : 16,
-    fontWeight: '600',
-    color: Colors.white,
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: isSmallScreen ? 12 : 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: isSmallScreen ? 16 : 18,
-  },
-  ctaSection: {
-    alignItems: 'center',
-    marginBottom: isSmallScreen ? 20 : 24,
-  },
-  ctaTitle: {
-    fontSize: isSmallScreen ? 20 : 22,
-    fontWeight: '600',
-    color: Colors.white,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  ctaSubtitle: {
-    fontSize: isSmallScreen ? 15 : 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    lineHeight: isSmallScreen ? 20 : 22,
-  },
-  buttonContainer: {
-    alignItems: 'center',
-    gap: 12,
+    marginBottom: isSmallScreen ? 24 : 32,
+    lineHeight: isSmallScreen ? 24 : 28,
   },
   startButton: {
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: Colors.primary,
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 8,
     },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 16,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 280,
+    marginBottom: 16,
   },
   buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: isSmallScreen ? 16 : 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    paddingVertical: isSmallScreen ? 18 : 20,
+    paddingHorizontal: 40,
+    borderRadius: 20,
   },
   buttonText: {
     color: Colors.white,
     fontWeight: '700',
-    fontSize: isSmallScreen ? 17 : 18,
+    fontSize: isSmallScreen ? 18 : 19,
     marginRight: 8,
   },
   skipButton: {
@@ -342,8 +336,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   skipButtonText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: isSmallScreen ? 15 : 16,
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: isSmallScreen ? 14 : 15,
     textDecorationLine: 'underline',
+    fontWeight: '500',
   },
 });
