@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,7 +7,7 @@ import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-import TutorialOverlay from '@/components/TutorialOverlay';
+import SimpleTutorialOverlay from '@/components/SimpleTutorialOverlay';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -30,6 +30,8 @@ export default function WelcomeScreen() {
     checkAndStartTutorial,
     resetTutorial
   } = useTutorialStore();
+  
+  const [simpleTutorialVisible, setSimpleTutorialVisible] = useState(false);
 
   useEffect(() => {
     console.log('Welcome screen state:', { isLoggedIn, onboardingCompleted: profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome });
@@ -77,19 +79,21 @@ export default function WelcomeScreen() {
   // Don't auto-start tutorial - let user choose
 
   const handleGetStarted = () => {
-    console.log('Starting tutorial... Platform:', Platform.OS);
-    console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
-    startTutorial();
-    
-    // Force a re-render check after a short delay
-    setTimeout(() => {
-      const newState = useTutorialStore.getState();
-      console.log('Tutorial state after start:', {
-        showTutorial: newState.showTutorial,
-        currentStep: newState.currentStep,
-        tutorialCompleted: newState.tutorialCompleted
-      });
-    }, 100);
+    console.log('Starting simple tutorial... Platform:', Platform.OS);
+    setSimpleTutorialVisible(true);
+  };
+  
+  const handleTutorialComplete = () => {
+    console.log('Tutorial completed');
+    setSimpleTutorialVisible(false);
+    skipTutorial(); // Mark as completed in store
+    router.push('/onboarding/personal-info');
+  };
+  
+  const handleTutorialSkip = () => {
+    console.log('Tutorial skipped');
+    setSimpleTutorialVisible(false);
+    skipTutorial(); // Mark as completed in store
   };
 
   const handleSkipToOnboarding = () => {
@@ -100,6 +104,8 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
+      
+
       
       {/* Background with subtle pattern */}
       <LinearGradient
@@ -166,7 +172,7 @@ export default function WelcomeScreen() {
               styles.startButton,
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
-onPress={handleGetStarted}
+            onPress={handleGetStarted}
             hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Start Tutorial"
@@ -180,14 +186,21 @@ onPress={handleGetStarted}
             </LinearGradient>
           </Pressable>
           
+
+          
           <Pressable style={styles.skipButton} onPress={handleSkipToOnboarding}>
             <Text style={styles.skipButtonText}>Skip to Setup</Text>
           </Pressable>
         </View>
       </View>
       
-      {/* Tutorial Components - moved to end to avoid blocking */}
-      <TutorialOverlay currentScreen="welcome" />
+      {/* Simple Tutorial Overlay */}
+      <SimpleTutorialOverlay 
+        visible={simpleTutorialVisible}
+        onComplete={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
+        currentScreen="welcome"
+      />
     </SafeAreaView>
   );
 }
@@ -390,4 +403,5 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     fontWeight: '500',
   },
+
 });

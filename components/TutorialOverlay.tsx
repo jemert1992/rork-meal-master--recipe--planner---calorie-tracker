@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -34,6 +34,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const [forceRender, setForceRender] = useState(0);
   
   const currentStepData = steps[currentStep] || steps[0];
   const isCurrentScreen = currentStepData?.screen === currentScreen;
@@ -42,9 +43,34 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   // Force re-render on web when state changes
   useEffect(() => {
     if (Platform.OS === 'web') {
-      console.log('Web tutorial overlay state change:', { shouldShow, showTutorial, isCurrentScreen, tutorialCompleted });
+      console.log('Web tutorial overlay state change:', { shouldShow, showTutorial, isCurrentScreen, tutorialCompleted, currentStep, currentStepData });
+      
+      // Force component re-render
+      setForceRender(prev => prev + 1);
+      
+      // Force re-render by updating animation values
+      if (shouldShow) {
+        fadeAnim.setValue(0);
+        scaleAnim.setValue(0.8);
+        
+        setTimeout(() => {
+          Animated.parallel([
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+              toValue: 1,
+              tension: 100,
+              friction: 8,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }, 10);
+      }
     }
-  }, [shouldShow, showTutorial, isCurrentScreen, tutorialCompleted]);
+  }, [shouldShow, showTutorial, isCurrentScreen, tutorialCompleted, currentStep]);
   
   console.log('TutorialOverlay render:', { 
     showTutorial, 
@@ -117,9 +143,9 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
   };
   
   // Web fallback - render as absolute positioned overlay instead of modal
-  if (Platform.OS === 'web' && shouldShow) {
-    return (
-      <View style={[styles.overlay, styles.webOverlay]}>
+  if (Platform.OS === 'web') {
+    return shouldShow ? (
+      <View style={[styles.overlay, styles.webOverlay]} key={`tutorial-${currentStep}-${Date.now()}`}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
         
         <View style={[styles.container, getModalPosition()]}>
@@ -202,7 +228,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
           </Animated.View>
         </View>
       </View>
-    );
+    ) : null;
   }
   
   return (

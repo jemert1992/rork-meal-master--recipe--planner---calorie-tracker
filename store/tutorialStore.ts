@@ -171,31 +171,49 @@ export const useTutorialStore = create<TutorialState>()(
       startTutorial: () => {
         console.log('Starting tutorial - setting showTutorial to true');
         
-        set({
+        // Force immediate state update
+        const newState = {
           showTutorial: true,
           showWelcome: false,
           currentStep: 0,
           tutorialCompleted: false,
           isFirstLaunch: false,
-        });
+        };
+        
+        set(newState);
         
         // Log the state immediately after setting
-        const newState = get();
-        console.log('Tutorial started - new state:', {
-          showTutorial: newState.showTutorial,
-          currentStep: newState.currentStep,
-          tutorialCompleted: newState.tutorialCompleted
-        });
+        console.log('Tutorial started - new state:', newState);
         
-        // Force a state update for web compatibility
+        // Multiple fallbacks for web compatibility
         if (typeof window !== 'undefined') {
+          // Immediate check
           setTimeout(() => {
             const currentState = get();
+            console.log('Web check 1:', currentState.showTutorial);
             if (!currentState.showTutorial) {
-              console.log('Web fallback: Re-setting tutorial state');
+              console.log('Web fallback 1: Re-setting tutorial state');
               set({ showTutorial: true });
             }
-          }, 50);
+          }, 10);
+          
+          // Secondary check
+          setTimeout(() => {
+            const currentState = get();
+            console.log('Web check 2:', currentState.showTutorial);
+            if (!currentState.showTutorial) {
+              console.log('Web fallback 2: Re-setting tutorial state');
+              set({ showTutorial: true });
+            }
+          }, 100);
+          
+          // Force re-render by updating a dummy state
+          setTimeout(() => {
+            const currentState = get();
+            if (currentState.showTutorial) {
+              set({ currentStep: 0 }); // Force re-render
+            }
+          }, 150);
         }
       },
       
