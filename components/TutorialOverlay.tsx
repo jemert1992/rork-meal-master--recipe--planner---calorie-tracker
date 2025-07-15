@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { ArrowRight, ArrowLeft, X, Lightbulb } from 'lucide-react-native';
+import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles } from 'lucide-react-native';
 import { useTutorialStore } from '@/store/tutorialStore';
 import Colors from '@/constants/colors';
 
@@ -173,9 +173,19 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
               <X size={20} color={Colors.textLight} />
             </Pressable>
             
-            {/* Icon */}
-            <View style={styles.iconContainer}>
-              <Lightbulb size={32} color={Colors.primary} />
+            {/* Branding Header */}
+            <View style={styles.brandingHeader}>
+              <View style={styles.brandLogoContainer}>
+                <View style={styles.brandLogo}>
+                  <ChefHat size={24} color={Colors.white} />
+                </View>
+                <View style={styles.brandTextContainer}>
+                  <Text style={styles.brandName}>Zestora</Text>
+                  <View style={styles.sparkleIcon}>
+                    <Sparkles size={12} color={Colors.primary} />
+                  </View>
+                </View>
+              </View>
             </View>
             
             {/* Content */}
@@ -279,9 +289,19 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
               <X size={20} color={Colors.textLight} />
             </Pressable>
             
-            {/* Icon */}
-            <View style={styles.iconContainer}>
-              <Lightbulb size={32} color={Colors.primary} />
+            {/* Branding Header */}
+            <View style={styles.brandingHeader}>
+              <View style={styles.brandLogoContainer}>
+                <View style={styles.brandLogo}>
+                  <ChefHat size={24} color={Colors.white} />
+                </View>
+                <View style={styles.brandTextContainer}>
+                  <Text style={styles.brandName}>Zestora</Text>
+                  <View style={styles.sparkleIcon}>
+                    <Sparkles size={12} color={Colors.primary} />
+                  </View>
+                </View>
+              </View>
             </View>
             
             {/* Content */}
@@ -365,25 +385,25 @@ const styles = StyleSheet.create({
   },
   tutorialCard: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: screenWidth < 380 ? 20 : 24,
+    borderRadius: 24,
+    padding: 24,
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-    maxWidth: screenWidth < 380 ? screenWidth - 40 : 400,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+    width: screenWidth - 40,
+    maxWidth: 420,
     alignSelf: 'center',
-    width: '100%',
-    minHeight: 220,
+    height: screenHeight < 700 ? 500 : 540, // Fixed height for consistency
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
     }),
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     paddingRight: 40, // Add padding to avoid overlap with close button
   },
   progressBar: {
@@ -405,19 +425,63 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    padding: 4,
-    zIndex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
-    width: 32,
-    height: 32,
+    top: 16,
+    right: 16,
+    padding: 6,
+    zIndex: 10,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 20,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     }),
+  },
+  brandingHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingTop: 8,
+  },
+  brandLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  brandTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  sparkleIcon: {
+    marginLeft: 6,
+    marginTop: -2,
   },
   iconContainer: {
     alignItems: 'center',
@@ -425,29 +489,36 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
+    flex: 1,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: screenWidth < 380 ? 18 : 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 8,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    lineHeight: 28,
   },
   description: {
-    fontSize: screenWidth < 380 ? 14 : 16,
-    color: Colors.textLight,
+    fontSize: 16,
+    color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: screenWidth < 380 ? 20 : 24,
-    paddingHorizontal: 8,
+    lineHeight: 24,
+    paddingHorizontal: 16,
+    fontWeight: '400',
   },
   actionHint: {
     backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
     marginBottom: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.2)',
   },
   actionText: {
     fontSize: 14,
@@ -457,8 +528,9 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    marginTop: 8,
+    marginBottom: 12,
+    marginTop: 'auto',
+    paddingTop: 16,
   },
   buttonSpacer: {
     flex: 1,
@@ -467,19 +539,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    minWidth: 120,
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+    borderRadius: 16,
+    minWidth: 140,
     justifyContent: 'center',
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+      boxShadow: '0 4px 16px rgba(255, 107, 107, 0.3)',
     }),
   },
   primaryButtonText: {
@@ -491,14 +563,20 @@ const styles = StyleSheet.create({
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: Colors.primary,
     backgroundColor: Colors.white,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     }),
   },
   secondaryButtonText: {
@@ -509,7 +587,8 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    marginTop: 8,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
@@ -517,5 +596,7 @@ const styles = StyleSheet.create({
   skipButtonText: {
     color: Colors.textLight,
     fontSize: 14,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
   },
 });
