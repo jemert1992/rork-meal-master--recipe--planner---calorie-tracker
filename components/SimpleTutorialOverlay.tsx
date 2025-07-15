@@ -7,12 +7,78 @@ import {
   Modal,
   Dimensions,
   Platform,
+  ImageBackground,
+  Animated,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles } from 'lucide-react-native';
+import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles, ArrowDown, ArrowUp, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Tutorial screenshots data with bubble positions and arrow directions
+const TUTORIAL_SCREENSHOTS = {
+  'welcome-intro': {
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center',
+    bubbles: [{
+      id: 'welcome',
+      text: 'Welcome to your healthy eating journey!',
+      position: { top: '20%', left: '10%' },
+      arrow: 'down-right',
+      size: 'large'
+    }]
+  },
+  'features-nutrition': {
+    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=800&fit=crop&crop=center',
+    bubbles: [{
+      id: 'nutrition',
+      text: 'Track your nutrition with smart insights',
+      position: { top: '30%', right: '10%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }]
+  },
+  'features-planning': {
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center',
+    bubbles: [{
+      id: 'planning',
+      text: 'Plan your entire week with ease',
+      position: { top: '40%', left: '15%' },
+      arrow: 'up-right',
+      size: 'large'
+    }]
+  },
+  'features-grocery': {
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center',
+    bubbles: [{
+      id: 'grocery',
+      text: 'Auto-generated grocery lists',
+      position: { bottom: '30%', right: '15%' },
+      arrow: 'up',
+      size: 'medium'
+    }]
+  },
+  'features-ai': {
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center',
+    bubbles: [{
+      id: 'ai',
+      text: 'AI-powered recommendations just for you',
+      position: { top: '25%', left: '20%' },
+      arrow: 'down',
+      size: 'large'
+    }]
+  },
+  'ready-to-start': {
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center',
+    bubbles: [{
+      id: 'start',
+      text: 'Ready to transform your health?',
+      position: { bottom: '25%', left: '10%' },
+      arrow: 'up-right',
+      size: 'large'
+    }]
+  }
+};
 
 interface TutorialStep {
   id: string;
@@ -82,6 +148,8 @@ export default function SimpleTutorialOverlay({
   currentScreen 
 }: SimpleTutorialOverlayProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
   
   const currentStepData = TUTORIAL_STEPS[currentStep];
   const isCurrentScreen = currentStepData?.screen === currentScreen;
@@ -95,6 +163,23 @@ export default function SimpleTutorialOverlay({
   useEffect(() => {
     if (visible) {
       setCurrentStep(0);
+      // Animate in
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.8);
     }
   }, [visible]);
   
@@ -112,28 +197,81 @@ export default function SimpleTutorialOverlay({
     }
   };
   
-  const getModalPosition = () => {
-    const isSmallScreen = screenHeight < 700;
-    const topPadding = isSmallScreen ? 120 : 160;
-    const bottomPadding = isSmallScreen ? 120 : 160;
-    
-    switch (currentStepData?.position) {
-      case 'top':
-        return { justifyContent: 'flex-start', paddingTop: topPadding };
-      case 'bottom':
-        return { justifyContent: 'flex-end', paddingBottom: bottomPadding };
-      default:
-        return { justifyContent: 'center', paddingHorizontal: 20 };
+  const getArrowIcon = (direction: string, size = 20, color = Colors.primary) => {
+    switch (direction) {
+      case 'up': return <ArrowUp size={size} color={color} />;
+      case 'down': return <ArrowDown size={size} color={color} />;
+      case 'up-right': return <ArrowUpRight size={size} color={color} />;
+      case 'down-left': return <ArrowDownLeft size={size} color={color} />;
+      case 'down-right': return <ArrowDownLeft size={size} color={color} style={{ transform: [{ scaleX: -1 }] }} />;
+      default: return <ArrowDown size={size} color={color} />;
     }
   };
+
+  const renderBubble = (bubble: any, index: number) => {
+    const bubbleSize = bubble.size === 'large' ? styles.bubbleLarge : 
+                     bubble.size === 'small' ? styles.bubbleSmall : styles.bubbleMedium;
+    
+    return (
+      <Animated.View
+        key={bubble.id}
+        style={[
+          styles.speechBubble,
+          bubbleSize,
+          bubble.position,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          }
+        ]}
+      >
+        <View style={styles.bubbleContent}>
+          <Text style={styles.bubbleText}>{bubble.text}</Text>
+          <View style={styles.arrowContainer}>
+            {getArrowIcon(bubble.arrow, 16, Colors.primary)}
+          </View>
+        </View>
+        
+        {/* Speech bubble tail */}
+        <View style={[
+          styles.bubbleTail,
+          bubble.arrow.includes('up') ? styles.bubbleTailUp : styles.bubbleTailDown,
+          bubble.arrow.includes('right') ? styles.bubbleTailRight : styles.bubbleTailLeft
+        ]} />
+      </Animated.View>
+    );
+  };
+
+  const currentScreenshot = TUTORIAL_SCREENSHOTS[currentStepData?.id as keyof typeof TUTORIAL_SCREENSHOTS];
   
   if (!shouldShow || !currentStepData) {
     return null;
   }
   
   const TutorialCard = () => (
-    <View style={[styles.container, getModalPosition()]}>
-      <View style={styles.tutorialCard}>
+    <View style={styles.screenshotContainer}>
+      {/* Screenshot Background */}
+      {currentScreenshot && (
+        <ImageBackground
+          source={{ uri: currentScreenshot.image }}
+          style={styles.screenshotBackground}
+          imageStyle={styles.screenshotImage}
+        >
+          {/* Overlay bubbles */}
+          {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
+        </ImageBackground>
+      )}
+      
+      {/* Control Panel */}
+      <Animated.View
+        style={[
+          styles.controlPanel,
+          {
+            transform: [{ scale: scaleAnim }],
+            opacity: fadeAnim,
+          },
+        ]}
+      >
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
@@ -170,17 +308,6 @@ export default function SimpleTutorialOverlay({
           <Text style={styles.description}>{currentStepData.description}</Text>
         </View>
         
-        {/* Action Hint */}
-        {currentStepData.action && (
-          <View style={styles.actionHint}>
-            <Text style={styles.actionText}>
-              {currentStepData.action === 'tap' && '👆 Tap to try it'}
-              {currentStepData.action === 'swipe' && '👈 Swipe to explore'}
-              {currentStepData.action === 'scroll' && '📜 Scroll to see more'}
-            </Text>
-          </View>
-        )}
-        
         {/* Navigation Buttons */}
         <View style={styles.buttonContainer}>
           {!isFirstStep && (
@@ -209,7 +336,7 @@ export default function SimpleTutorialOverlay({
         <Pressable style={styles.skipButton} onPress={onSkip}>
           <Text style={styles.skipButtonText}>Skip Tutorial</Text>
         </Pressable>
-      </View>
+      </Animated.View>
     </View>
   );
   
@@ -249,7 +376,7 @@ export default function SimpleTutorialOverlay({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     zIndex: 9999,
   },
   webOverlay: {
@@ -261,17 +388,112 @@ const styles = StyleSheet.create({
     zIndex: 10000,
   },
   androidBlur: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   webBlur: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     backdropFilter: 'blur(10px)',
   },
-  container: {
+  screenshotContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
   },
-  tutorialCard: {
+  screenshotBackground: {
+    width: screenWidth * 0.7,
+    height: screenHeight * 0.7,
+    maxWidth: 300,
+    maxHeight: 600,
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  screenshotImage: {
+    borderRadius: 24,
+  },
+  speechBubble: {
+    position: 'absolute',
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    ...(Platform.OS === 'web' && {
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+    }),
+  },
+  bubbleSmall: {
+    padding: 8,
+    minWidth: 80,
+    maxWidth: 120,
+  },
+  bubbleMedium: {
+    padding: 12,
+    minWidth: 100,
+    maxWidth: 160,
+  },
+  bubbleLarge: {
+    padding: 16,
+    minWidth: 120,
+    maxWidth: 200,
+  },
+  bubbleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bubbleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text,
+    flex: 1,
+    lineHeight: 16,
+  },
+  arrowContainer: {
+    marginLeft: 8,
+    padding: 2,
+  },
+  bubbleTail: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    borderStyle: 'solid',
+  },
+  bubbleTailUp: {
+    bottom: -8,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: Colors.white,
+  },
+  bubbleTailDown: {
+    top: -8,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: Colors.white,
+  },
+  bubbleTailLeft: {
+    left: 20,
+  },
+  bubbleTailRight: {
+    right: 20,
+  },
+  controlPanel: {
     backgroundColor: Colors.white,
     borderRadius: 24,
     padding: 24,
@@ -283,7 +505,6 @@ const styles = StyleSheet.create({
     width: screenWidth - 40,
     maxWidth: 420,
     alignSelf: 'center',
-    height: screenHeight < 700 ? 500 : 540, // Fixed height for consistency
     ...(Platform.OS === 'web' && {
       boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
     }),
@@ -378,8 +599,6 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     marginBottom: 20,
-    flex: 1,
-    justifyContent: 'center',
   },
   title: {
     fontSize: 22,
@@ -398,27 +617,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontWeight: '400',
   },
-  actionHint: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 107, 0.2)',
-  },
-  actionText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '500',
-  },
+
   buttonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    marginTop: 'auto',
-    paddingTop: 16,
+    marginTop: 16,
   },
   buttonSpacer: {
     flex: 1,
