@@ -512,22 +512,81 @@ export default function SimpleTutorialOverlay({
             
             {/* Overlay bubbles */}
             {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
+            
+            {/* All content overlaid directly on image */}
+            {/* Progress Bar - Top */}
+            <View style={styles.overlaidProgressContainer}>
+              <View style={styles.overlaidProgressBar}>
+                <View style={[styles.overlaidProgressFill, { width: `${progress}%` }]} />
+              </View>
+              <Text style={styles.overlaidProgressText}>
+                {currentStep + 1} of {TUTORIAL_STEPS.length}
+              </Text>
+            </View>
+            
+            {/* Close Button - Top Right */}
+            <Pressable style={styles.overlaidCloseButton} onPress={onSkip}>
+              <X size={20} color={Colors.white} />
+            </Pressable>
+            
+            {/* Branding Header - Top Center */}
+            <View style={styles.overlaidBrandingHeader}>
+              <View style={styles.overlaidBrandLogoContainer}>
+                <View style={styles.overlaidBrandLogo}>
+                  <ChefHat size={24} color={Colors.white} />
+                </View>
+                <View style={styles.overlaidBrandTextContainer}>
+                  <Text style={styles.overlaidBrandName}>Zestora</Text>
+                  <View style={styles.overlaidSparkleIcon}>
+                    <Sparkles size={12} color={Colors.primary} />
+                  </View>
+                </View>
+              </View>
+            </View>
+            
+            {/* Main Content - Bottom */}
+            <View style={styles.overlaidMainContent}>
+              <Text style={styles.overlaidTitle}>{currentStepData.title}</Text>
+              <Text style={styles.overlaidDescription}>{currentStepData.description}</Text>
+              
+              {/* Navigation Buttons */}
+              <View style={styles.overlaidButtonContainer}>
+                {!isFirstStep && (
+                  <Pressable style={styles.overlaidSecondaryButton} onPress={handlePrevious}>
+                    <ArrowLeft size={16} color={Colors.primary} />
+                    <Text style={styles.overlaidSecondaryButtonText}>Back</Text>
+                  </Pressable>
+                )}
+                
+                <View style={styles.buttonSpacer} />
+                
+                {isLastStep ? (
+                  <Pressable style={styles.overlaidPrimaryButton} onPress={handleNext}>
+                    <Text style={styles.overlaidPrimaryButtonText}>Get Started</Text>
+                    <ArrowRight size={16} color={Colors.white} />
+                  </Pressable>
+                ) : (
+                  <Pressable style={styles.overlaidPrimaryButton} onPress={handleNext}>
+                    <Text style={styles.overlaidPrimaryButtonText}>Next</Text>
+                    <ArrowRight size={16} color={Colors.white} />
+                  </Pressable>
+                )}
+              </View>
+              
+              {/* Skip Button */}
+              <Pressable style={styles.overlaidSkipButton} onPress={onSkip}>
+                <Text style={styles.overlaidSkipButtonText}>Skip Tutorial</Text>
+              </Pressable>
+            </View>
           </ImageBackground>
         ) : (
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <Text style={styles.loadingText}>Generating preview...</Text>
             {(Platform.OS as string) === 'web' ? (
               <View 
-                style={[
-                  styles.loadingSpinner,
-                  { 
-                    // @ts-ignore - Web-specific CSS property
-                    animationName: 'tutorial-spin',
-                    animationDuration: '1s',
-                    animationIterationCount: 'infinite',
-                    animationTimingFunction: 'linear'
-                  }
-                ]} 
+                style={styles.loadingSpinner}
+                // @ts-ignore - Web-specific className
+                className="tutorial-loading-spinner"
               />
             ) : (
               <Animated.View
@@ -546,74 +605,6 @@ export default function SimpleTutorialOverlay({
             )}
           </View>
         )}
-        
-        {/* Overlaid Content Panel */}
-        <View style={styles.overlaidContent}>
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress}%` }]} />
-            </View>
-            <Text style={styles.progressText}>
-              {currentStep + 1} of {TUTORIAL_STEPS.length}
-            </Text>
-          </View>
-          
-          {/* Close Button */}
-          <Pressable style={styles.closeButton} onPress={onSkip}>
-            <X size={20} color={Colors.textLight} />
-          </Pressable>
-          
-          {/* Branding Header */}
-          <View style={styles.brandingHeader}>
-            <View style={styles.brandLogoContainer}>
-              <View style={styles.brandLogo}>
-                <ChefHat size={24} color={Colors.white} />
-              </View>
-              <View style={styles.brandTextContainer}>
-                <Text style={styles.brandName}>Zestora</Text>
-                <View style={styles.sparkleIcon}>
-                  <Sparkles size={12} color={Colors.primary} />
-                </View>
-              </View>
-            </View>
-          </View>
-          
-          {/* Content */}
-          <View style={styles.content}>
-            <Text style={styles.title}>{currentStepData.title}</Text>
-            <Text style={styles.description}>{currentStepData.description}</Text>
-          </View>
-          
-          {/* Navigation Buttons */}
-          <View style={styles.buttonContainer}>
-            {!isFirstStep && (
-              <Pressable style={styles.secondaryButton} onPress={handlePrevious}>
-                <ArrowLeft size={16} color={Colors.primary} />
-                <Text style={styles.secondaryButtonText}>Back</Text>
-              </Pressable>
-            )}
-            
-            <View style={styles.buttonSpacer} />
-            
-            {isLastStep ? (
-              <Pressable style={styles.primaryButton} onPress={handleNext}>
-                <Text style={styles.primaryButtonText}>Get Started</Text>
-                <ArrowRight size={16} color={Colors.white} />
-              </Pressable>
-            ) : (
-              <Pressable style={styles.primaryButton} onPress={handleNext}>
-                <Text style={styles.primaryButtonText}>Next</Text>
-                <ArrowRight size={16} color={Colors.white} />
-              </Pressable>
-            )}
-          </View>
-          
-          {/* Skip Button */}
-          <Pressable style={styles.skipButton} onPress={onSkip}>
-            <Text style={styles.skipButtonText}>Skip Tutorial</Text>
-          </Pressable>
-        </View>
       </Animated.View>
     </View>
   );
@@ -634,10 +625,10 @@ export default function SimpleTutorialOverlay({
       transparent={true}
       animationType="fade"
       statusBarTranslucent={(Platform.OS as string) !== 'web'}
-      presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
+      presentationStyle={(Platform.OS as string) === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
-        {Platform.OS === 'ios' ? (
+        {(Platform.OS as string) === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
         ) : (Platform.OS as string) !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
@@ -703,43 +694,210 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 24,
   },
-  overlaidContent: {
+  // Overlaid Progress Bar
+  overlaidProgressContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 24,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    top: 20,
+    left: 20,
+    right: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  overlaidProgressBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    marginRight: 12,
+  },
+  overlaidProgressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+  },
+  overlaidProgressText: {
+    fontSize: 12,
+    color: Colors.white,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  // Overlaid Close Button
+  overlaidCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.1)',
+      cursor: 'pointer',
     }),
   },
-  screenshotBackground: {
-    width: Math.min(screenWidth * 0.65, 280),
-    height: Math.min(screenHeight * 0.45, 400),
+  // Overlaid Branding Header
+  overlaidBrandingHeader: {
+    position: 'absolute',
+    top: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  overlaidBrandLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 16,
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    ...((Platform.OS as string) === 'web' && {
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.2)',
+    }),
+  },
+  overlaidBrandLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  overlaidBrandTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  overlaidBrandName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  overlaidSparkleIcon: {
+    marginLeft: 4,
+    marginTop: -2,
+  },
+  // Overlaid Main Content
+  overlaidMainContent: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  overlaidTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.white,
+    textAlign: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 8,
+    lineHeight: 26,
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  overlaidDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 8,
+    fontWeight: '500',
+    marginBottom: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  overlaidButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  overlaidPrimaryButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    minWidth: 120,
+    justifyContent: 'center',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowRadius: 8,
+    elevation: 6,
+    ...((Platform.OS as string) === 'web' && {
+      cursor: 'pointer',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+    }),
   },
-  screenshotImage: {
-    borderRadius: 20,
+  overlaidPrimaryButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    fontSize: 15,
+    marginRight: 6,
   },
+  overlaidSecondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Colors.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+    ...((Platform.OS as string) === 'web' && {
+      cursor: 'pointer',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    }),
+  },
+  overlaidSecondaryButtonText: {
+    color: Colors.primary,
+    fontWeight: '500',
+    fontSize: 15,
+    marginLeft: 6,
+  },
+  overlaidSkipButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 12,
+    ...((Platform.OS as string) === 'web' && {
+      cursor: 'pointer',
+    }),
+  },
+  overlaidSkipButtonText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
   speechBubble: {
     position: 'absolute',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -818,204 +976,8 @@ const styles = StyleSheet.create({
   bubbleTailRight: {
     right: 20,
   },
-  controlPanel: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 12,
-    width: screenWidth - 32,
-    maxWidth: 400,
-    alignSelf: 'center',
-    maxHeight: screenHeight * 0.5,
-    ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
-    }),
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingRight: 40, // Add padding to avoid overlap with close button
-  },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: Colors.textLight,
-    fontWeight: '500',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 6,
-    zIndex: 10,
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 18,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    ...((Platform.OS as string) === 'web' && {
-      cursor: 'pointer',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-    }),
-  },
-  brandingHeader: {
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingTop: 0,
-  },
-  brandLogoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  brandTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  brandName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  sparkleIcon: {
-    marginLeft: 6,
-    marginTop: -2,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  content: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 8,
-    lineHeight: 24,
-  },
-  description: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 8,
-    fontWeight: '400',
-  },
-
-  buttonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    marginTop: 8,
-  },
   buttonSpacer: {
     flex: 1,
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    minWidth: 120,
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    ...((Platform.OS as string) === 'web' && {
-      cursor: 'pointer',
-      boxShadow: '0 4px 16px rgba(255, 107, 107, 0.3)',
-    }),
-  },
-  primaryButtonText: {
-    color: Colors.white,
-    fontWeight: '600',
-    fontSize: 15,
-    marginRight: 6,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    backgroundColor: Colors.white,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    ...((Platform.OS as string) === 'web' && {
-      cursor: 'pointer',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-    }),
-  },
-  secondaryButtonText: {
-    color: Colors.primary,
-    fontWeight: '500',
-    fontSize: 15,
-    marginLeft: 6,
-  },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 6,
-    marginTop: 2,
-    ...((Platform.OS as string) === 'web' && {
-      cursor: 'pointer',
-    }),
-  },
-  skipButtonText: {
-    color: Colors.textLight,
-    fontSize: 13,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
   },
   loadingContainer: {
     backgroundColor: Colors.backgroundLight,
