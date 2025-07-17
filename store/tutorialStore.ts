@@ -21,6 +21,7 @@ interface TutorialState {
   showWelcome: boolean;
   steps: TutorialStep[];
   shouldRedirectToOnboarding: boolean;
+  tutorialActive: boolean;
   
   // Actions
   startTutorial: () => void;
@@ -35,6 +36,7 @@ interface TutorialState {
   forceHideTutorial: () => void;
   setShouldRedirectToOnboarding: (should: boolean) => void;
   checkAndStartTutorial: () => void;
+  setTutorialActive: (active: boolean) => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -86,75 +88,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'center',
     completed: false,
   },
-  {
-    id: 'home-welcome',
-    title: 'Your Recipe Dashboard',
-    description: 'Welcome to your recipe hub! Discover thousands of recipes, browse by categories, and find meals that match your goals.',
-    screen: 'home',
-    position: 'center',
-    completed: false,
-  },
-  {
-    id: 'meal-planner-widget',
-    title: 'Weekly Meal Planner',
-    description: 'Plan your entire week with the meal planner widget. Tap any day to add meals or use "Pick for Me" for automatic suggestions.',
-    screen: 'home',
-    targetElement: 'meal-planner',
-    position: 'top',
-    completed: false,
-  },
-  {
-    id: 'recipe-categories',
-    title: 'Browse by Categories',
-    description: 'Explore recipes by meal type (breakfast, lunch, dinner) or dietary preferences (vegetarian, vegan, low-carb).',
-    screen: 'home',
-    targetElement: 'categories',
-    position: 'center',
-    action: 'tap',
-    completed: false,
-  },
-  {
-    id: 'meal-planning',
-    title: 'Weekly Meal Planning',
-    description: 'Plan your entire week ahead! View and organize meals for each day.',
-    screen: 'meal-plan',
-    position: 'top',
-    completed: false,
-  },
-  {
-    id: 'pick-for-me',
-    title: 'Let Us Pick For You',
-    description: 'Use the "Pick for Me" feature to automatically select meals based on your preferences and nutrition goals.',
-    screen: 'meal-plan',
-    targetElement: 'pick-for-me-button',
-    position: 'bottom',
-    action: 'tap',
-    completed: false,
-  },
-  {
-    id: 'grocery-list',
-    title: 'Smart Grocery Lists',
-    description: 'Your grocery list is automatically generated from your meal plans. Never forget an ingredient!',
-    screen: 'grocery-list',
-    position: 'top',
-    completed: false,
-  },
-  {
-    id: 'profile-settings',
-    title: 'Personalize Your Experience',
-    description: 'Update your profile, dietary preferences, and nutrition goals anytime from here.',
-    screen: 'profile',
-    position: 'top',
-    completed: false,
-  },
-  {
-    id: 'completion',
-    title: 'You\'re All Set! 🚀',
-    description: 'You\'re ready to start your healthy eating journey. Remember, you can always access help from your profile.',
-    screen: 'home',
-    position: 'center',
-    completed: false,
-  },
 ];
 
 export const useTutorialStore = create<TutorialState>()(
@@ -167,54 +100,18 @@ export const useTutorialStore = create<TutorialState>()(
       showWelcome: false,
       steps: TUTORIAL_STEPS,
       shouldRedirectToOnboarding: false,
+      tutorialActive: false,
       
       startTutorial: () => {
-        console.log('Starting tutorial - setting showTutorial to true');
-        
-        // Force immediate state update
-        const newState = {
+        console.log('Starting tutorial');
+        set({
           showTutorial: true,
           showWelcome: false,
           currentStep: 0,
           tutorialCompleted: false,
           isFirstLaunch: false,
-        };
-        
-        set(newState);
-        
-        // Log the state immediately after setting
-        console.log('Tutorial started - new state:', newState);
-        
-        // Multiple fallbacks for web compatibility
-        if (typeof window !== 'undefined') {
-          // Immediate check
-          setTimeout(() => {
-            const currentState = get();
-            console.log('Web check 1:', currentState.showTutorial);
-            if (!currentState.showTutorial) {
-              console.log('Web fallback 1: Re-setting tutorial state');
-              set({ showTutorial: true });
-            }
-          }, 10);
-          
-          // Secondary check
-          setTimeout(() => {
-            const currentState = get();
-            console.log('Web check 2:', currentState.showTutorial);
-            if (!currentState.showTutorial) {
-              console.log('Web fallback 2: Re-setting tutorial state');
-              set({ showTutorial: true });
-            }
-          }, 100);
-          
-          // Force re-render by updating a dummy state
-          setTimeout(() => {
-            const currentState = get();
-            if (currentState.showTutorial) {
-              set({ currentStep: 0 }); // Force re-render
-            }
-          }, 150);
-        }
+          tutorialActive: true,
+        });
       },
       
       nextStep: () => {
@@ -239,24 +136,21 @@ export const useTutorialStore = create<TutorialState>()(
           showWelcome: false,
           tutorialCompleted: true,
           isFirstLaunch: false,
+          tutorialActive: false,
+          shouldRedirectToOnboarding: true,
         });
       },
       
       completeTutorial: () => {
         console.log('Completing tutorial');
-        const { steps, currentStep } = get();
-        const currentStepData = steps[currentStep];
-        
-        // If completing tutorial on welcome screen, set redirect flag
-        const shouldRedirect = currentStepData?.screen === 'welcome';
-        
         set({
           showTutorial: false,
           showWelcome: false,
           tutorialCompleted: true,
           currentStep: 0,
           isFirstLaunch: false,
-          shouldRedirectToOnboarding: shouldRedirect,
+          tutorialActive: false,
+          shouldRedirectToOnboarding: true,
         });
       },
       
@@ -266,8 +160,10 @@ export const useTutorialStore = create<TutorialState>()(
           currentStep: 0,
           tutorialCompleted: false,
           showTutorial: false,
-          showWelcome: true,
+          showWelcome: false,
           isFirstLaunch: true,
+          tutorialActive: false,
+          shouldRedirectToOnboarding: false,
           steps: TUTORIAL_STEPS.map(step => ({ ...step, completed: false })),
         });
       },
@@ -300,6 +196,7 @@ export const useTutorialStore = create<TutorialState>()(
         set({
           showTutorial: false,
           showWelcome: false,
+          tutorialActive: false,
         });
       },
       
@@ -308,7 +205,14 @@ export const useTutorialStore = create<TutorialState>()(
       },
       
       checkAndStartTutorial: () => {
-        // No auto-start - user must manually start tutorial
+        const { isFirstLaunch, tutorialCompleted } = get();
+        if (isFirstLaunch && !tutorialCompleted) {
+          set({ showWelcome: true });
+        }
+      },
+      
+      setTutorialActive: (active: boolean) => {
+        set({ tutorialActive: active });
       },
     }),
     {

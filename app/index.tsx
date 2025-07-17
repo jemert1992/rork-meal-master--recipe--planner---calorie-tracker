@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Image, Platform } from 'react-native';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,86 +19,57 @@ export default function WelcomeScreen() {
   const { 
     isFirstLaunch, 
     tutorialCompleted, 
-    showWelcome, 
     showTutorial, 
-    currentStep,
     startTutorial,
     skipTutorial,
-    setShowTutorial,
     shouldRedirectToOnboarding,
     setShouldRedirectToOnboarding,
-    checkAndStartTutorial,
-    resetTutorial
+    checkAndStartTutorial
   } = useTutorialStore();
-  
-  const [simpleTutorialVisible, setSimpleTutorialVisible] = useState(false);
 
+  // Check if tutorial should be shown immediately on first launch
   useEffect(() => {
-    console.log('Welcome screen state:', { isLoggedIn, onboardingCompleted: profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome });
-    // If user is already logged in and completed onboarding, redirect to main app
+    console.log('Welcome screen mounted:', { isFirstLaunch, tutorialCompleted, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
+    
+    // If user is already set up, redirect to main app
     if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted) {
       router.replace('/(tabs)');
+      return;
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, showWelcome]);
-  
-  // Debug tutorial state
-  useEffect(() => {
-    console.log('Tutorial debug:', {
-      showTutorial,
-      currentStep,
-      tutorialCompleted,
-      stepsLength: useTutorialStore.getState().steps.length,
-      firstStep: useTutorialStore.getState().steps[0],
-      platform: Platform.OS
-    });
-  }, [showTutorial, currentStep, tutorialCompleted]);
-  
-  // Additional web debugging
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      console.log('Web-specific tutorial state:', {
-        showTutorial,
-        tutorialCompleted,
-        currentStep,
-        isLoggedIn,
-        onboardingCompleted: profile.onboardingCompleted
-      });
+    
+    // Show tutorial immediately on first launch
+    if (isFirstLaunch && !tutorialCompleted) {
+      console.log('First launch detected - starting tutorial');
+      startTutorial();
     }
-  }, [showTutorial, tutorialCompleted, currentStep, isLoggedIn, profile.onboardingCompleted]);
-  
-
+  }, [isFirstLaunch, tutorialCompleted, isLoggedIn, profile.onboardingCompleted]);
   
   // Handle redirect to onboarding after tutorial completion
   useEffect(() => {
     if (shouldRedirectToOnboarding && tutorialCompleted) {
+      console.log('Redirecting to onboarding after tutorial completion');
       setShouldRedirectToOnboarding(false);
       router.push('/onboarding/personal-info');
     }
   }, [shouldRedirectToOnboarding, tutorialCompleted, setShouldRedirectToOnboarding, router]);
 
-  // Don't auto-start tutorial - let user choose
-
   const handleGetStarted = () => {
-    console.log('Starting simple tutorial... Platform:', Platform.OS);
-    setSimpleTutorialVisible(true);
+    console.log('Starting tutorial manually');
+    startTutorial();
   };
   
   const handleTutorialComplete = () => {
     console.log('Tutorial completed');
-    setSimpleTutorialVisible(false);
-    skipTutorial(); // Mark as completed in store
-    router.push('/onboarding/personal-info');
+    // Tutorial completion is handled by the store
   };
   
   const handleTutorialSkip = () => {
     console.log('Tutorial skipped');
-    setSimpleTutorialVisible(false);
-    skipTutorial(); // Mark as completed in store
+    skipTutorial();
   };
 
   const handleSkipToOnboarding = () => {
     skipTutorial();
-    router.push('/onboarding/personal-info');
   };
 
   return (
@@ -194,9 +165,9 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Simple Tutorial Overlay */}
+      {/* Tutorial Overlay */}
       <SimpleTutorialOverlay 
-        visible={simpleTutorialVisible}
+        visible={showTutorial}
         onComplete={handleTutorialComplete}
         onSkip={handleTutorialSkip}
         currentScreen="welcome"

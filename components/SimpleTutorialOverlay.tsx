@@ -152,8 +152,7 @@ export default function SimpleTutorialOverlay({
   const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
   
   const currentStepData = TUTORIAL_STEPS[currentStep];
-  const isCurrentScreen = currentStepData?.screen === currentScreen;
-  const shouldShow = visible && isCurrentScreen && !!currentStepData;
+  const shouldShow = visible && !!currentStepData;
   
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
@@ -321,7 +320,7 @@ export default function SimpleTutorialOverlay({
           
           {isLastStep ? (
             <Pressable style={styles.primaryButton} onPress={handleNext}>
-              <Text style={styles.primaryButtonText}>Set Up Profile</Text>
+              <Text style={styles.primaryButtonText}>Get Started</Text>
               <ArrowRight size={16} color={Colors.white} />
             </Pressable>
           ) : (
@@ -355,8 +354,8 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== ('web' as any)}
-      presentationStyle={Platform.OS === ('web' as any) ? undefined : 'overFullScreen'}
+      statusBarTranslucent={Platform.OS !== 'web'}
+      presentationStyle={Platform.OS === 'web' ? undefined : 'overFullScreen'}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
