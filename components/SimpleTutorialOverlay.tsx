@@ -271,7 +271,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animations for web
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
+if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
   const existingStyle = document.getElementById('tutorial-animations');
   if (!existingStyle) {
     const style = document.createElement('style');
@@ -532,7 +532,7 @@ export default function SimpleTutorialOverlay({
 
   // Animations
   useEffect(() => {
-    if (isGeneratingImages && Platform.OS !== 'web') {
+    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -636,7 +636,7 @@ export default function SimpleTutorialOverlay({
         <Animated.View style={[
           isCallout ? styles.calloutContent : 
           isCelebration ? styles.celebrationContent : styles.pointerContent,
-          Platform.OS === 'web' && styles.webHighlight
+          (Platform.OS as string) === 'web' && styles.webHighlight
         ]}>
           <View style={styles.highlightIconContainer}>
             {getHighlightIcon(highlight.icon, isCallout ? 20 : 16, 
@@ -754,7 +754,7 @@ export default function SimpleTutorialOverlay({
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <View style={styles.loadingContent}>
               <Text style={styles.loadingText}>Loading preview...</Text>
-              {Platform.OS === 'web' ? (
+              {(Platform.OS as string) === 'web' ? (
                 <View 
                   style={styles.loadingSpinner}
                   // @ts-ignore - Web-specific className
@@ -783,7 +783,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if (Platform.OS === 'web') {
+  if ((Platform.OS as string) === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -797,13 +797,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
+      statusBarTranslucent={(Platform.OS as string) !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS !== 'web' ? (
+        ) : (Platform.OS as string) !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
     }),
   },
@@ -912,7 +912,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1110,7 +1110,7 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1140,5 +1140,20 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: Colors.border,
     borderTopColor: Colors.primary,
+  },
+  webHighlight: {
+    // Web-specific highlight styles
+    backdropFilter: 'blur(4px)',
+  },
+  celebrationRing: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+    backgroundColor: 'transparent',
+    top: -25,
+    left: -25,
   },
 });
