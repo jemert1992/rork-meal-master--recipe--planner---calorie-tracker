@@ -382,7 +382,7 @@ export default function SimpleTutorialOverlay({
   };
 
   const currentScreenshot = TUTORIAL_SCREENSHOTS[currentStepData?.id as keyof typeof TUTORIAL_SCREENSHOTS];
-  const currentImage = generatedImages[currentStepData?.id] || currentScreenshot?.image;
+  const currentImage = generatedImages[currentStepData?.id];
   
   if (!shouldShow || !currentStepData) {
     return null;
@@ -520,16 +520,16 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
-      presentationStyle={Platform.OS !== 'web' ? 'overFullScreen' : undefined}
+      statusBarTranslucent={Platform.OS === 'android' || Platform.OS === 'ios'}
+      presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS === 'web' ? (
-          <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
-        ) : (
+        ) : Platform.OS === 'android' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
         )}
         
         <TutorialCard />
