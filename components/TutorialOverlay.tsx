@@ -19,65 +19,125 @@ import Colors from '@/constants/colors';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Tutorial screenshots data with bubble positions and arrow directions
+// Using mockup app screenshots to show users where they'll input their data
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'welcome',
-      text: 'Welcome to your healthy eating journey!',
+      text: 'Welcome to Zestora! Your personal meal planning and nutrition companion',
       position: { top: '20%', left: '10%' },
       arrow: 'down-right',
       size: 'large'
     }]
   },
   'features-nutrition': {
-    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=800&fit=crop&crop=center',
+    // Profile screen mockup - shows nutrition tracking interface
+    image: 'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'nutrition',
-      text: 'Track your nutrition with smart insights',
-      position: { top: '30%', right: '10%' },
+      id: 'nutrition-header',
+      text: 'This is your Profile screen - your nutrition command center',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'nutrition-bars',
+      text: 'Visual nutrition bars will appear here showing your daily progress',
+      position: { top: '40%', right: '5%' },
       arrow: 'down-left',
       size: 'medium'
-    }]
-  },
-  'features-planning': {
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center',
-    bubbles: [{
-      id: 'planning',
-      text: 'Plan your entire week with ease',
-      position: { top: '40%', left: '15%' },
-      arrow: 'up-right',
-      size: 'large'
-    }]
-  },
-  'features-grocery': {
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center',
-    bubbles: [{
-      id: 'grocery',
-      text: 'Auto-generated grocery lists',
-      position: { bottom: '30%', right: '15%' },
+    }, {
+      id: 'add-food-button',
+      text: 'Tap "Add Food" here to log your meals and track calories',
+      position: { bottom: '30%', left: '50%' },
       arrow: 'up',
       size: 'medium'
     }]
   },
-  'features-ai': {
-    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center',
+  'features-planning': {
+    // Meal planning screen mockup - shows calendar/planning interface
+    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'ai',
-      text: 'AI-powered recommendations just for you',
-      position: { top: '25%', left: '20%' },
-      arrow: 'down',
+      id: 'planning-header',
+      text: 'This is your Meal Plan screen - where you organize your weekly meals',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'meal-slots',
+      text: 'Each day shows breakfast, lunch, and dinner slots for easy planning',
+      position: { top: '35%', right: '5%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'generate-button',
+      text: 'Use "Generate" to automatically create meal plans based on your preferences',
+      position: { bottom: '20%', left: '20%' },
+      arrow: 'up-right',
+      size: 'medium'
+    }]
+  },
+  'features-grocery': {
+    // Grocery list screen mockup - shows shopping list interface
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'grocery-header',
+      text: 'This is your Grocery List screen - your smart shopping companion',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'generate-grocery',
+      text: 'Tap "Generate from Meal Plan" to create shopping lists automatically',
+      position: { top: '30%', right: '5%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'check-items',
+      text: 'Check off items as you shop - they\'re organized by store category',
+      position: { bottom: '25%', left: '10%' },
+      arrow: 'up-right',
+      size: 'medium'
+    }]
+  },
+  'features-ai': {
+    // Recipe discovery screen mockup - shows recipe browsing interface
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'home-header',
+      text: 'This is your Home screen - discover thousands of personalized recipes',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'search-bar',
+      text: 'Use the search bar to find recipes by name, ingredient, or dietary need',
+      position: { top: '30%', right: '5%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'recipe-categories',
+      text: 'Browse categories like breakfast, vegetarian, or high-protein meals',
+      position: { bottom: '30%', left: '10%' },
+      arrow: 'up-right',
+      size: 'medium'
     }]
   },
   'ready-to-start': {
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center',
+    // Profile setup screen mockup - shows onboarding interface
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'start',
-      text: 'Ready to transform your health?',
-      position: { bottom: '25%', left: '10%' },
-      arrow: 'up-right',
+      id: 'ready-start',
+      text: 'Perfect! Now you know where everything is in the app',
+      position: { top: '15%', left: '10%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'profile-setup',
+      text: 'Next, set up your profile with dietary preferences and nutrition goals',
+      position: { bottom: '20%', right: '10%' },
+      arrow: 'up-left',
+      size: 'medium'
     }]
   }
 };

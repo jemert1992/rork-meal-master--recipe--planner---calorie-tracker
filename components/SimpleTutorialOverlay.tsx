@@ -17,94 +17,124 @@ import Colors from '@/constants/colors';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Tutorial screenshots data with bubble positions and arrow directions
+// Using mockup app screenshots to show users where they'll input their data
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'welcome',
-      text: 'Welcome to Zestora! Your personal meal planning companion',
-      position: { top: '15%', left: '5%' },
+      text: 'Welcome to Zestora! Your personal meal planning and nutrition companion',
+      position: { top: '20%', left: '10%' },
       arrow: 'down-right',
       size: 'large'
     }]
   },
   'features-nutrition': {
-    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    // Profile screen mockup - shows nutrition tracking interface
+    image: 'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'nutrition',
-      text: 'Tap the Profile tab at the bottom to track your daily nutrition',
-      position: { bottom: '8%', left: '50%' },
-      arrow: 'up',
-      size: 'medium'
+      id: 'nutrition-header',
+      text: 'This is your Profile screen - your nutrition command center',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
+      size: 'large'
     }, {
       id: 'nutrition-bars',
-      text: 'Visual nutrition bars will appear here showing your daily intake progress',
-      position: { top: '35%', left: '5%' },
-      arrow: 'down-right',
-      size: 'small'
+      text: 'Visual nutrition bars will appear here showing your daily progress',
+      position: { top: '40%', right: '5%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'add-food-button',
+      text: 'Tap "Add Food" here to log your meals and track calories',
+      position: { bottom: '30%', left: '50%' },
+      arrow: 'up',
+      size: 'medium'
     }]
   },
   'features-planning': {
-    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    // Meal planning screen mockup - shows calendar/planning interface
+    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'planning',
-      text: 'Tap the Meal Plan tab at the bottom to access weekly planning',
-      position: { bottom: '8%', left: '25%' },
-      arrow: 'up',
+      id: 'planning-header',
+      text: 'This is your Meal Plan screen - where you organize your weekly meals',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
     }, {
       id: 'meal-slots',
-      text: 'You\'ll see breakfast, lunch, and dinner slots for each day where you can add meals',
-      position: { top: '25%', right: '5%' },
+      text: 'Each day shows breakfast, lunch, and dinner slots for easy planning',
+      position: { top: '35%', right: '5%' },
       arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'generate-button',
+      text: 'Use "Generate" to automatically create meal plans based on your preferences',
+      position: { bottom: '20%', left: '20%' },
+      arrow: 'up-right',
       size: 'medium'
     }]
   },
   'features-grocery': {
-    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    // Grocery list screen mockup - shows shopping list interface
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'grocery',
-      text: 'Tap the Grocery tab at the bottom to view your auto-generated shopping lists',
-      position: { bottom: '8%', right: '25%' },
-      arrow: 'up',
+      id: 'grocery-header',
+      text: 'This is your Grocery List screen - your smart shopping companion',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
     }, {
-      id: 'grocery-check',
-      text: 'Check off items as you shop - they\'ll be organized by category',
-      position: { top: '30%', left: '5%' },
-      arrow: 'down-right',
-      size: 'small'
+      id: 'generate-grocery',
+      text: 'Tap "Generate from Meal Plan" to create shopping lists automatically',
+      position: { top: '30%', right: '5%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'check-items',
+      text: 'Check off items as you shop - they\'re organized by store category',
+      position: { bottom: '25%', left: '10%' },
+      arrow: 'up-right',
+      size: 'medium'
     }]
   },
   'features-ai': {
-    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    // Recipe discovery screen mockup - shows recipe browsing interface
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'ai',
-      text: 'The Home tab shows recipe recommendations based on your dietary preferences',
-      position: { bottom: '8%', left: '5%' },
-      arrow: 'up',
+      id: 'home-header',
+      text: 'This is your Home screen - discover thousands of personalized recipes',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
     }, {
-      id: 'search',
-      text: 'Use this search bar to find thousands of recipes by name or ingredient',
-      position: { top: '20%', right: '5%' },
+      id: 'search-bar',
+      text: 'Use the search bar to find recipes by name, ingredient, or dietary need',
+      position: { top: '30%', right: '5%' },
       arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'recipe-categories',
+      text: 'Browse categories like breakfast, vegetarian, or high-protein meals',
+      position: { bottom: '30%', left: '10%' },
+      arrow: 'up-right',
       size: 'medium'
     }]
   },
   'ready-to-start': {
-    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    // Profile setup screen mockup - shows onboarding interface
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'start',
-      text: 'Ready to start your healthy eating journey?',
-      position: { top: '12%', left: '5%' },
+      id: 'ready-start',
+      text: 'Perfect! Now you know where everything is in the app',
+      position: { top: '15%', left: '10%' },
       arrow: 'down-right',
       size: 'large'
     }, {
-      id: 'profile',
-      text: 'First, tap the Profile tab to set up your dietary preferences and nutrition goals',
-      position: { bottom: '8%', right: '5%' },
-      arrow: 'up',
+      id: 'profile-setup',
+      text: 'Next, set up your profile with dietary preferences and nutrition goals',
+      position: { bottom: '20%', right: '10%' },
+      arrow: 'up-left',
       size: 'medium'
     }]
   }
@@ -123,42 +153,42 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome-intro',
     title: 'Welcome to Zestora! 🎉',
-    description: 'Your personal meal planning and nutrition tracking companion. Discover thousands of recipes and plan your perfect week!',
+    description: 'Your personal meal planning and nutrition tracking companion. Let\'s take a quick tour of where you\'ll manage your healthy eating journey!',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-nutrition',
-    title: 'Track Your Nutrition 📊',
-    description: 'Monitor your daily calories, protein, carbs, and fats with beautiful visual progress bars. Stay on track with your health goals!',
+    title: 'Profile & Nutrition Tracking 📊',
+    description: 'This is your Profile screen where you\'ll track daily nutrition, set calorie goals, and monitor your progress with visual bars.',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-planning',
-    title: 'Plan Your Week 📅',
-    description: 'Drag and drop recipes into your weekly meal plan. Organize breakfast, lunch, dinner, and snacks for the entire week ahead.',
+    title: 'Weekly Meal Planning 📅',
+    description: 'This is your Meal Plan screen where you\'ll organize breakfast, lunch, and dinner for each day. Generate plans automatically or add meals manually.',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-grocery',
     title: 'Smart Grocery Lists 🛒',
-    description: 'Automatically generate shopping lists from your meal plans. Check off items as you shop and never forget ingredients again!',
+    description: 'This is your Grocery List screen where shopping lists are automatically generated from your meal plans, organized by store category.',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-ai',
-    title: 'Discover Recipes ✨',
-    description: 'Browse thousands of recipes with smart search and filtering. Find meals that match your dietary preferences and fitness goals.',
+    title: 'Recipe Discovery 🔍',
+    description: 'This is your Home screen where you\'ll discover thousands of recipes, search by ingredients, and browse categories that match your preferences.',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'ready-to-start',
-    title: 'Let\'s Get Started! 🚀',
-    description: 'Set up your profile with dietary preferences and nutrition goals to get personalized recipe recommendations.',
+    title: 'Ready to Start! 🚀',
+    description: 'Now you know where everything is! Set up your profile with dietary preferences and nutrition goals to get personalized recommendations.',
     screen: 'welcome',
     position: 'center',
   },
