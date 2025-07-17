@@ -14,14 +14,64 @@ import { BlurView } from 'expo-blur';
 import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles, ArrowDown, ArrowUp, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
+// Image generation service
+const generateTutorialImage = async (prompt: string): Promise<string> => {
+  try {
+    const response = await fetch('https://toolkit.rork.com/images/generate/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        size: '512x1024'
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate image');
+    }
+
+    const data = await response.json();
+    return `data:${data.image.mimeType};base64,${data.image.base64Data}`;
+  } catch (error) {
+    console.error('Error generating tutorial image:', error);
+    // Return a fallback color gradient
+    return 'data:image/svg+xml;base64,' + btoa(`
+      <svg width="512" height="1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#4ECDC4;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="512" height="1024" fill="url(#grad)" />
+      </svg>
+    `);
+  }
+};
+
+// Cache for generated images
+const imageCache: { [key: string]: string } = {};
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Add CSS animation for web spinner
+if (Platform.OS === 'web') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 // Tutorial screenshots data with bubble positions and arrow directions
-// Using realistic mobile app interface mockups that represent actual Zestora app screens
+// Using custom generated images that represent actual Zestora app screens
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    // App branding/welcome screen - clean interface with logo
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'welcome',
       text: 'Welcome to Zestora - your personal nutrition companion!',
@@ -31,8 +81,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-nutrition': {
-    // Profile screen mockup - nutrition tracking dashboard with progress bars
-    image: 'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'nutrition-tracking',
       text: 'Track daily nutrition with visual progress indicators',
@@ -48,8 +96,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-planning': {
-    // Meal planning screen mockup - calendar view with meal slots
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'meal-planning',
       text: 'Plan breakfast, lunch, and dinner for each day',
@@ -65,8 +111,8 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-grocery': {
-    // Grocery list screen mockup - organized shopping list interface
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    // Grocery list screen with organized items
+    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'grocery-generation',
       text: 'Generate shopping lists automatically from meal plans',
@@ -82,8 +128,8 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-ai': {
-    // Recipe discovery screen mockup - recipe cards and search interface
-    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    // Recipe discovery screen with recipe cards
+    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'recipe-discovery',
       text: 'Discover thousands of recipes tailored to your preferences',
@@ -99,8 +145,8 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'ready-to-start': {
-    // Onboarding completion screen - ready to begin using the app
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    // Onboarding completion screen
+    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'tutorial-complete',
       text: 'Great! You\'re ready to start your healthy eating journey',
@@ -185,8 +231,11 @@ export default function SimpleTutorialOverlay({
   currentScreen 
 }: SimpleTutorialOverlayProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [generatedImages, setGeneratedImages] = useState<{ [key: string]: string }>({});
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
+  const spinAnim = React.useRef(new Animated.Value(0)).current;
   
   const currentStepData = TUTORIAL_STEPS[currentStep];
   const shouldShow = visible && !!currentStepData;
@@ -195,6 +244,60 @@ export default function SimpleTutorialOverlay({
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
   const progress = ((currentStep + 1) / TUTORIAL_STEPS.length) * 100;
   
+  // Generate tutorial images when component mounts
+  useEffect(() => {
+    const generateImages = async () => {
+      if (isGeneratingImages || Object.keys(generatedImages).length > 0) return;
+      
+      setIsGeneratingImages(true);
+      
+      const imagePrompts = {
+        'welcome-intro': 'Mobile app welcome screen for Zestora nutrition app, clean modern UI with chef hat logo, welcome text, green and orange color scheme, mobile phone mockup, professional app design',
+        'features-nutrition': 'Mobile app nutrition tracking screen, circular progress bars for calories and macros, daily nutrition dashboard, food logging interface, modern UI design, mobile phone mockup',
+        'features-planning': 'Mobile app meal planning screen, weekly calendar view with breakfast lunch dinner slots, meal planning interface, recipe cards, modern mobile UI design',
+        'features-grocery': 'Mobile app grocery shopping list screen, organized food items by categories, checkboxes, clean list interface, shopping cart icon, modern mobile app design',
+        'features-ai': 'Mobile app recipe discovery screen, grid of recipe cards with food photos, search and filter options, modern cooking app interface, mobile phone mockup',
+        'ready-to-start': 'Mobile app onboarding completion screen, success checkmark, ready to start message, modern app interface, celebration design, mobile phone mockup'
+      };
+
+      const newImages: { [key: string]: string } = {};
+      
+      for (const [key, prompt] of Object.entries(imagePrompts)) {
+        if (imageCache[key]) {
+          newImages[key] = imageCache[key];
+        } else {
+          try {
+            const imageData = await generateTutorialImage(prompt);
+            imageCache[key] = imageData;
+            newImages[key] = imageData;
+          } catch (error) {
+            console.error(`Failed to generate image for ${key}:`, error);
+          }
+        }
+      }
+      
+      setGeneratedImages(newImages);
+      setIsGeneratingImages(false);
+    };
+
+    generateImages();
+  }, []);
+
+  // Spinner animation
+  useEffect(() => {
+    if (isGeneratingImages && Platform.OS !== 'web') {
+      const spinAnimation = Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      );
+      spinAnimation.start();
+      return () => spinAnimation.stop();
+    }
+  }, [isGeneratingImages]);
+
   // Reset step when tutorial becomes visible
   useEffect(() => {
     if (visible) {
@@ -279,6 +382,7 @@ export default function SimpleTutorialOverlay({
   };
 
   const currentScreenshot = TUTORIAL_SCREENSHOTS[currentStepData?.id as keyof typeof TUTORIAL_SCREENSHOTS];
+  const currentImage = generatedImages[currentStepData?.id] || currentScreenshot?.image;
   
   if (!shouldShow || !currentStepData) {
     return null;
@@ -288,14 +392,39 @@ export default function SimpleTutorialOverlay({
     <View style={styles.screenshotContainer}>
       {/* Screenshot Background */}
       {currentScreenshot && (
-        <ImageBackground
-          source={{ uri: currentScreenshot.image }}
-          style={styles.screenshotBackground}
-          imageStyle={styles.screenshotImage}
-        >
-          {/* Overlay bubbles */}
-          {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
-        </ImageBackground>
+        <View style={styles.screenshotBackground}>
+          {currentImage ? (
+            <ImageBackground
+              source={{ uri: currentImage }}
+              style={styles.screenshotBackground}
+              imageStyle={styles.screenshotImage}
+            >
+              {/* Overlay bubbles */}
+              {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
+            </ImageBackground>
+          ) : (
+            <View style={[styles.screenshotBackground, styles.loadingContainer]}>
+              <Text style={styles.loadingText}>Generating preview...</Text>
+              {Platform.OS === 'web' ? (
+                <View style={styles.loadingSpinner} />
+              ) : (
+                <Animated.View
+                  style={[
+                    styles.loadingSpinner,
+                    {
+                      transform: [{
+                        rotate: spinAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '360deg'],
+                        }),
+                      }],
+                    },
+                  ]}
+                />
+              )}
+            </View>
+          )}
+        </View>
       )}
       
       {/* Control Panel */}
@@ -391,16 +520,16 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS === 'ios' || Platform.OS === 'android'}
-      presentationStyle={Platform.OS === 'ios' || Platform.OS === 'android' ? 'overFullScreen' : undefined}
+      statusBarTranslucent={Platform.OS !== 'web'}
+      presentationStyle={Platform.OS !== 'web' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS === 'android' ? (
-          <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
-        ) : (
+        ) : Platform.OS === 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         )}
         
         <TutorialCard />
@@ -728,5 +857,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     textDecorationLine: 'underline',
+  },
+  loadingContainer: {
+    backgroundColor: Colors.backgroundLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  loadingSpinner: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderTopColor: Colors.primary,
+    ...(Platform.OS === 'web' && {
+      animation: 'spin 1s linear infinite',
+    }),
   },
 });
