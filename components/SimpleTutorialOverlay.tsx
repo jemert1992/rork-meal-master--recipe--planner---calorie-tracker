@@ -14,8 +14,97 @@ import { BlurView } from 'expo-blur';
 import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles, ArrowDown, ArrowUp, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
-// Image generation service
+// Create fallback images with better designs
+const createFallbackImage = (stepId: string): string => {
+  const designs = {
+    'welcome-intro': {
+      gradient: { start: '#FF6B6B', end: '#4ECDC4' },
+      icon: '👋',
+      title: 'Welcome to Zestora',
+      subtitle: 'Your nutrition companion'
+    },
+    'features-nutrition': {
+      gradient: { start: '#4ECDC4', end: '#45B7D1' },
+      icon: '📊',
+      title: 'Nutrition Tracking',
+      subtitle: 'Monitor your daily intake'
+    },
+    'features-planning': {
+      gradient: { start: '#96CEB4', end: '#FFEAA7' },
+      icon: '📅',
+      title: 'Meal Planning',
+      subtitle: 'Plan your weekly meals'
+    },
+    'features-grocery': {
+      gradient: { start: '#DDA0DD', end: '#98D8C8' },
+      icon: '🛒',
+      title: 'Grocery Lists',
+      subtitle: 'Auto-generated shopping'
+    },
+    'features-ai': {
+      gradient: { start: '#F7DC6F', end: '#BB8FCE' },
+      icon: '✨',
+      title: 'AI Recommendations',
+      subtitle: 'Personalized suggestions'
+    },
+    'ready-to-start': {
+      gradient: { start: '#85C1E9', end: '#F8C471' },
+      icon: '🚀',
+      title: 'Ready to Start',
+      subtitle: 'Begin your journey'
+    }
+  };
+  
+  const design = designs[stepId as keyof typeof designs] || designs['welcome-intro'];
+  
+  return 'data:image/svg+xml;base64,' + btoa(`
+    <svg width="280" height="400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:${design.gradient.start};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${design.gradient.end};stop-opacity:1" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.2)"/>
+        </filter>
+      </defs>
+      <rect width="280" height="400" rx="20" fill="url(#grad)" />
+      
+      <!-- Phone mockup frame -->
+      <rect x="20" y="40" width="240" height="320" rx="16" fill="white" filter="url(#shadow)" />
+      <rect x="30" y="50" width="220" height="300" rx="12" fill="#f8f9fa" />
+      
+      <!-- Icon -->
+      <text x="140" y="120" text-anchor="middle" font-size="32" fill="#333">${design.icon}</text>
+      
+      <!-- Title -->
+      <text x="140" y="160" text-anchor="middle" fill="#333" font-size="16" font-family="Arial, sans-serif" font-weight="bold">${design.title}</text>
+      
+      <!-- Subtitle -->
+      <text x="140" y="180" text-anchor="middle" fill="#666" font-size="12" font-family="Arial, sans-serif">${design.subtitle}</text>
+      
+      <!-- Mock UI elements -->
+      <rect x="50" y="200" width="180" height="8" rx="4" fill="#e9ecef" />
+      <rect x="50" y="220" width="140" height="8" rx="4" fill="#e9ecef" />
+      <rect x="50" y="240" width="160" height="8" rx="4" fill="#e9ecef" />
+      
+      <!-- Mock buttons -->
+      <rect x="50" y="280" width="60" height="24" rx="12" fill="${design.gradient.start}" opacity="0.8" />
+      <rect x="120" y="280" width="60" height="24" rx="12" fill="${design.gradient.end}" opacity="0.8" />
+      
+      <!-- Zestora branding -->
+      <text x="140" y="380" text-anchor="middle" fill="white" font-size="14" font-family="Arial, sans-serif" font-weight="bold" opacity="0.9">Zestora</text>
+    </svg>
+  `);
+};
+
+// Image generation service with better error handling
 const generateTutorialImage = async (prompt: string, stepId: string): Promise<string> => {
+  // For now, always use fallback images to avoid HTTP 500 errors
+  // This ensures the tutorial works reliably
+  return createFallbackImage(stepId);
+  
+  /* Commented out API call until image generation service is stable
   try {
     const response = await fetch('https://toolkit.rork.com/images/generate/', {
       method: 'POST',
@@ -23,8 +112,8 @@ const generateTutorialImage = async (prompt: string, stepId: string): Promise<st
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt,
-        size: '512x1024'
+        prompt: prompt + ' mobile app screenshot, clean modern UI design, professional interface',
+        size: '512x512'
       }),
     });
 
@@ -36,32 +125,9 @@ const generateTutorialImage = async (prompt: string, stepId: string): Promise<st
     return `data:${data.image.mimeType};base64,${data.image.base64Data}`;
   } catch (error) {
     console.error(`Error generating tutorial image for ${stepId}:`, error);
-    
-    // Return step-specific fallback gradients
-    const gradients = {
-      'welcome-intro': { start: '#FF6B6B', end: '#4ECDC4' },
-      'features-nutrition': { start: '#4ECDC4', end: '#45B7D1' },
-      'features-planning': { start: '#96CEB4', end: '#FFEAA7' },
-      'features-grocery': { start: '#DDA0DD', end: '#98D8C8' },
-      'features-ai': { start: '#F7DC6F', end: '#BB8FCE' },
-      'ready-to-start': { start: '#85C1E9', end: '#F8C471' }
-    };
-    
-    const colors = gradients[stepId as keyof typeof gradients] || { start: '#FF6B6B', end: '#4ECDC4' };
-    
-    return 'data:image/svg+xml;base64,' + btoa(`
-      <svg width="512" height="1024" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:${colors.start};stop-opacity:1" />
-            <stop offset="100%" style="stop-color:${colors.end};stop-opacity:1" />
-          </linearGradient>
-        </defs>
-        <rect width="512" height="1024" fill="url(#grad)" />
-        <text x="256" y="512" text-anchor="middle" fill="white" font-size="24" font-family="Arial, sans-serif" opacity="0.8">Zestora</text>
-      </svg>
-    `);
+    return createFallbackImage(stepId);
   }
+  */
 };
 
 // Cache for generated images
@@ -70,7 +136,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animation for web spinner
-if (Platform.OS === 'web') {
+if ((Platform.OS as string) === 'web') {
   const style = document.createElement('style');
   style.textContent = `
     @keyframes spin {
@@ -85,7 +151,6 @@ if (Platform.OS === 'web') {
 // Using custom generated images that represent actual Zestora app screens
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'welcome',
       text: 'Welcome to Zestora - your personal nutrition companion!',
@@ -95,7 +160,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-nutrition': {
-    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'nutrition-tracking',
       text: 'Track daily nutrition with visual progress indicators',
@@ -111,7 +175,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-planning': {
-    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'meal-planning',
       text: 'Plan breakfast, lunch, and dinner for each day',
@@ -127,8 +190,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-grocery': {
-    // Grocery list screen with organized items
-    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'grocery-generation',
       text: 'Generate shopping lists automatically from meal plans',
@@ -144,8 +205,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-ai': {
-    // Recipe discovery screen with recipe cards
-    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'recipe-discovery',
       text: 'Discover thousands of recipes tailored to your preferences',
@@ -161,8 +220,6 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'ready-to-start': {
-    // Onboarding completion screen
-    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'tutorial-complete',
       text: 'Great! You\'re ready to start your healthy eating journey',
@@ -305,7 +362,7 @@ export default function SimpleTutorialOverlay({
 
   // Spinner animation
   useEffect(() => {
-    if (isGeneratingImages && Platform.OS !== 'web') {
+    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -425,7 +482,7 @@ export default function SimpleTutorialOverlay({
           ) : (
             <View style={[styles.screenshotBackground, styles.loadingContainer]}>
               <Text style={styles.loadingText}>Generating preview...</Text>
-              {Platform.OS === 'web' ? (
+              {(Platform.OS as string) === 'web' ? (
                 <View style={styles.loadingSpinner} />
               ) : (
                 <Animated.View
@@ -526,7 +583,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if (Platform.OS === 'web') {
+  if ((Platform.OS as string) === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -540,13 +597,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
+      statusBarTranslucent={(Platform.OS as string) !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS !== 'web' ? (
+        ) : (Platform.OS as string) !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -612,7 +669,7 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 2,
     borderColor: Colors.primary,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
     }),
   },
@@ -690,7 +747,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     alignSelf: 'center',
     maxHeight: screenHeight * 0.5,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
     }),
   },
@@ -734,7 +791,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     }),
@@ -828,7 +885,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 4px 16px rgba(255, 107, 107, 0.3)',
     }),
@@ -853,7 +910,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     }),
@@ -868,7 +925,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     marginTop: 4,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -896,11 +953,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.border,
     borderTopColor: Colors.primary,
-    ...(Platform.OS === 'web' && {
-      animationName: 'spin',
-      animationDuration: '1s',
-      animationTimingFunction: 'linear',
-      animationIterationCount: 'infinite',
+    ...((Platform.OS as string) === 'web' && {
+      animation: 'spin 1s linear infinite',
     }),
   },
 });
