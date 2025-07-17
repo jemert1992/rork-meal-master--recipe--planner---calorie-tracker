@@ -17,65 +17,102 @@ import Colors from '@/constants/colors';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Tutorial screenshots data with bubble positions and arrow directions
+// Using realistic mobile app interface mockups that represent actual Zestora app screens
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center',
+    // App branding/welcome screen - clean interface with logo
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'welcome',
-      text: 'Welcome to your healthy eating journey!',
-      position: { top: '20%', left: '10%' },
+      text: 'Welcome to Zestora - your personal nutrition companion!',
+      position: { top: '25%', left: '10%' },
       arrow: 'down-right',
       size: 'large'
     }]
   },
   'features-nutrition': {
-    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=800&fit=crop&crop=center',
+    // Profile screen mockup - nutrition tracking dashboard with progress bars
+    image: 'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'nutrition',
-      text: 'Track your nutrition with smart insights',
-      position: { top: '30%', right: '10%' },
+      id: 'nutrition-tracking',
+      text: 'Track daily nutrition with visual progress indicators',
+      position: { top: '20%', right: '10%' },
       arrow: 'down-left',
       size: 'medium'
+    }, {
+      id: 'nutrition-goals',
+      text: 'Set and monitor your calorie and macro goals',
+      position: { top: '60%', left: '15%' },
+      arrow: 'up-right',
+      size: 'small'
     }]
   },
   'features-planning': {
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center',
+    // Meal planning screen mockup - calendar view with meal slots
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'planning',
-      text: 'Plan your entire week with ease',
-      position: { top: '40%', left: '15%' },
-      arrow: 'up-right',
+      id: 'meal-planning',
+      text: 'Plan breakfast, lunch, and dinner for each day',
+      position: { top: '25%', left: '15%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'generate-button',
+      text: 'Auto-generate meal plans with smart suggestions',
+      position: { top: '75%', right: '10%' },
+      arrow: 'up-left',
+      size: 'small'
     }]
   },
   'features-grocery': {
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center',
+    // Grocery list screen mockup - organized shopping list interface
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'grocery',
-      text: 'Auto-generated grocery lists',
-      position: { bottom: '30%', right: '15%' },
-      arrow: 'up',
+      id: 'grocery-generation',
+      text: 'Generate shopping lists automatically from meal plans',
+      position: { top: '20%', right: '15%' },
+      arrow: 'down-left',
       size: 'medium'
+    }, {
+      id: 'grocery-organization',
+      text: 'Items organized by store categories for efficiency',
+      position: { bottom: '30%', left: '10%' },
+      arrow: 'up-right',
+      size: 'small'
     }]
   },
   'features-ai': {
-    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center',
+    // Recipe discovery screen mockup - recipe cards and search interface
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'ai',
-      text: 'AI-powered recommendations just for you',
-      position: { top: '25%', left: '20%' },
-      arrow: 'down',
+      id: 'recipe-discovery',
+      text: 'Discover thousands of recipes tailored to your preferences',
+      position: { top: '15%', left: '20%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'recipe-filtering',
+      text: 'Filter by dietary needs, meal type, and cooking time',
+      position: { bottom: '25%', right: '15%' },
+      arrow: 'up-left',
+      size: 'medium'
     }]
   },
   'ready-to-start': {
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center',
+    // Onboarding completion screen - ready to begin using the app
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
-      id: 'start',
-      text: 'Ready to transform your health?',
-      position: { bottom: '25%', left: '10%' },
-      arrow: 'up-right',
+      id: 'tutorial-complete',
+      text: 'Great! You\'re ready to start your healthy eating journey',
+      position: { top: '25%', left: '10%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'profile-setup',
+      text: 'Next, we\'ll set up your profile and dietary preferences',
+      position: { bottom: '20%', right: '10%' },
+      arrow: 'up-left',
+      size: 'medium'
     }]
   }
 };
@@ -354,8 +391,8 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== ('web' as any)}
-      presentationStyle={Platform.OS === ('web' as any) ? undefined : 'overFullScreen'}
+      statusBarTranslucent={Platform.OS !== 'web'}
+      presentationStyle={Platform.OS === 'web' ? undefined : 'overFullScreen'}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
