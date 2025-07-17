@@ -392,7 +392,7 @@ export default function SimpleTutorialOverlay({
       transparent={true}
       animationType="fade"
       statusBarTranslucent={Platform.OS !== 'web'}
-      presentationStyle={Platform.OS === 'web' ? undefined : 'overFullScreen'}
+      presentationStyle={Platform.OS !== 'web' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
