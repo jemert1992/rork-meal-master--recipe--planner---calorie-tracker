@@ -15,7 +15,7 @@ import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles, ArrowDown, ArrowUp, ArrowU
 import Colors from '@/constants/colors';
 
 // Image generation service
-const generateTutorialImage = async (prompt: string): Promise<string> => {
+const generateTutorialImage = async (prompt: string, stepId: string): Promise<string> => {
   try {
     const response = await fetch('https://toolkit.rork.com/images/generate/', {
       method: 'POST',
@@ -29,23 +29,36 @@ const generateTutorialImage = async (prompt: string): Promise<string> => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate image');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
     return `data:${data.image.mimeType};base64,${data.image.base64Data}`;
   } catch (error) {
-    console.error('Error generating tutorial image:', error);
-    // Return a fallback color gradient
+    console.error(`Error generating tutorial image for ${stepId}:`, error);
+    
+    // Return step-specific fallback gradients
+    const gradients = {
+      'welcome-intro': { start: '#FF6B6B', end: '#4ECDC4' },
+      'features-nutrition': { start: '#4ECDC4', end: '#45B7D1' },
+      'features-planning': { start: '#96CEB4', end: '#FFEAA7' },
+      'features-grocery': { start: '#DDA0DD', end: '#98D8C8' },
+      'features-ai': { start: '#F7DC6F', end: '#BB8FCE' },
+      'ready-to-start': { start: '#85C1E9', end: '#F8C471' }
+    };
+    
+    const colors = gradients[stepId as keyof typeof gradients] || { start: '#FF6B6B', end: '#4ECDC4' };
+    
     return 'data:image/svg+xml;base64,' + btoa(`
       <svg width="512" height="1024" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#4ECDC4;stop-opacity:1" />
+            <stop offset="0%" style="stop-color:${colors.start};stop-opacity:1" />
+            <stop offset="100%" style="stop-color:${colors.end};stop-opacity:1" />
           </linearGradient>
         </defs>
         <rect width="512" height="1024" fill="url(#grad)" />
+        <text x="256" y="512" text-anchor="middle" fill="white" font-size="24" font-family="Arial, sans-serif" opacity="0.8">Zestora</text>
       </svg>
     `);
   }
@@ -72,6 +85,7 @@ if (Platform.OS === 'web') {
 // Using custom generated images that represent actual Zestora app screens
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
+    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'welcome',
       text: 'Welcome to Zestora - your personal nutrition companion!',
@@ -81,6 +95,7 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-nutrition': {
+    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'nutrition-tracking',
       text: 'Track daily nutrition with visual progress indicators',
@@ -96,6 +111,7 @@ const TUTORIAL_SCREENSHOTS = {
     }]
   },
   'features-planning': {
+    image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder - will be replaced
     bubbles: [{
       id: 'meal-planning',
       text: 'Plan breakfast, lunch, and dinner for each day',
@@ -267,11 +283,15 @@ export default function SimpleTutorialOverlay({
           newImages[key] = imageCache[key];
         } else {
           try {
-            const imageData = await generateTutorialImage(prompt);
+            const imageData = await generateTutorialImage(prompt, key);
             imageCache[key] = imageData;
             newImages[key] = imageData;
           } catch (error) {
             console.error(`Failed to generate image for ${key}:`, error);
+            // Use fallback gradient
+            const imageData = await generateTutorialImage('', key);
+            imageCache[key] = imageData;
+            newImages[key] = imageData;
           }
         }
       }
@@ -520,13 +540,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS === 'android' || Platform.OS === 'ios'}
+      statusBarTranslucent={Platform.OS !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS === 'android' ? (
+        ) : Platform.OS !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -877,7 +897,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderTopColor: Colors.primary,
     ...(Platform.OS === 'web' && {
-      animation: 'spin 1s linear infinite',
+      animationName: 'spin',
+      animationDuration: '1s',
+      animationTimingFunction: 'linear',
+      animationIterationCount: 'infinite',
     }),
   },
 });
