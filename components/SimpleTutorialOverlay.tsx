@@ -19,63 +19,93 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // Tutorial screenshots data with bubble positions and arrow directions
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'welcome',
-      text: 'Welcome to your healthy eating journey!',
-      position: { top: '20%', left: '10%' },
+      text: 'Welcome to Zestora! Your personal meal planning companion',
+      position: { top: '8%', left: '5%' },
       arrow: 'down-right',
       size: 'large'
     }]
   },
   'features-nutrition': {
-    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=800&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'nutrition',
-      text: 'Track your nutrition with smart insights',
-      position: { top: '30%', right: '10%' },
+      text: 'Track your daily nutrition and see your progress',
+      position: { top: '10%', right: '5%' },
       arrow: 'down-left',
       size: 'medium'
+    }, {
+      id: 'nutrition-bars',
+      text: 'Visual nutrition bars show your daily intake',
+      position: { bottom: '50%', left: '5%' },
+      arrow: 'up-right',
+      size: 'small'
     }]
   },
   'features-planning': {
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'planning',
-      text: 'Plan your entire week with ease',
-      position: { top: '40%', left: '15%' },
-      arrow: 'up-right',
+      text: 'Plan your entire week with drag & drop',
+      position: { top: '8%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
-    }]
-  },
-  'features-grocery': {
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center',
-    bubbles: [{
-      id: 'grocery',
-      text: 'Auto-generated grocery lists',
-      position: { bottom: '30%', right: '15%' },
-      arrow: 'up',
+    }, {
+      id: 'meal-slots',
+      text: 'Add meals to breakfast, lunch, and dinner slots',
+      position: { bottom: '45%', right: '5%' },
+      arrow: 'up-left',
       size: 'medium'
     }]
   },
+  'features-grocery': {
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'grocery',
+      text: 'Auto-generated grocery lists from your meal plan',
+      position: { top: '10%', left: '5%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'grocery-check',
+      text: 'Check off items as you shop',
+      position: { bottom: '47%', right: '5%' },
+      arrow: 'up',
+      size: 'small'
+    }]
+  },
   'features-ai': {
-    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'ai',
-      text: 'AI-powered recommendations just for you',
-      position: { top: '25%', left: '20%' },
-      arrow: 'down',
+      text: 'AI-powered recipe recommendations based on your preferences',
+      position: { top: '6%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'search',
+      text: 'Search thousands of recipes',
+      position: { bottom: '52%', right: '5%' },
+      arrow: 'up-left',
+      size: 'medium'
     }]
   },
   'ready-to-start': {
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'start',
-      text: 'Ready to transform your health?',
-      position: { bottom: '25%', left: '10%' },
-      arrow: 'up-right',
+      text: 'Ready to start your healthy eating journey?',
+      position: { top: '8%', left: '5%' },
+      arrow: 'down-right',
       size: 'large'
+    }, {
+      id: 'profile',
+      text: 'Set up your profile to get personalized recommendations',
+      position: { bottom: '45%', right: '5%' },
+      arrow: 'up-left',
+      size: 'medium'
     }]
   }
 };
@@ -93,42 +123,42 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome-intro',
     title: 'Welcome to Zestora! 🎉',
-    description: 'Your personal meal planning and nutrition tracking companion. We\'re here to make healthy eating simple and enjoyable!',
+    description: 'Your personal meal planning and nutrition tracking companion. Discover thousands of recipes and plan your perfect week!',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-nutrition',
-    title: 'Smart Nutrition Tracking 📊',
-    description: 'Track calories, macros, and nutrients effortlessly. Our AI analyzes your eating patterns and provides personalized insights.',
+    title: 'Track Your Nutrition 📊',
+    description: 'Monitor your daily calories, protein, carbs, and fats with beautiful visual progress bars. Stay on track with your health goals!',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-planning',
-    title: 'Weekly Meal Planning 📅',
-    description: 'Plan your entire week with drag-and-drop simplicity. Get personalized recipe recommendations based on your goals.',
+    title: 'Plan Your Week 📅',
+    description: 'Drag and drop recipes into your weekly meal plan. Organize breakfast, lunch, dinner, and snacks for the entire week ahead.',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-grocery',
-    title: 'Auto Grocery Lists 🛒',
-    description: 'Never forget ingredients again! Your shopping list is automatically generated from your meal plans.',
+    title: 'Smart Grocery Lists 🛒',
+    description: 'Automatically generate shopping lists from your meal plans. Check off items as you shop and never forget ingredients again!',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-ai',
-    title: 'AI Recommendations ✨',
-    description: 'Get personalized meal suggestions, recipe modifications, and nutrition advice tailored to your preferences and goals.',
+    title: 'Discover Recipes ✨',
+    description: 'Browse thousands of recipes with smart search and filtering. Find meals that match your dietary preferences and fitness goals.',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'ready-to-start',
-    title: 'Ready to Transform Your Health? 🚀',
-    description: 'Let\'s set up your profile and start your journey to better nutrition. Your healthiest self is just a few steps away!',
+    title: 'Let\'s Get Started! 🚀',
+    description: 'Set up your profile with dietary preferences and nutrition goals to get personalized recipe recommendations.',
     screen: 'welcome',
     position: 'center',
   },
@@ -257,6 +287,9 @@ export default function SimpleTutorialOverlay({
           style={styles.screenshotBackground}
           imageStyle={styles.screenshotImage}
         >
+          {/* Dark overlay for better bubble visibility */}
+          <View style={styles.screenshotOverlay} />
+          
           {/* Overlay bubbles */}
           {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
         </ImageBackground>
@@ -396,17 +429,17 @@ const styles = StyleSheet.create({
   },
   screenshotContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   screenshotBackground: {
-    width: Math.min(screenWidth * 0.65, 280),
-    height: Math.min(screenHeight * 0.45, 400),
-    borderRadius: 20,
+    width: screenWidth,
+    height: screenHeight * 0.75,
+    borderRadius: 0,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 0,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -414,37 +447,45 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   screenshotImage: {
-    borderRadius: 20,
+    borderRadius: 0,
+  },
+  screenshotOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   speechBubble: {
     position: 'absolute',
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 3,
     borderColor: Colors.primary,
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+      boxShadow: '0 6px 24px rgba(0, 0, 0, 0.25)',
     }),
   },
   bubbleSmall: {
-    padding: 8,
-    minWidth: 80,
-    maxWidth: 120,
+    padding: 12,
+    minWidth: 120,
+    maxWidth: 180,
   },
   bubbleMedium: {
-    padding: 12,
-    minWidth: 100,
-    maxWidth: 160,
+    padding: 16,
+    minWidth: 160,
+    maxWidth: 240,
   },
   bubbleLarge: {
-    padding: 16,
-    minWidth: 120,
-    maxWidth: 200,
+    padding: 20,
+    minWidth: 200,
+    maxWidth: 300,
   },
   bubbleContent: {
     flexDirection: 'row',
@@ -452,11 +493,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   bubbleText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: Colors.text,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 20,
+    textAlign: 'left',
   },
   arrowContainer: {
     marginLeft: 8,
@@ -469,44 +511,47 @@ const styles = StyleSheet.create({
     borderStyle: 'solid',
   },
   bubbleTailUp: {
-    bottom: -8,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
+    bottom: -12,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 12,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: Colors.white,
   },
   bubbleTailDown: {
-    top: -8,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 8,
+    top: -12,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderBottomWidth: 12,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderBottomColor: Colors.white,
   },
   bubbleTailLeft: {
-    left: 20,
+    left: 30,
   },
   bubbleTailRight: {
-    right: 20,
+    right: 30,
   },
   controlPanel: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     padding: 20,
+    paddingBottom: 30,
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
     elevation: 12,
-    width: screenWidth - 32,
-    maxWidth: 400,
+    width: screenWidth,
     alignSelf: 'center',
-    maxHeight: screenHeight * 0.5,
+    maxHeight: screenHeight * 0.35,
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
+      boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.15)',
     }),
   },
   progressContainer: {
@@ -556,7 +601,7 @@ const styles = StyleSheet.create({
   },
   brandingHeader: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     paddingTop: 4,
   },
   brandLogoContainer: {
@@ -598,24 +643,24 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     flex: 1,
     justifyContent: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     paddingHorizontal: 8,
-    lineHeight: 26,
+    lineHeight: 24,
   },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
     paddingHorizontal: 12,
     fontWeight: '400',
   },
@@ -623,8 +668,8 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 8,
   },
   buttonSpacer: {
     flex: 1,
