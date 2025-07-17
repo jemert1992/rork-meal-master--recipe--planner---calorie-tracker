@@ -11,7 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { ArrowRight, ArrowLeft, X, ChefHat, Target, Calendar, ShoppingCart, Zap, Play } from 'lucide-react-native';
+import { ArrowRight, ArrowLeft, X, ChefHat, Target, Calendar, ShoppingCart, Zap, Play, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 // Utility function to properly encode SVG strings with Unicode characters
@@ -36,42 +36,42 @@ const createAppMockup = (stepId: string): string => {
       subtitle: 'Your nutrition companion',
       primaryColor: '#FF6B6B',
       secondaryColor: '#4ECDC4',
-      showWelcome: true
+      type: 'welcome'
     },
     'features-nutrition': {
       title: 'Nutrition Dashboard',
       subtitle: 'Track your daily intake',
       primaryColor: '#4ECDC4',
       secondaryColor: '#FFD166',
-      showNutrition: true
+      type: 'nutrition'
     },
     'features-planning': {
       title: 'Meal Planner',
       subtitle: 'Plan your weekly meals',
       primaryColor: '#96CEB4',
       secondaryColor: '#FFEAA7',
-      showPlanning: true
+      type: 'planning'
     },
     'features-grocery': {
       title: 'Grocery List',
       subtitle: 'Auto-generated shopping',
       primaryColor: '#DDA0DD',
       secondaryColor: '#98D8C8',
-      showGrocery: true
+      type: 'grocery'
     },
     'features-ai': {
       title: 'Recipe Discovery',
       subtitle: 'AI-powered suggestions',
       primaryColor: '#F7DC6F',
       secondaryColor: '#BB8FCE',
-      showRecipes: true
+      type: 'recipes'
     },
     'ready-to-start': {
       title: 'Ready to Start!',
       subtitle: 'Begin your journey',
       primaryColor: '#85C1E9',
       secondaryColor: '#F8C471',
-      showSuccess: true
+      type: 'success'
     }
   };
   
@@ -104,7 +104,7 @@ const createAppMockup = (stepId: string): string => {
       <text x="70" y="80" font-size="18" font-weight="700" fill="#1A202C">${mockup.title}</text>
       <text x="70" y="98" font-size="13" fill="#4A5568">${mockup.subtitle}</text>
       
-      ${mockup.showWelcome ? `
+      ${mockup.type === 'welcome' ? `
         <!-- Welcome content -->
         <rect x="20" y="150" width="280" height="120" rx="16" fill="white" filter="url(#cardShadow)" />
         <text x="160" y="180" text-anchor="middle" font-size="20" font-weight="600" fill="#1A202C">Welcome! 👋</text>
@@ -114,7 +114,7 @@ const createAppMockup = (stepId: string): string => {
         <text x="160" y="253" text-anchor="middle" font-size="12" font-weight="600" fill="white">Get Started</text>
       ` : ''}
       
-      ${mockup.showNutrition ? `
+      ${mockup.type === 'nutrition' ? `
         <!-- Nutrition tracking -->
         <rect x="20" y="150" width="130" height="100" rx="12" fill="white" filter="url(#cardShadow)" />
         <text x="85" y="175" text-anchor="middle" font-size="14" font-weight="600" fill="#1A202C">Calories</text>
@@ -133,7 +133,7 @@ const createAppMockup = (stepId: string): string => {
         <text x="185" y="230" font-size="10" fill="#4A5568">Carbs: 80%</text>
       ` : ''}
       
-      ${mockup.showPlanning ? `
+      ${mockup.type === 'planning' ? `
         <!-- Meal planning -->
         <rect x="20" y="150" width="280" height="200" rx="12" fill="white" filter="url(#cardShadow)" />
         <text x="30" y="175" font-size="16" font-weight="600" fill="#1A202C">This Week</text>
@@ -161,7 +161,7 @@ const createAppMockup = (stepId: string): string => {
         <text x="160" y="282" text-anchor="middle" font-size="14" font-weight="600" fill="white">✨ Generate Meal Plan</text>
       ` : ''}
       
-      ${mockup.showGrocery ? `
+      ${mockup.type === 'grocery' ? `
         <!-- Grocery list -->
         <rect x="20" y="150" width="280" height="250" rx="12" fill="white" filter="url(#cardShadow)" />
         <text x="30" y="175" font-size="16" font-weight="600" fill="#1A202C">Shopping List</text>
@@ -193,7 +193,7 @@ const createAppMockup = (stepId: string): string => {
         <text x="160" y="379" text-anchor="middle" font-size="13" fill="${mockup.secondaryColor}">+ Add custom item</text>
       ` : ''}
       
-      ${mockup.showRecipes ? `
+      ${mockup.type === 'recipes' ? `
         <!-- Recipe discovery -->
         <rect x="20" y="150" width="280" height="250" rx="12" fill="white" filter="url(#cardShadow)" />
         <text x="30" y="175" font-size="16" font-weight="600" fill="#1A202C">Discover Recipes</text>
@@ -226,7 +226,7 @@ const createAppMockup = (stepId: string): string => {
         <text x="227" y="340" text-anchor="middle" font-size="9" fill="#4A5568">25 min • 450 cal</text>
       ` : ''}
       
-      ${mockup.showSuccess ? `
+      ${mockup.type === 'success' ? `
         <!-- Success screen -->
         <rect x="20" y="180" width="280" height="200" rx="16" fill="white" filter="url(#cardShadow)" />
         <circle cx="160" cy="230" r="30" fill="${mockup.primaryColor}" opacity="0.1" />
@@ -271,7 +271,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animations for web
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
+if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
   const existingStyle = document.getElementById('tutorial-animations');
   if (!existingStyle) {
     const style = document.createElement('style');
@@ -513,7 +513,7 @@ export default function SimpleTutorialOverlay({
 
   // Spinner animation
   useEffect(() => {
-    if (isGeneratingImages && Platform.OS !== 'web') {
+    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -701,7 +701,7 @@ export default function SimpleTutorialOverlay({
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <View style={styles.loadingContent}>
               <Text style={styles.loadingText}>Loading preview...</Text>
-              {Platform.OS === 'web' ? (
+              {(Platform.OS as string) === 'web' ? (
                 <View 
                   style={styles.loadingSpinner}
                   // @ts-ignore - Web-specific className
@@ -730,7 +730,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if (Platform.OS === 'web') {
+  if ((Platform.OS as string) === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -744,13 +744,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
+      statusBarTranslucent={(Platform.OS as string) !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS !== 'web' ? (
+        ) : (Platform.OS as string) !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
     }),
   },
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
     }),
   },
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
     }),
   },
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 6px 24px rgba(255, 215, 102, 0.3)',
     }),
   },
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 -4px 30px rgba(0, 0, 0, 0.1)',
     }),
   },
@@ -1018,7 +1018,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 4px 20px rgba(255, 107, 107, 0.3)',
     }),
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
