@@ -19,92 +19,92 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // Tutorial screenshots data with bubble positions and arrow directions
 const TUTORIAL_SCREENSHOTS = {
   'welcome-intro': {
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'welcome',
       text: 'Welcome to Zestora! Your personal meal planning companion',
-      position: { top: '8%', left: '5%' },
+      position: { top: '15%', left: '5%' },
       arrow: 'down-right',
       size: 'large'
     }]
   },
   'features-nutrition': {
-    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'nutrition',
-      text: 'Track your daily nutrition and see your progress',
-      position: { top: '10%', right: '5%' },
-      arrow: 'down-left',
+      text: 'Tap the Profile tab at the bottom to track your daily nutrition',
+      position: { bottom: '8%', left: '50%' },
+      arrow: 'up',
       size: 'medium'
     }, {
       id: 'nutrition-bars',
-      text: 'Visual nutrition bars show your daily intake',
-      position: { bottom: '50%', left: '5%' },
-      arrow: 'up-right',
+      text: 'Visual nutrition bars will appear here showing your daily intake progress',
+      position: { top: '35%', left: '5%' },
+      arrow: 'down-right',
       size: 'small'
     }]
   },
   'features-planning': {
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'planning',
-      text: 'Plan your entire week with drag & drop',
-      position: { top: '8%', left: '5%' },
-      arrow: 'down-right',
+      text: 'Tap the Meal Plan tab at the bottom to access weekly planning',
+      position: { bottom: '8%', left: '25%' },
+      arrow: 'up',
       size: 'large'
     }, {
       id: 'meal-slots',
-      text: 'Add meals to breakfast, lunch, and dinner slots',
-      position: { bottom: '45%', right: '5%' },
-      arrow: 'up-left',
+      text: 'You\'ll see breakfast, lunch, and dinner slots for each day where you can add meals',
+      position: { top: '25%', right: '5%' },
+      arrow: 'down-left',
       size: 'medium'
     }]
   },
   'features-grocery': {
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'grocery',
-      text: 'Auto-generated grocery lists from your meal plan',
-      position: { top: '10%', left: '5%' },
-      arrow: 'down-right',
+      text: 'Tap the Grocery tab at the bottom to view your auto-generated shopping lists',
+      position: { bottom: '8%', right: '25%' },
+      arrow: 'up',
       size: 'large'
     }, {
       id: 'grocery-check',
-      text: 'Check off items as you shop',
-      position: { bottom: '47%', right: '5%' },
-      arrow: 'up',
+      text: 'Check off items as you shop - they\'ll be organized by category',
+      position: { top: '30%', left: '5%' },
+      arrow: 'down-right',
       size: 'small'
     }]
   },
   'features-ai': {
-    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'ai',
-      text: 'AI-powered recipe recommendations based on your preferences',
-      position: { top: '6%', left: '5%' },
-      arrow: 'down-right',
+      text: 'The Home tab shows recipe recommendations based on your dietary preferences',
+      position: { bottom: '8%', left: '5%' },
+      arrow: 'up',
       size: 'large'
     }, {
       id: 'search',
-      text: 'Search thousands of recipes',
-      position: { bottom: '52%', right: '5%' },
-      arrow: 'up-left',
+      text: 'Use this search bar to find thousands of recipes by name or ingredient',
+      position: { top: '20%', right: '5%' },
+      arrow: 'down-left',
       size: 'medium'
     }]
   },
   'ready-to-start': {
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
+    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=900&fit=crop&crop=center&auto=format&q=80',
     bubbles: [{
       id: 'start',
       text: 'Ready to start your healthy eating journey?',
-      position: { top: '8%', left: '5%' },
+      position: { top: '12%', left: '5%' },
       arrow: 'down-right',
       size: 'large'
     }, {
       id: 'profile',
-      text: 'Set up your profile to get personalized recommendations',
-      position: { bottom: '45%', right: '5%' },
-      arrow: 'up-left',
+      text: 'First, tap the Profile tab to set up your dietary preferences and nutrition goals',
+      position: { bottom: '8%', right: '5%' },
+      arrow: 'up',
       size: 'medium'
     }]
   }
