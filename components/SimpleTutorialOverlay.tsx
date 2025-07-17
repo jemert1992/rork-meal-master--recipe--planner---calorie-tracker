@@ -305,8 +305,8 @@ if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
   }
 }
 
-// Tutorial feature highlights with precise positioning
-interface TutorialHighlight {
+// Tutorial feature highlights with contextual positioning
+interface TutorialTooltip {
   id: string;
   text: string;
   position: {
@@ -316,91 +316,102 @@ interface TutorialHighlight {
     right?: string;
     transform?: string;
   };
-  type: 'callout' | 'pointer' | 'celebration';
+  type: 'tooltip' | 'spotlight' | 'celebration';
   icon: string;
+  anchor: 'top' | 'bottom' | 'left' | 'right';
 }
 
-interface TutorialHighlights {
-  highlights: TutorialHighlight[];
+interface TutorialTooltips {
+  tooltips: TutorialTooltip[];
 }
 
-const TUTORIAL_HIGHLIGHTS: Record<string, TutorialHighlights> = {
+const TUTORIAL_TOOLTIPS: Record<string, TutorialTooltips> = {
   'welcome-intro': {
-    highlights: [{
+    tooltips: [{
       id: 'app-logo',
-      text: 'Meet Zestora - your personal nutrition companion',
-      position: { top: '15%', left: '50%', transform: 'translateX(-50%)' },
-      type: 'callout',
-      icon: 'chef-hat'
+      text: 'Welcome to Zestora',
+      position: { top: '20%', left: '50%', transform: 'translateX(-50%)' },
+      type: 'spotlight',
+      icon: 'chef-hat',
+      anchor: 'bottom'
     }]
   },
   'features-nutrition': {
-    highlights: [{
+    tooltips: [{
       id: 'calorie-circle',
-      text: 'Visual calorie tracking with daily goals',
-      position: { top: '35%', left: '25%' },
-      type: 'pointer',
-      icon: 'target'
+      text: 'Track daily calories',
+      position: { top: '28%', left: '15%' },
+      type: 'tooltip',
+      icon: 'target',
+      anchor: 'right'
     }, {
       id: 'macro-bars',
-      text: 'Monitor protein, carbs, and fat intake',
-      position: { top: '35%', right: '15%' },
-      type: 'pointer',
-      icon: 'target'
+      text: 'Monitor macros',
+      position: { top: '28%', right: '15%' },
+      type: 'tooltip',
+      icon: 'target',
+      anchor: 'left'
     }]
   },
   'features-planning': {
-    highlights: [{
+    tooltips: [{
       id: 'weekly-view',
-      text: 'Plan meals for the entire week at a glance',
-      position: { top: '40%', left: '50%', transform: 'translateX(-50%)' },
-      type: 'callout',
-      icon: 'calendar'
+      text: 'Weekly meal overview',
+      position: { top: '32%', left: '50%', transform: 'translateX(-50%)' },
+      type: 'tooltip',
+      icon: 'calendar',
+      anchor: 'bottom'
     }, {
       id: 'generate-btn',
-      text: 'AI-powered meal plan generation',
-      position: { bottom: '25%', left: '50%', transform: 'translateX(-50%)' },
-      type: 'pointer',
-      icon: 'zap'
+      text: 'AI meal generation',
+      position: { bottom: '35%', left: '50%', transform: 'translateX(-50%)' },
+      type: 'tooltip',
+      icon: 'zap',
+      anchor: 'top'
     }]
   },
   'features-grocery': {
-    highlights: [{
+    tooltips: [{
       id: 'auto-list',
-      text: 'Automatically generated from your meal plans',
-      position: { top: '25%', right: '10%' },
-      type: 'callout',
-      icon: 'shopping-cart'
+      text: 'Auto-generated lists',
+      position: { top: '22%', right: '8%' },
+      type: 'tooltip',
+      icon: 'shopping-cart',
+      anchor: 'left'
     }, {
       id: 'categories',
-      text: 'Organized by store sections for efficient shopping',
-      position: { bottom: '35%', left: '15%' },
-      type: 'pointer',
-      icon: 'shopping-cart'
+      text: 'Organized by sections',
+      position: { bottom: '45%', left: '8%' },
+      type: 'tooltip',
+      icon: 'shopping-cart',
+      anchor: 'right'
     }]
   },
   'features-ai': {
-    highlights: [{
+    tooltips: [{
       id: 'search-bar',
-      text: 'Smart recipe search with dietary filters',
-      position: { top: '35%', left: '50%', transform: 'translateX(-50%)' },
-      type: 'pointer',
-      icon: 'zap'
+      text: 'Smart recipe search',
+      position: { top: '30%', left: '50%', transform: 'translateX(-50%)' },
+      type: 'tooltip',
+      icon: 'zap',
+      anchor: 'bottom'
     }, {
       id: 'recipe-cards',
-      text: 'Personalized recommendations based on your preferences',
-      position: { bottom: '30%', left: '50%', transform: 'translateX(-50%)' },
-      type: 'callout',
-      icon: 'sparkles'
+      text: 'Personalized suggestions',
+      position: { bottom: '38%', left: '50%', transform: 'translateX(-50%)' },
+      type: 'tooltip',
+      icon: 'sparkles',
+      anchor: 'top'
     }]
   },
   'ready-to-start': {
-    highlights: [{
+    tooltips: [{
       id: 'success-icon',
-      text: 'You\'re all set to begin your healthy eating journey!',
-      position: { top: '45%', left: '50%', transform: 'translateX(-50%)' },
+      text: 'Ready to begin!',
+      position: { top: '42%', left: '50%', transform: 'translateX(-50%)' },
       type: 'celebration',
-      icon: 'play'
+      icon: 'play',
+      anchor: 'bottom'
     }]
   }
 };
@@ -417,43 +428,43 @@ interface TutorialStep {
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome-intro',
-    title: 'Welcome to Zestora!',
-    description: 'Your personal nutrition companion that makes healthy eating simple, enjoyable, and sustainable.',
+    title: 'Welcome to Zestora',
+    description: 'Your personal nutrition companion for healthy eating',
     screen: 'welcome',
     position: 'center',
   },
   {
     id: 'features-nutrition',
-    title: 'Smart Nutrition Tracking',
-    description: 'Effortlessly track calories, macros, and nutrients with visual progress indicators and personalized insights.',
+    title: 'Track Your Nutrition',
+    description: 'Visual calorie and macro tracking with daily goals',
     screen: 'nutrition',
     position: 'center',
   },
   {
     id: 'features-planning',
-    title: 'Weekly Meal Planning',
-    description: 'Plan your entire week with intuitive tools. Get AI-powered recipe recommendations tailored to your goals.',
+    title: 'Plan Your Meals',
+    description: 'Weekly meal planning with AI-powered suggestions',
     screen: 'planning',
     position: 'center',
   },
   {
     id: 'features-grocery',
-    title: 'Smart Grocery Lists',
-    description: 'Never forget ingredients again! Shopping lists are automatically generated and organized by store sections.',
+    title: 'Smart Shopping Lists',
+    description: 'Auto-generated lists organized by store sections',
     screen: 'grocery',
     position: 'center',
   },
   {
     id: 'features-ai',
-    title: 'AI-Powered Discovery',
-    description: 'Discover thousands of recipes with smart filtering. Get personalized suggestions based on your dietary preferences.',
+    title: 'Discover Recipes',
+    description: 'Personalized recipe recommendations and smart search',
     screen: 'recipes',
     position: 'center',
   },
   {
     id: 'ready-to-start',
-    title: 'Ready to Begin?',
-    description: 'You\'re all set! Let\'s create your profile and start your journey to better nutrition and health.',
+    title: 'Ready to Start',
+    description: 'Let\'s begin your healthy eating journey',
     screen: 'success',
     position: 'center',
   },
@@ -616,53 +627,59 @@ export default function SimpleTutorialOverlay({
     }
   };
 
-  const renderHighlight = (highlight: TutorialHighlight, index: number) => {
-    const isCallout = highlight.type === 'callout';
-    const isCelebration = highlight.type === 'celebration';
+  const renderTooltip = (tooltip: TutorialTooltip, index: number) => {
+    const isCelebration = tooltip.type === 'celebration';
+    const isSpotlight = tooltip.type === 'spotlight';
     
     return (
       <Animated.View
-        key={highlight.id}
+        key={tooltip.id}
         style={[
-          isCallout ? styles.calloutHighlight : 
-          isCelebration ? styles.celebrationHighlight : styles.pointerHighlight,
-          highlight.position,
+          styles.tooltipContainer,
+          tooltip.position,
           {
             opacity: fadeAnim,
-            transform: [{ scale: pulseAnim }],
+            transform: [{ scale: scaleAnim }],
           }
         ]}
       >
-        <Animated.View style={[
-          isCallout ? styles.calloutContent : 
-          isCelebration ? styles.celebrationContent : styles.pointerContent,
-          (Platform.OS as string) === 'web' && styles.webHighlight
+        {/* Tooltip content */}
+        <View style={[
+          styles.tooltipContent,
+          isCelebration && styles.celebrationTooltip,
+          isSpotlight && styles.spotlightTooltip,
+          (Platform.OS as string) === 'web' && styles.webTooltip
         ]}>
-          <View style={styles.highlightIconContainer}>
-            {getHighlightIcon(highlight.icon, isCallout ? 20 : 16, 
+          <View style={styles.tooltipIconContainer}>
+            {getHighlightIcon(tooltip.icon, 16, 
               isCelebration ? Colors.accent : Colors.primary)}
           </View>
           <Text style={[
-            isCallout ? styles.calloutText : 
-            isCelebration ? styles.celebrationText : styles.pointerText
+            styles.tooltipText,
+            isCelebration && styles.celebrationText,
+            isSpotlight && styles.spotlightText
           ]}>
-            {highlight.text}
+            {tooltip.text}
           </Text>
-        </Animated.View>
+        </View>
         
-        {/* Pointer arrow for pointer type */}
-        {highlight.type === 'pointer' && (
-          <View style={styles.pointerArrow} />
-        )}
+        {/* Tooltip arrow */}
+        <View style={[
+          styles.tooltipArrow,
+          styles[`tooltipArrow${tooltip.anchor.charAt(0).toUpperCase() + tooltip.anchor.slice(1)}` as keyof typeof styles]
+        ]} />
         
-        {/* Animated ring for celebration */}
-        {highlight.type === 'celebration' && (
+        {/* Animated pulse ring for celebration */}
+        {isCelebration && (
           <Animated.View 
             style={[
               styles.celebrationRing,
               {
                 transform: [{ scale: pulseAnim }],
-                opacity: fadeAnim,
+                opacity: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.6]
+                }),
               }
             ]} 
           />
@@ -671,7 +688,7 @@ export default function SimpleTutorialOverlay({
     );
   };
 
-  const currentHighlights = TUTORIAL_HIGHLIGHTS[currentStepData?.id];
+  const currentTooltips = TUTORIAL_TOOLTIPS[currentStepData?.id];
   const currentImage = generatedImages[currentStepData?.id];
   
   if (!shouldShow || !currentStepData) {
@@ -700,8 +717,8 @@ export default function SimpleTutorialOverlay({
             {/* Subtle overlay for better contrast */}
             <View style={styles.imageOverlay} />
             
-            {/* Feature highlights */}
-            {currentHighlights?.highlights.map((highlight, index) => renderHighlight(highlight, index))}
+            {/* Contextual tooltips */}
+            {currentTooltips?.tooltips.map((tooltip, index) => renderTooltip(tooltip, index))}
             
             {/* Progress indicator - Top */}
             <View style={styles.progressContainer}>
@@ -718,9 +735,9 @@ export default function SimpleTutorialOverlay({
               <X size={18} color={Colors.white} />
             </Pressable>
             
-            {/* Main content overlay - Bottom */}
-            <View style={styles.contentOverlay}>
-              <View style={styles.contentCard}>
+            {/* Main content overlay - Contextual positioning */}
+            <View style={styles.contextualOverlay}>
+              <View style={styles.contextualCard}>
                 <Text style={styles.stepTitle}>{currentStepData.title}</Text>
                 <Text style={styles.stepDescription}>{currentStepData.description}</Text>
                 
@@ -916,81 +933,53 @@ const styles = StyleSheet.create({
       cursor: 'pointer',
     }),
   },
-  // Feature highlights
-  calloutHighlight: {
+  // Contextual tooltips
+  tooltipContainer: {
     position: 'absolute',
     zIndex: 5,
-  },
-  pointerHighlight: {
-    position: 'absolute',
-    zIndex: 5,
-  },
-  celebrationHighlight: {
-    position: 'absolute',
-    zIndex: 5,
-  },
-  calloutContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 280,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-    }),
   },
-  pointerContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  tooltipContent: {
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 220,
+    maxWidth: 180,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+      boxShadow: '0 2px 16px rgba(0, 0, 0, 0.12)',
     }),
   },
-  celebrationContent: {
-    backgroundColor: 'rgba(255, 215, 102, 0.95)',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: 300,
+  celebrationTooltip: {
+    backgroundColor: 'rgba(255, 215, 102, 0.96)',
+    borderColor: 'rgba(255, 215, 102, 0.3)',
     shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.2,
     ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 6px 24px rgba(255, 215, 102, 0.3)',
+      boxShadow: '0 4px 20px rgba(255, 215, 102, 0.2)',
     }),
   },
-  highlightIconContainer: {
-    marginRight: 8,
+  spotlightTooltip: {
+    backgroundColor: 'rgba(255, 107, 107, 0.96)',
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.2,
+    ...((Platform.OS as string) === 'web' && {
+      boxShadow: '0 4px 20px rgba(255, 107, 107, 0.2)',
+    }),
   },
-  calloutText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-    flex: 1,
-    lineHeight: 18,
+  tooltipIconContainer: {
+    marginRight: 6,
   },
-  pointerText: {
+  tooltipText: {
     fontSize: 12,
     fontWeight: '600',
     color: Colors.text,
@@ -998,71 +987,111 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   celebrationText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
-    flex: 1,
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  pointerArrow: {
+  spotlightText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.white,
+    lineHeight: 18,
+  },
+  tooltipArrow: {
     position: 'absolute',
-    bottom: -6,
-    left: 20,
     width: 0,
     height: 0,
+  },
+  tooltipArrowTop: {
+    top: -6,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'rgba(255, 255, 255, 0.96)',
+  },
+  tooltipArrowBottom: {
+    bottom: -6,
     borderLeftWidth: 6,
     borderRightWidth: 6,
     borderTopWidth: 6,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopColor: 'rgba(255, 255, 255, 0.96)',
   },
-  // Content overlay
-  contentOverlay: {
+  tooltipArrowLeft: {
+    left: -6,
+    top: '50%',
+    marginTop: -6,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderRightWidth: 6,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderRightColor: 'rgba(255, 255, 255, 0.96)',
+  },
+  tooltipArrowRight: {
+    right: -6,
+    top: '50%',
+    marginTop: -6,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftWidth: 6,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'rgba(255, 255, 255, 0.96)',
+  },
+  // Contextual content overlay - positioned to avoid bottom obstruction
+  contextualOverlay: {
     position: 'absolute',
-    bottom: 0,
+    top: '65%',
     left: 0,
     right: 0,
     zIndex: 10,
-  },
-  contentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    borderRadius: 24,
     alignItems: 'center',
+  },
+  contextualCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    marginHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    maxWidth: 320,
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 -4px 30px rgba(0, 0, 0, 0.1)',
+      boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
     }),
   },
   stepTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 28,
+    marginBottom: 8,
+    lineHeight: 24,
   },
   stepDescription: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-    paddingHorizontal: 8,
+    lineHeight: 20,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   navigationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   backButton: {
     flexDirection: 'row',
@@ -1088,24 +1117,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
     ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
-      boxShadow: '0 4px 20px rgba(255, 107, 107, 0.3)',
+      boxShadow: '0 2px 16px rgba(255, 107, 107, 0.2)',
     }),
   },
   nextButtonText: {
     color: Colors.white,
     fontWeight: '600',
-    fontSize: 16,
-    marginRight: 8,
+    fontSize: 14,
+    marginRight: 6,
   },
   skipButton: {
     paddingVertical: 8,
@@ -1141,19 +1170,19 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderTopColor: Colors.primary,
   },
-  webHighlight: {
-    // Web-specific highlight styles
-    backdropFilter: 'blur(4px)',
+  webTooltip: {
+    // Web-specific tooltip styles
+    backdropFilter: 'blur(8px)',
   },
   celebrationRing: {
     position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
     borderColor: Colors.accent,
     backgroundColor: 'transparent',
-    top: -25,
-    left: -25,
+    top: -20,
+    left: -20,
   },
 });
