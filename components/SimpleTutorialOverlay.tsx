@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -271,7 +271,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animations for web
-if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const existingStyle = document.getElementById('tutorial-animations');
   if (!existingStyle) {
     const style = document.createElement('style');
@@ -306,7 +306,25 @@ if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
 }
 
 // Tutorial feature highlights with precise positioning
-const TUTORIAL_HIGHLIGHTS = {
+interface TutorialHighlight {
+  id: string;
+  text: string;
+  position: {
+    top?: string;
+    bottom?: string;
+    left?: string;
+    right?: string;
+    transform?: string;
+  };
+  type: 'callout' | 'pointer' | 'celebration';
+  icon: string;
+}
+
+interface TutorialHighlights {
+  highlights: TutorialHighlight[];
+}
+
+const TUTORIAL_HIGHLIGHTS: Record<string, TutorialHighlights> = {
   'welcome-intro': {
     highlights: [{
       id: 'app-logo',
@@ -457,9 +475,10 @@ export default function SimpleTutorialOverlay({
   const [currentStep, setCurrentStep] = useState(0);
   const [generatedImages, setGeneratedImages] = useState<{ [key: string]: string }>({});
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
-  const spinAnim = React.useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   
   const currentStepData = TUTORIAL_STEPS[currentStep];
   const shouldShow = visible && !!currentStepData;
@@ -511,9 +530,9 @@ export default function SimpleTutorialOverlay({
     generateImages();
   }, []);
 
-  // Spinner animation
+  // Animations
   useEffect(() => {
-    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
+    if (isGeneratingImages && Platform.OS !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -525,6 +544,26 @@ export default function SimpleTutorialOverlay({
       return () => spinAnimation.stop();
     }
   }, [isGeneratingImages]);
+
+  // Pulse animation for highlights
+  useEffect(() => {
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.8,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseAnimation.start();
+    return () => pulseAnimation.stop();
+  }, []);
 
   // Reset step when tutorial becomes visible
   useEffect(() => {
@@ -577,7 +616,7 @@ export default function SimpleTutorialOverlay({
     }
   };
 
-  const renderHighlight = (highlight: any, index: number) => {
+  const renderHighlight = (highlight: TutorialHighlight, index: number) => {
     const isCallout = highlight.type === 'callout';
     const isCelebration = highlight.type === 'celebration';
     
@@ -590,13 +629,14 @@ export default function SimpleTutorialOverlay({
           highlight.position,
           {
             opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
+            transform: [{ scale: pulseAnim }],
           }
         ]}
       >
-        <View style={[
+        <Animated.View style={[
           isCallout ? styles.calloutContent : 
-          isCelebration ? styles.celebrationContent : styles.pointerContent
+          isCelebration ? styles.celebrationContent : styles.pointerContent,
+          Platform.OS === 'web' && styles.webHighlight
         ]}>
           <View style={styles.highlightIconContainer}>
             {getHighlightIcon(highlight.icon, isCallout ? 20 : 16, 
@@ -608,17 +648,30 @@ export default function SimpleTutorialOverlay({
           ]}>
             {highlight.text}
           </Text>
-        </View>
+        </Animated.View>
         
         {/* Pointer arrow for pointer type */}
         {highlight.type === 'pointer' && (
           <View style={styles.pointerArrow} />
         )}
+        
+        {/* Animated ring for celebration */}
+        {highlight.type === 'celebration' && (
+          <Animated.View 
+            style={[
+              styles.celebrationRing,
+              {
+                transform: [{ scale: pulseAnim }],
+                opacity: fadeAnim,
+              }
+            ]} 
+          />
+        )}
       </Animated.View>
     );
   };
 
-  const currentHighlights = TUTORIAL_HIGHLIGHTS[currentStepData?.id as keyof typeof TUTORIAL_HIGHLIGHTS];
+  const currentHighlights = TUTORIAL_HIGHLIGHTS[currentStepData?.id];
   const currentImage = generatedImages[currentStepData?.id];
   
   if (!shouldShow || !currentStepData) {
@@ -701,7 +754,7 @@ export default function SimpleTutorialOverlay({
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <View style={styles.loadingContent}>
               <Text style={styles.loadingText}>Loading preview...</Text>
-              {(Platform.OS as string) === 'web' ? (
+              {Platform.OS === 'web' ? (
                 <View 
                   style={styles.loadingSpinner}
                   // @ts-ignore - Web-specific className
@@ -730,7 +783,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if ((Platform.OS as string) === 'web') {
+  if (Platform.OS === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -744,13 +797,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={(Platform.OS as string) !== 'web'}
+      statusBarTranslucent={Platform.OS !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (Platform.OS as string) !== 'web' ? (
+        ) : Platform.OS !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -800,7 +853,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
     }),
   },
@@ -859,7 +912,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1018,7 +1071,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1057,7 +1110,7 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
   },
