@@ -490,128 +490,130 @@ export default function SimpleTutorialOverlay({
   
   const TutorialCard = () => (
     <View style={styles.screenshotContainer}>
-      {/* Screenshot Background */}
-      {currentScreenshot && (
-        <View style={styles.screenshotBackground}>
-          {currentImage ? (
-            <ImageBackground
-              source={{ uri: currentImage }}
-              style={styles.screenshotBackground}
-              imageStyle={styles.screenshotImage}
-            >
-              {/* Overlay bubbles */}
-              {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
-            </ImageBackground>
-          ) : (
-            <View style={[styles.screenshotBackground, styles.loadingContainer]}>
-              <Text style={styles.loadingText}>Generating preview...</Text>
-              {(Platform.OS as string) === 'web' ? (
-                <View 
-                  style={[
-                    styles.loadingSpinner,
-                    { 
-                      // @ts-ignore - Web-specific CSS property
-                      animationName: 'tutorial-spin',
-                      animationDuration: '1s',
-                      animationIterationCount: 'infinite',
-                      animationTimingFunction: 'linear'
-                    }
-                  ]} 
-                />
-              ) : (
-                <Animated.View
-                  style={[
-                    styles.loadingSpinner,
-                    {
-                      transform: [{
-                        rotate: spinAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0deg', '360deg'],
-                        }),
-                      }],
-                    },
-                  ]}
-                />
-              )}
-            </View>
-          )}
-        </View>
-      )}
-      
-      {/* Control Panel */}
+      {/* Single Card with Image Background and Overlaid Content */}
       <Animated.View
         style={[
-          styles.controlPanel,
+          styles.tutorialCard,
           {
             transform: [{ scale: scaleAnim }],
             opacity: fadeAnim,
           },
         ]}
       >
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+        {/* Background Image */}
+        {currentScreenshot && currentImage ? (
+          <ImageBackground
+            source={{ uri: currentImage }}
+            style={styles.cardImageBackground}
+            imageStyle={styles.cardImage}
+          >
+            {/* Dark overlay for better text readability */}
+            <View style={styles.imageOverlay} />
+            
+            {/* Overlay bubbles */}
+            {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
+          </ImageBackground>
+        ) : (
+          <View style={[styles.cardImageBackground, styles.loadingContainer]}>
+            <Text style={styles.loadingText}>Generating preview...</Text>
+            {(Platform.OS as string) === 'web' ? (
+              <View 
+                style={[
+                  styles.loadingSpinner,
+                  { 
+                    // @ts-ignore - Web-specific CSS property
+                    animationName: 'tutorial-spin',
+                    animationDuration: '1s',
+                    animationIterationCount: 'infinite',
+                    animationTimingFunction: 'linear'
+                  }
+                ]} 
+              />
+            ) : (
+              <Animated.View
+                style={[
+                  styles.loadingSpinner,
+                  {
+                    transform: [{
+                      rotate: spinAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      }),
+                    }],
+                  },
+                ]}
+              />
+            )}
           </View>
-          <Text style={styles.progressText}>
-            {currentStep + 1} of {TUTORIAL_STEPS.length}
-          </Text>
-        </View>
+        )}
         
-        {/* Close Button */}
-        <Pressable style={styles.closeButton} onPress={onSkip}>
-          <X size={20} color={Colors.textLight} />
-        </Pressable>
-        
-        {/* Branding Header */}
-        <View style={styles.brandingHeader}>
-          <View style={styles.brandLogoContainer}>
-            <View style={styles.brandLogo}>
-              <ChefHat size={24} color={Colors.white} />
+        {/* Overlaid Content Panel */}
+        <View style={styles.overlaidContent}>
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress}%` }]} />
             </View>
-            <View style={styles.brandTextContainer}>
-              <Text style={styles.brandName}>Zestora</Text>
-              <View style={styles.sparkleIcon}>
-                <Sparkles size={12} color={Colors.primary} />
+            <Text style={styles.progressText}>
+              {currentStep + 1} of {TUTORIAL_STEPS.length}
+            </Text>
+          </View>
+          
+          {/* Close Button */}
+          <Pressable style={styles.closeButton} onPress={onSkip}>
+            <X size={20} color={Colors.textLight} />
+          </Pressable>
+          
+          {/* Branding Header */}
+          <View style={styles.brandingHeader}>
+            <View style={styles.brandLogoContainer}>
+              <View style={styles.brandLogo}>
+                <ChefHat size={24} color={Colors.white} />
+              </View>
+              <View style={styles.brandTextContainer}>
+                <Text style={styles.brandName}>Zestora</Text>
+                <View style={styles.sparkleIcon}>
+                  <Sparkles size={12} color={Colors.primary} />
+                </View>
               </View>
             </View>
           </View>
-        </View>
-        
-        {/* Content */}
-        <View style={styles.content}>
-          <Text style={styles.title}>{currentStepData.title}</Text>
-          <Text style={styles.description}>{currentStepData.description}</Text>
-        </View>
-        
-        {/* Navigation Buttons */}
-        <View style={styles.buttonContainer}>
-          {!isFirstStep && (
-            <Pressable style={styles.secondaryButton} onPress={handlePrevious}>
-              <ArrowLeft size={16} color={Colors.primary} />
-              <Text style={styles.secondaryButtonText}>Back</Text>
-            </Pressable>
-          )}
           
-          <View style={styles.buttonSpacer} />
+          {/* Content */}
+          <View style={styles.content}>
+            <Text style={styles.title}>{currentStepData.title}</Text>
+            <Text style={styles.description}>{currentStepData.description}</Text>
+          </View>
           
-          {isLastStep ? (
-            <Pressable style={styles.primaryButton} onPress={handleNext}>
-              <Text style={styles.primaryButtonText}>Get Started</Text>
-              <ArrowRight size={16} color={Colors.white} />
-            </Pressable>
-          ) : (
-            <Pressable style={styles.primaryButton} onPress={handleNext}>
-              <Text style={styles.primaryButtonText}>Next</Text>
-              <ArrowRight size={16} color={Colors.white} />
-            </Pressable>
-          )}
+          {/* Navigation Buttons */}
+          <View style={styles.buttonContainer}>
+            {!isFirstStep && (
+              <Pressable style={styles.secondaryButton} onPress={handlePrevious}>
+                <ArrowLeft size={16} color={Colors.primary} />
+                <Text style={styles.secondaryButtonText}>Back</Text>
+              </Pressable>
+            )}
+            
+            <View style={styles.buttonSpacer} />
+            
+            {isLastStep ? (
+              <Pressable style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>Get Started</Text>
+                <ArrowRight size={16} color={Colors.white} />
+              </Pressable>
+            ) : (
+              <Pressable style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>Next</Text>
+                <ArrowRight size={16} color={Colors.white} />
+              </Pressable>
+            )}
+          </View>
+          
+          {/* Skip Button */}
+          <Pressable style={styles.skipButton} onPress={onSkip}>
+            <Text style={styles.skipButtonText}>Skip Tutorial</Text>
+          </Pressable>
         </View>
-        
-        {/* Skip Button */}
-        <Pressable style={styles.skipButton} onPress={onSkip}>
-          <Text style={styles.skipButtonText}>Skip Tutorial</Text>
-        </Pressable>
       </Animated.View>
     </View>
   );
@@ -677,6 +679,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 20,
   },
+  tutorialCard: {
+    width: screenWidth - 32,
+    maxWidth: 400,
+    height: Math.min(screenHeight * 0.8, 700),
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 12,
+    ...((Platform.OS as string) === 'web' && {
+      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+    }),
+  },
+  cardImageBackground: {
+    flex: 1,
+    position: 'relative',
+  },
+  cardImage: {
+    borderRadius: 24,
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 24,
+  },
+  overlaidContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 24,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    ...((Platform.OS as string) === 'web' && {
+      boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.1)',
+    }),
+  },
   screenshotBackground: {
     width: Math.min(screenWidth * 0.65, 280),
     height: Math.min(screenHeight * 0.45, 400),
@@ -694,17 +742,19 @@ const styles = StyleSheet.create({
   },
   speechBubble: {
     position: 'absolute',
-    backgroundColor: Colors.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
     borderWidth: 2,
     borderColor: Colors.primary,
+    backdropFilter: 'blur(10px)',
     ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+      backdropFilter: 'blur(10px)',
     }),
   },
   bubbleSmall: {
@@ -788,7 +838,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     paddingRight: 40, // Add padding to avoid overlap with close button
   },
   progressBar: {
@@ -810,8 +860,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     padding: 6,
     zIndex: 10,
     backgroundColor: Colors.backgroundLight,
@@ -832,8 +882,8 @@ const styles = StyleSheet.create({
   },
   brandingHeader: {
     alignItems: 'center',
-    marginBottom: 16,
-    paddingTop: 4,
+    marginBottom: 12,
+    paddingTop: 0,
   },
   brandLogoContainer: {
     flexDirection: 'row',
@@ -875,32 +925,30 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     marginBottom: 16,
-    flex: 1,
-    justifyContent: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     paddingHorizontal: 8,
-    lineHeight: 26,
+    lineHeight: 24,
   },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 12,
+    lineHeight: 18,
+    paddingHorizontal: 8,
     fontWeight: '400',
   },
 
   buttonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 8,
   },
   buttonSpacer: {
     flex: 1,
@@ -957,8 +1005,8 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     alignItems: 'center',
-    paddingVertical: 8,
-    marginTop: 4,
+    paddingVertical: 6,
+    marginTop: 2,
     ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
