@@ -7,108 +7,114 @@ import {
   Modal,
   Dimensions,
   Platform,
+  ImageBackground,
   Animated,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles, ArrowDown, ArrowUp, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
-// Import tutorial pages
-import TutorialWelcomeScreen from '@/app/tutorial/welcome';
-import TutorialNutritionScreen from '@/app/tutorial/nutrition';
-import TutorialMealPlanScreen from '@/app/tutorial/meal-plan';
-import TutorialGroceryListScreen from '@/app/tutorial/grocery-list';
-import TutorialRecipesScreen from '@/app/tutorial/recipes';
-import TutorialOnboardingScreen from '@/app/tutorial/onboarding';
-
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Tutorial screenshots data with bubble positions and arrow directions
 // Using realistic mobile app interface mockups that represent actual Zestora app screens
-// Tutorial page components mapping
-const TUTORIAL_PAGES = {
-  'welcome-intro': TutorialWelcomeScreen,
-  'features-nutrition': TutorialNutritionScreen,
-  'features-planning': TutorialMealPlanScreen,
-  'features-grocery': TutorialGroceryListScreen,
-  'features-ai': TutorialRecipesScreen,
-  'ready-to-start': TutorialOnboardingScreen,
-};
-
-// Tutorial bubbles data with positions and arrow directions
-const TUTORIAL_BUBBLES = {
-  'welcome-intro': [{
-    id: 'welcome',
-    text: 'Welcome to Zestora - your personal nutrition companion!',
-    position: { top: '25%', left: '10%' },
-    arrow: 'down-right',
-    size: 'large'
-  }],
-  'features-nutrition': [{
-    id: 'nutrition-tracking',
-    text: 'Track daily nutrition with visual progress indicators',
-    position: { top: '20%', right: '10%' },
-    arrow: 'down-left',
-    size: 'medium'
-  }, {
-    id: 'nutrition-goals',
-    text: 'Set and monitor your calorie and macro goals',
-    position: { top: '60%', left: '15%' },
-    arrow: 'up-right',
-    size: 'small'
-  }],
-  'features-planning': [{
-    id: 'meal-planning',
-    text: 'Plan breakfast, lunch, and dinner for each day',
-    position: { top: '25%', left: '15%' },
-    arrow: 'down-right',
-    size: 'large'
-  }, {
-    id: 'generate-button',
-    text: 'Auto-generate meal plans with smart suggestions',
-    position: { top: '75%', right: '10%' },
-    arrow: 'up-left',
-    size: 'small'
-  }],
-  'features-grocery': [{
-    id: 'grocery-generation',
-    text: 'Generate shopping lists automatically from meal plans',
-    position: { top: '20%', right: '15%' },
-    arrow: 'down-left',
-    size: 'medium'
-  }, {
-    id: 'grocery-organization',
-    text: 'Items organized by store categories for efficiency',
-    position: { bottom: '30%', left: '10%' },
-    arrow: 'up-right',
-    size: 'small'
-  }],
-  'features-ai': [{
-    id: 'recipe-discovery',
-    text: 'Discover thousands of recipes tailored to your preferences',
-    position: { top: '15%', left: '20%' },
-    arrow: 'down-right',
-    size: 'large'
-  }, {
-    id: 'recipe-filtering',
-    text: 'Filter by dietary needs, meal type, and cooking time',
-    position: { bottom: '25%', right: '15%' },
-    arrow: 'up-left',
-    size: 'medium'
-  }],
-  'ready-to-start': [{
-    id: 'tutorial-complete',
-    text: 'Great! You\'re ready to start your healthy eating journey',
-    position: { top: '25%', left: '10%' },
-    arrow: 'down-right',
-    size: 'large'
-  }, {
-    id: 'profile-setup',
-    text: 'Next, we\'ll set up your profile and dietary preferences',
-    position: { bottom: '20%', right: '10%' },
-    arrow: 'up-left',
-    size: 'medium'
-  }]
+const TUTORIAL_SCREENSHOTS = {
+  'welcome-intro': {
+    // App branding/welcome screen - clean interface with logo
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'welcome',
+      text: 'Welcome to Zestora - your personal nutrition companion!',
+      position: { top: '25%', left: '10%' },
+      arrow: 'down-right',
+      size: 'large'
+    }]
+  },
+  'features-nutrition': {
+    // Profile screen mockup - nutrition tracking dashboard with progress bars
+    image: 'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'nutrition-tracking',
+      text: 'Track daily nutrition with visual progress indicators',
+      position: { top: '20%', right: '10%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'nutrition-goals',
+      text: 'Set and monitor your calorie and macro goals',
+      position: { top: '60%', left: '15%' },
+      arrow: 'up-right',
+      size: 'small'
+    }]
+  },
+  'features-planning': {
+    // Meal planning screen mockup - calendar view with meal slots
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'meal-planning',
+      text: 'Plan breakfast, lunch, and dinner for each day',
+      position: { top: '25%', left: '15%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'generate-button',
+      text: 'Auto-generate meal plans with smart suggestions',
+      position: { top: '75%', right: '10%' },
+      arrow: 'up-left',
+      size: 'small'
+    }]
+  },
+  'features-grocery': {
+    // Grocery list screen mockup - organized shopping list interface
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'grocery-generation',
+      text: 'Generate shopping lists automatically from meal plans',
+      position: { top: '20%', right: '15%' },
+      arrow: 'down-left',
+      size: 'medium'
+    }, {
+      id: 'grocery-organization',
+      text: 'Items organized by store categories for efficiency',
+      position: { bottom: '30%', left: '10%' },
+      arrow: 'up-right',
+      size: 'small'
+    }]
+  },
+  'features-ai': {
+    // Recipe discovery screen mockup - recipe cards and search interface
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'recipe-discovery',
+      text: 'Discover thousands of recipes tailored to your preferences',
+      position: { top: '15%', left: '20%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'recipe-filtering',
+      text: 'Filter by dietary needs, meal type, and cooking time',
+      position: { bottom: '25%', right: '15%' },
+      arrow: 'up-left',
+      size: 'medium'
+    }]
+  },
+  'ready-to-start': {
+    // Onboarding completion screen - ready to begin using the app
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=800&fit=crop&crop=center&auto=format&q=80',
+    bubbles: [{
+      id: 'tutorial-complete',
+      text: 'Great! You\'re ready to start your healthy eating journey',
+      position: { top: '25%', left: '10%' },
+      arrow: 'down-right',
+      size: 'large'
+    }, {
+      id: 'profile-setup',
+      text: 'Next, we\'ll set up your profile and dietary preferences',
+      position: { bottom: '20%', right: '10%' },
+      arrow: 'up-left',
+      size: 'medium'
+    }]
+  }
 };
 
 interface TutorialStep {
@@ -272,8 +278,7 @@ export default function SimpleTutorialOverlay({
     );
   };
 
-  const currentBubbles = TUTORIAL_BUBBLES[currentStepData?.id as keyof typeof TUTORIAL_BUBBLES];
-  const TutorialPageComponent = TUTORIAL_PAGES[currentStepData?.id as keyof typeof TUTORIAL_PAGES];
+  const currentScreenshot = TUTORIAL_SCREENSHOTS[currentStepData?.id as keyof typeof TUTORIAL_SCREENSHOTS];
   
   if (!shouldShow || !currentStepData) {
     return null;
@@ -281,13 +286,16 @@ export default function SimpleTutorialOverlay({
   
   const TutorialCard = () => (
     <View style={styles.screenshotContainer}>
-      {/* Actual App Page */}
-      {TutorialPageComponent && (
-        <View style={styles.screenshotBackground}>
-          <TutorialPageComponent />
+      {/* Screenshot Background */}
+      {currentScreenshot && (
+        <ImageBackground
+          source={{ uri: currentScreenshot.image }}
+          style={styles.screenshotBackground}
+          imageStyle={styles.screenshotImage}
+        >
           {/* Overlay bubbles */}
-          {currentBubbles && currentBubbles.map((bubble, index) => renderBubble(bubble, index))}
-        </View>
+          {currentScreenshot.bubbles.map((bubble, index) => renderBubble(bubble, index))}
+        </ImageBackground>
       )}
       
       {/* Control Panel */}
@@ -383,8 +391,8 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
-      presentationStyle={Platform.OS !== 'web' ? 'overFullScreen' : undefined}
+      statusBarTranslucent={Platform.OS === 'ios' || Platform.OS === 'android'}
+      presentationStyle={Platform.OS === 'ios' || Platform.OS === 'android' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
