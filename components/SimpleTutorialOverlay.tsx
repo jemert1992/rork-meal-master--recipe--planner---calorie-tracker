@@ -391,8 +391,8 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
-      presentationStyle={Platform.OS !== 'web' ? 'overFullScreen' : undefined}
+      statusBarTranslucent={Platform.OS === 'ios' || Platform.OS === 'android'}
+      presentationStyle={Platform.OS === 'ios' || Platform.OS === 'android' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
