@@ -14,6 +14,20 @@ import { BlurView } from 'expo-blur';
 import { ArrowRight, ArrowLeft, X, ChefHat, Sparkles, ArrowDown, ArrowUp, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
+// Utility function to properly encode SVG strings with Unicode characters
+const utf8ToBase64 = (str: string): string => {
+  if (typeof btoa !== 'undefined') {
+    try {
+      return btoa(unescape(encodeURIComponent(str)));
+    } catch (error) {
+      // Fallback for problematic characters
+      return btoa(str.replace(/[\u0080-\uFFFF]/g, '?'));
+    }
+  }
+  // Node.js fallback (shouldn't be needed in React Native)
+  return Buffer.from(str, 'utf8').toString('base64');
+};
+
 // Create fallback images with better designs
 const createFallbackImage = (stepId: string): string => {
   const designs = {
@@ -57,7 +71,7 @@ const createFallbackImage = (stepId: string): string => {
   
   const design = designs[stepId as keyof typeof designs] || designs['welcome-intro'];
   
-  return 'data:image/svg+xml;base64,' + btoa(`
+  const svgString = `
     <svg width="280" height="400" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -95,7 +109,9 @@ const createFallbackImage = (stepId: string): string => {
       <!-- Zestora branding -->
       <text x="140" y="380" text-anchor="middle" fill="white" font-size="14" font-family="Arial, sans-serif" font-weight="bold" opacity="0.9">Zestora</text>
     </svg>
-  `);
+  `;
+  
+  return 'data:image/svg+xml;base64,' + utf8ToBase64(svgString);
 };
 
 // Image generation service with better error handling
@@ -136,15 +152,22 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animation for web spinner
-if ((Platform.OS as string) === 'web') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `;
-  document.head.appendChild(style);
+if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
+  const existingStyle = document.getElementById('tutorial-spinner-animation');
+  if (!existingStyle) {
+    const style = document.createElement('style');
+    style.id = 'tutorial-spinner-animation';
+    style.textContent = `
+      @keyframes tutorial-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .tutorial-loading-spinner {
+        animation: tutorial-spin 1s linear infinite;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
 
 // Tutorial screenshots data with bubble positions and arrow directions
@@ -483,7 +506,18 @@ export default function SimpleTutorialOverlay({
             <View style={[styles.screenshotBackground, styles.loadingContainer]}>
               <Text style={styles.loadingText}>Generating preview...</Text>
               {(Platform.OS as string) === 'web' ? (
-                <View style={styles.loadingSpinner} />
+                <View 
+                  style={[
+                    styles.loadingSpinner,
+                    { 
+                      // @ts-ignore - Web-specific CSS property
+                      animationName: 'tutorial-spin',
+                      animationDuration: '1s',
+                      animationIterationCount: 'infinite',
+                      animationTimingFunction: 'linear'
+                    }
+                  ]} 
+                />
               ) : (
                 <Animated.View
                   style={[
@@ -953,8 +987,5 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.border,
     borderTopColor: Colors.primary,
-    ...((Platform.OS as string) === 'web' && {
-      animation: 'spin 1s linear infinite',
-    }),
   },
 });
