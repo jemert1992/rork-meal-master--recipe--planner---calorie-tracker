@@ -271,7 +271,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animations for web
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
+if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
   const existingStyle = document.getElementById('tutorial-animations');
   if (!existingStyle) {
     const style = document.createElement('style');
@@ -534,7 +534,7 @@ export default function SimpleTutorialOverlay({
 
   // Animations
   useEffect(() => {
-    if (isGeneratingImages && Platform.OS !== 'web') {
+    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -644,7 +644,7 @@ export default function SimpleTutorialOverlay({
           styles.tooltipContent,
           isCelebration && styles.celebrationTooltip,
           isSpotlight && styles.spotlightTooltip,
-          Platform.OS === 'web' && styles.webTooltip
+          (Platform.OS as string) === 'web' && styles.webTooltip
         ]}>
           <View style={styles.tooltipIconContainer}>
             {getHighlightIcon(tooltip.icon, 16, 
@@ -692,7 +692,7 @@ export default function SimpleTutorialOverlay({
   }
   
   // Simplified version to prevent blocking
-  if (Platform.OS === 'web') {
+  if ((Platform.OS as string) === 'web') {
     return (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -795,7 +795,7 @@ export default function SimpleTutorialOverlay({
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <View style={styles.loadingContent}>
               <Text style={styles.loadingText}>Loading preview...</Text>
-              {Platform.OS === 'web' ? (
+              {(Platform.OS as string) === 'web' ? (
                 <View 
                   style={styles.loadingSpinner}
                   // @ts-ignore - Web-specific className
@@ -824,7 +824,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if (Platform.OS === 'web') {
+  if ((Platform.OS as string) === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -838,13 +838,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'web'}
+      statusBarTranslucent={(Platform.OS as string) !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : Platform.OS !== 'web' ? (
+        ) : (Platform.OS as string) !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
     }),
   },
@@ -1124,7 +1124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1163,7 +1163,7 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
     }),
   },
