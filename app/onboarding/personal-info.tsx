@@ -83,17 +83,29 @@ export default function PersonalInfoScreen() {
   
   const handleNext = () => {
     if (!isFormValid) {
-      // Show specific validation errors
+      // Show specific validation errors with helpful messages
       if (!ageValidation.isValid) {
-        Alert.alert('Invalid Age', ageValidation.error!);
+        Alert.alert('Age Required', ageValidation.error! + '\n\nThis helps us calculate your daily nutrition needs.');
         return;
       }
       if (!weightValidation.isValid) {
-        Alert.alert('Invalid Weight', weightValidation.error!);
+        Alert.alert('Weight Required', weightValidation.error! + '\n\nWe use this to personalize your calorie goals.');
         return;
       }
       if (!heightValidation.isValid) {
-        Alert.alert('Invalid Height', heightValidation.error!);
+        Alert.alert('Height Required', heightValidation.error! + '\n\nHeight helps us calculate your metabolic rate.');
+        return;
+      }
+      if (name.trim() === '') {
+        Alert.alert('Name Required', 'Please enter your name so we can personalize your experience.');
+        return;
+      }
+      if (gender === '') {
+        Alert.alert('Gender Required', 'This helps us provide more accurate nutrition recommendations.');
+        return;
+      }
+      if (activityLevel === '') {
+        Alert.alert('Activity Level Required', 'This helps us calculate your daily calorie needs.');
         return;
       }
       return;
@@ -124,8 +136,14 @@ export default function PersonalInfoScreen() {
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Tell us about yourself</Text>
-          <Text style={styles.subtitle}>We'll use this information to personalize your experience</Text>
+          <Text style={styles.title}>Let's get to know you</Text>
+          <Text style={styles.subtitle}>Help us create your personalized nutrition plan in just a few steps</Text>
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>Step 1 of 3</Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: '33%' }]} />
+            </View>
+          </View>
         </View>
         
         <View style={styles.form}>
@@ -236,14 +254,14 @@ export default function PersonalInfoScreen() {
                 onPress={() => setActivityLevel('sedentary')}
               >
                 <Text style={[styles.activityTitle, activityLevel === 'sedentary' && styles.optionTextSelected]}>Sedentary</Text>
-                <Text style={styles.activityDescription}>Little or no exercise</Text>
+                <Text style={styles.activityDescription}>Desk job, little to no exercise</Text>
               </Pressable>
               
               <Pressable
                 style={[styles.activityOption, activityLevel === 'light' && styles.optionSelected]}
                 onPress={() => setActivityLevel('light')}
               >
-                <Text style={[styles.activityTitle, activityLevel === 'light' && styles.optionTextSelected]}>Light</Text>
+                <Text style={[styles.activityTitle, activityLevel === 'light' && styles.optionTextSelected]}>Lightly Active</Text>
                 <Text style={styles.activityDescription}>Light exercise 1-3 days/week</Text>
               </Pressable>
               
@@ -251,7 +269,7 @@ export default function PersonalInfoScreen() {
                 style={[styles.activityOption, activityLevel === 'moderate' && styles.optionSelected]}
                 onPress={() => setActivityLevel('moderate')}
               >
-                <Text style={[styles.activityTitle, activityLevel === 'moderate' && styles.optionTextSelected]}>Moderate</Text>
+                <Text style={[styles.activityTitle, activityLevel === 'moderate' && styles.optionTextSelected]}>Moderately Active</Text>
                 <Text style={styles.activityDescription}>Moderate exercise 3-5 days/week</Text>
               </Pressable>
               
@@ -259,7 +277,7 @@ export default function PersonalInfoScreen() {
                 style={[styles.activityOption, activityLevel === 'active' && styles.optionSelected]}
                 onPress={() => setActivityLevel('active')}
               >
-                <Text style={[styles.activityTitle, activityLevel === 'active' && styles.optionTextSelected]}>Active</Text>
+                <Text style={[styles.activityTitle, activityLevel === 'active' && styles.optionTextSelected]}>Very Active</Text>
                 <Text style={styles.activityDescription}>Hard exercise 6-7 days/week</Text>
               </Pressable>
               
@@ -267,7 +285,7 @@ export default function PersonalInfoScreen() {
                 style={[styles.activityOption, activityLevel === 'very-active' && styles.optionSelected]}
                 onPress={() => setActivityLevel('very-active')}
               >
-                <Text style={[styles.activityTitle, activityLevel === 'very-active' && styles.optionTextSelected]}>Very Active</Text>
+                <Text style={[styles.activityTitle, activityLevel === 'very-active' && styles.optionTextSelected]}>Extremely Active</Text>
                 <Text style={styles.activityDescription}>Very hard exercise & physical job</Text>
               </Pressable>
             </View>
@@ -447,5 +465,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
+  },
+  progressContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  progressText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  progressBar: {
+    width: 120,
+    height: 4,
+    backgroundColor: Colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
 });

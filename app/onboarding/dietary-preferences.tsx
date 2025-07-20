@@ -41,15 +41,21 @@ export default function DietaryPreferencesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Dietary Preferences</Text>
+          <Text style={styles.title}>Your Dietary Preferences</Text>
           <Text style={styles.subtitle}>
-            Tell us about your diet and allergies so we can recommend suitable recipes
+            Help us find recipes that match your lifestyle and dietary needs
           </Text>
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>Step 2 of 3</Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: '66%' }]} />
+            </View>
+          </View>
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Diet Type</Text>
-          <Text style={styles.sectionSubtitle}>Select one that best describes your diet</Text>
+          <Text style={styles.sectionTitle}>What's your diet style?</Text>
+          <Text style={styles.sectionSubtitle}>Choose the option that best fits your eating habits</Text>
           
           <View style={styles.optionsContainer}>
             {DIET_TYPES.map((dietType) => (
@@ -88,8 +94,8 @@ export default function DietaryPreferencesScreen() {
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Allergies & Intolerances</Text>
-          <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+          <Text style={styles.sectionTitle}>Any allergies or intolerances?</Text>
+          <Text style={styles.sectionSubtitle}>Select any that apply (we'll filter recipes accordingly)</Text>
           
           <View style={styles.allergiesContainer}>
             {COMMON_ALLERGIES.map((allergy) => (
@@ -259,5 +265,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.white,
     marginRight: 8,
+  },
+  progressContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  progressText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  progressBar: {
+    width: 120,
+    height: 4,
+    backgroundColor: Colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
 });

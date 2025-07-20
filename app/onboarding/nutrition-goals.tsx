@@ -62,11 +62,6 @@ export default function NutritionGoalsScreen() {
     
     // Navigate to main app
     router.replace('/(tabs)');
-    
-    // Start the tutorial after a brief delay
-    setTimeout(() => {
-      startTutorial();
-    }, 1000);
   };
   
   return (
@@ -75,8 +70,14 @@ export default function NutritionGoalsScreen() {
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Nutrition Goals</Text>
-          <Text style={styles.subtitle}>Set your daily nutrition targets</Text>
+          <Text style={styles.title}>Your Nutrition Goals</Text>
+          <Text style={styles.subtitle}>Let's set your daily nutrition targets to help you reach your goals</Text>
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>Step 3 of 3</Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: '100%' }]} />
+            </View>
+          </View>
         </View>
         
         <View style={styles.toggleContainer}>
@@ -102,7 +103,7 @@ export default function NutritionGoalsScreen() {
         {useCalculated ? (
           <View style={styles.calculatedContainer}>
             <Text style={styles.calculatedText}>
-              Based on your profile, we've calculated the following daily nutrition goals:
+              Great! Based on your profile, we've calculated personalized daily nutrition goals for you:
             </Text>
             
             <View style={styles.goalItem}>
@@ -189,7 +190,7 @@ export default function NutritionGoalsScreen() {
       <View style={styles.footer}>
         <Pressable style={styles.completeButton} onPress={handleComplete}>
           <Check size={20} color={Colors.white} />
-          <Text style={styles.completeButtonText}>Complete Setup</Text>
+          <Text style={styles.completeButtonText}>Start Using Zestora</Text>
         </Pressable>
       </View>
     </View>
@@ -342,5 +343,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
     marginLeft: 8,
+  },
+  progressContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  progressText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  progressBar: {
+    width: 120,
+    height: 4,
+    backgroundColor: Colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
 });

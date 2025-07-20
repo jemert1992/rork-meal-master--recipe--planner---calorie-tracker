@@ -69,7 +69,7 @@ export default function WelcomeScreen() {
   };
 
   const handleSkipToOnboarding = () => {
-    skipTutorial();
+    router.push('/onboarding/welcome');
   };
 
   return (

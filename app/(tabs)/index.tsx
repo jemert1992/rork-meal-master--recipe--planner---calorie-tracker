@@ -11,13 +11,20 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
-import TutorialOverlay from '@/components/TutorialOverlay';
-import TutorialWelcome from '@/components/TutorialWelcome';
+import UserFriendlyTutorial from '@/components/UserFriendlyTutorial';
 import { useTutorialStore } from '@/store/tutorialStore';
 import { useUserStore } from '@/store/userStore';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
 import * as edamamService from '@/services/edamamService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Helper function to get time-based greeting
+const getTimeOfDay = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+};
 
 // Featured recipe collections
 const featuredCollections = [
@@ -54,7 +61,7 @@ const initialRecipeCategories = [
 export default function RecipesScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
-  const { checkShouldShowWelcome, forceHideTutorial, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch, resetTutorial } = useTutorialStore();
+  const { showTutorial, tutorialCompleted, startTutorial, skipTutorial, forceHideTutorial, resetTutorial } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
   
   const { 
@@ -94,15 +101,16 @@ export default function RecipesScreen() {
     checkEdamamCredentials();
   }, []);
 
-  // Check if tutorial welcome should be shown after onboarding
+  // Show tutorial for new users after onboarding
   useEffect(() => {
-    console.log('Home screen tutorial check:', { isLoggedIn, onboardingCompleted: profile.onboardingCompleted, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch });
-    // Temporarily disable tutorial auto-show to prevent blocking
-    // if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted) {
-    //   // Show tutorial welcome after onboarding is completed
-    //   checkShouldShowWelcome(profile.onboardingCompleted);
-    // }
-  }, [isLoggedIn, profile.onboardingCompleted, checkShouldShowWelcome, showWelcome, showTutorial, tutorialCompleted, isFirstLaunch]);
+    if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted) {
+      // Show tutorial after a brief delay to let the user see the main screen first
+      const timer = setTimeout(() => {
+        startTutorial();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, startTutorial]);
 
   // Update category counts
   useEffect(() => {
@@ -362,53 +370,64 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <TutorialWelcome />
-      <TutorialOverlay currentScreen="home" />
+      <UserFriendlyTutorial 
+        visible={showTutorial}
+        onComplete={skipTutorial}
+        onSkip={skipTutorial}
+      />
       <View style={styles.header}>
-        <Text style={styles.title}>Discover Recipes</Text>
-        <View style={styles.headerRow}>
-          <Text style={styles.subtitle}>Find and save your favorite meals</Text>
-          <View style={styles.dataSourceContainer}>
-            {/* Debug buttons - remove after fixing */}
-            {(showWelcome || showTutorial) && (
-              <>
-                <Pressable 
-                  style={[styles.dataSourceButton, { backgroundColor: Colors.error, marginRight: 4 }]} 
-                  onPress={forceHideTutorial}
-                >
-                  <Text style={[styles.dataSourceText, { color: Colors.white, fontSize: 10 }]}>Hide</Text>
-                </Pressable>
-                <Pressable 
-                  style={[styles.dataSourceButton, { backgroundColor: Colors.warning, marginRight: 8 }]} 
-                  onPress={resetTutorial}
-                >
-                  <Text style={[styles.dataSourceText, { color: Colors.white, fontSize: 10 }]}>Reset</Text>
-                </Pressable>
-              </>
-            )}
-            <Pressable 
-              style={styles.dataSourceButton} 
-              onPress={toggleDataSource}
-            >
-              {useFirestore ? (
-                <Database size={16} color={Colors.primary} />
-              ) : (
-                <Cloud size={16} color={Colors.primary} />
-              )}
-              <Text style={styles.dataSourceText}>
-                {useFirestore ? 'Firestore' : 'API'}
-              </Text>
-            </Pressable>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greeting}>Good {getTimeOfDay()}, {profile.name || 'there'}! 👋</Text>
+            <Text style={styles.subtitle}>Ready to plan some delicious meals?</Text>
+          </View>
+          <Pressable 
+            style={styles.helpButton}
+            onPress={() => startTutorial()}
+          >
+            <Text style={styles.helpButtonText}>Help</Text>
+          </Pressable>
+        </View>
+        
+        {/* Quick Stats */}
+        <View style={styles.quickStats}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{Object.values(mealPlan).filter(day => day.breakfast || day.lunch || day.dinner).length}</Text>
+            <Text style={styles.statLabel}>Days Planned</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{favoriteRecipeIds.length}</Text>
+            <Text style={styles.statLabel}>Favorites</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{recipes.length}</Text>
+            <Text style={styles.statLabel}>Recipes</Text>
           </View>
         </View>
       </View>
 
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <Pressable style={styles.quickActionButton} onPress={() => router.push('/add-meal/today')}>
+          <Text style={styles.quickActionEmoji}>🍽️</Text>
+          <Text style={styles.quickActionText}>Add Meal</Text>
+        </Pressable>
+        <Pressable style={styles.quickActionButton} onPress={handleGenerateGroceryList}>
+          <Text style={styles.quickActionEmoji}>🛒</Text>
+          <Text style={styles.quickActionText}>Grocery List</Text>
+        </Pressable>
+        <Pressable style={styles.quickActionButton} onPress={() => setFilters({...filters, favorite: true})}>
+          <Text style={styles.quickActionEmoji}>❤️</Text>
+          <Text style={styles.quickActionText}>Favorites</Text>
+        </Pressable>
+      </View>
+      
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
           <Search size={20} color={Colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search recipes or tags..."
+            placeholder="Search for recipes, ingredients, or cuisines..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={Colors.textLight}
@@ -447,7 +466,14 @@ export default function RecipesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No recipes found</Text>
-              <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
+              <Text style={styles.emptySubtext}>
+                {searchQuery.trim().length >= 2 
+                  ? 'Try different keywords or check your spelling'
+                  : filters.favorite 
+                    ? 'Start favoriting recipes by tapping the heart icon'
+                    : 'Try refreshing or adjusting your filters'
+                }
+              </Text>
               <Pressable style={styles.refreshButton} onPress={handleRefresh}>
                 <RefreshCw size={16} color={Colors.white} />
                 <Text style={styles.refreshButtonText}>Refresh Recipes</Text>
@@ -472,6 +498,83 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  helpButton: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  helpButtonText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  quickStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  quickActionButton: {
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    minWidth: 80,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quickActionEmoji: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: Colors.text,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   headerRow: {
     flexDirection: 'row',

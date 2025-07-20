@@ -30,7 +30,7 @@ export class ErrorHandler {
   static handleNetworkError(error: any) {
     const appError = this.createError(
       'NETWORK_ERROR',
-      'Unable to connect to the server. Please check your internet connection.',
+      'Looks like you\'re offline! Please check your internet connection and try again.',
       error
     );
     this.logError(appError);
@@ -40,7 +40,7 @@ export class ErrorHandler {
   static handleRecipeLoadError(error: any) {
     const appError = this.createError(
       'RECIPE_LOAD_ERROR',
-      'Unable to load recipes. Please try again.',
+      'We couldn\'t load your recipes right now. Don\'t worry, your data is safe! Try refreshing or check back in a moment.',
       error
     );
     this.logError(appError);
@@ -50,7 +50,7 @@ export class ErrorHandler {
   static handleMealPlanError(error: any) {
     const appError = this.createError(
       'MEAL_PLAN_ERROR',
-      'Unable to generate meal plan. Please try again.',
+      'We had trouble creating your meal plan. Try adjusting your preferences or selecting different recipes.',
       error
     );
     this.logError(appError);
@@ -60,7 +60,7 @@ export class ErrorHandler {
   static handleStorageError(error: any) {
     const appError = this.createError(
       'STORAGE_ERROR',
-      'Unable to save data. Please check your device storage.',
+      'We couldn\'t save your changes. Please make sure you have enough storage space and try again.',
       error
     );
     this.logError(appError);
@@ -79,12 +79,12 @@ export class ErrorHandler {
 
   private static showUserFriendlyError(error: AppError) {
     Alert.alert(
-      'Oops!',
+      'Something went wrong',
       error.message,
       [
-        { text: 'OK', style: 'default' },
+        { text: 'Got it', style: 'default' },
         { 
-          text: 'Report Issue', 
+          text: 'Get help', 
           style: 'cancel',
           onPress: () => this.reportIssue(error)
         }
@@ -96,8 +96,8 @@ export class ErrorHandler {
     // In a real app, this would send the error to your support system
     console.log('Reporting issue:', error);
     Alert.alert(
-      'Thank you',
-      'Your issue has been reported. We\'ll look into it.',
+      'Thanks for letting us know!',
+      'We\'ve received your report and will work on fixing this. In the meantime, try restarting the app or check our help section.',
       [{ text: 'OK' }]
     );
   }

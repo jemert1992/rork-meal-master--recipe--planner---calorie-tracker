@@ -534,7 +534,7 @@ export default function SimpleTutorialOverlay({
 
   // Animations
   useEffect(() => {
-    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
+    if (isGeneratingImages && Platform.OS !== 'web' && (Platform.OS as any) !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -692,7 +692,7 @@ export default function SimpleTutorialOverlay({
   }
   
   // Simplified version to prevent blocking
-  if ((Platform.OS as string) === 'web') {
+  if (Platform.OS === 'web' || (Platform.OS as any) === 'web') {
     return (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -795,7 +795,7 @@ export default function SimpleTutorialOverlay({
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <View style={styles.loadingContent}>
               <Text style={styles.loadingText}>Loading preview...</Text>
-              {(Platform.OS as string) === 'web' ? (
+              {(Platform.OS === 'web' || (Platform.OS as any) === 'web') ? (
                 <View 
                   style={styles.loadingSpinner}
                   // @ts-ignore - Web-specific className
@@ -824,7 +824,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if ((Platform.OS as string) === 'web') {
+  if (Platform.OS === 'web' || (Platform.OS as any) === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -838,13 +838,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={(Platform.OS as string) !== 'web'}
+      statusBarTranslucent={Platform.OS !== 'web' && (Platform.OS as any) !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (Platform.OS as string) !== 'web' ? (
+        ) : (Platform.OS !== 'web' && (Platform.OS as any) !== 'web') ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
-    ...((Platform.OS as string) === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
     }),
   },
@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       cursor: 'pointer',
     }),
   },
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       boxShadow: '0 2px 16px rgba(0, 0, 0, 0.12)',
     }),
   },
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 215, 102, 0.3)',
     shadowColor: Colors.accent,
     shadowOpacity: 0.2,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       boxShadow: '0 4px 20px rgba(255, 215, 102, 0.2)',
     }),
   },
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 107, 107, 0.3)',
     shadowColor: Colors.primary,
     shadowOpacity: 0.2,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       boxShadow: '0 4px 20px rgba(255, 107, 107, 0.2)',
     }),
   },
@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
     }),
   },
@@ -1124,7 +1124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    ...((Platform.OS as string) === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       cursor: 'pointer',
     }),
   },
@@ -1149,7 +1149,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       cursor: 'pointer',
       boxShadow: '0 2px 16px rgba(255, 107, 107, 0.2)',
     }),
@@ -1163,7 +1163,7 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    ...((Platform.OS as string) === 'web' && {
+    ...((Platform.OS === 'web' || (Platform.OS as any) === 'web') && {
       cursor: 'pointer',
     }),
   },
