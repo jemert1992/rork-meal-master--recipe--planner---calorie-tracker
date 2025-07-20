@@ -844,7 +844,7 @@ export default function SimpleTutorialOverlay({
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (Platform.OS === 'ios' || Platform.OS === 'android' || Platform.OS === 'macos' || Platform.OS === 'windows') ? (
+        ) : (Platform.OS === 'android' || Platform.OS === 'macos' || Platform.OS === 'windows') ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
