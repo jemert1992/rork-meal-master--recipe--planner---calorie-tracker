@@ -629,7 +629,7 @@ export default function SimpleTutorialOverlay({
     
     return (
       <Animated.View
-        key={tooltip.id}
+        key={`${tooltip.id}-${index}`}
         style={[
           styles.tooltipContainer,
           tooltip.position,
