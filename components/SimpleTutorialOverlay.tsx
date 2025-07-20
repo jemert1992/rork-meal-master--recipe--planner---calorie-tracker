@@ -824,7 +824,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if ((Platform.OS as string) === 'web') {
+  if (Platform.OS === 'ios' || Platform.OS === 'android' || Platform.OS === 'macos' || Platform.OS === 'windows' ? false : true) {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -838,13 +838,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={(Platform.OS as string) !== 'web'}
+      statusBarTranslucent={Platform.OS !== 'ios' && Platform.OS !== 'android' && Platform.OS !== 'macos' && Platform.OS !== 'windows' ? false : true}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : ((Platform.OS as string) !== 'web') ? (
+        ) : (Platform.OS === 'ios' || Platform.OS === 'android' || Platform.OS === 'macos' || Platform.OS === 'windows') ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />

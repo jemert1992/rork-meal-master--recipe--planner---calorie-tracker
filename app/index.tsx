@@ -7,7 +7,7 @@ import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-import SimpleTutorialOverlay from '@/components/SimpleTutorialOverlay';
+import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -165,13 +165,12 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Tutorial Overlay - Temporarily disabled to test if this is blocking */}
+      {/* Tutorial Overlay */}
       {showTutorial && (
-        <SimpleTutorialOverlay 
+        <ModernTutorialOverlay 
           visible={showTutorial}
           onComplete={handleTutorialComplete}
           onSkip={handleTutorialSkip}
-          currentScreen="welcome"
         />
       )}
     </SafeAreaView>

@@ -11,7 +11,7 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
-import UserFriendlyTutorial from '@/components/UserFriendlyTutorial';
+import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
 import { useTutorialStore } from '@/store/tutorialStore';
 import { useUserStore } from '@/store/userStore';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
@@ -370,7 +370,7 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <UserFriendlyTutorial 
+      <ModernTutorialOverlay 
         visible={showTutorial}
         onComplete={skipTutorial}
         onSkip={skipTutorial}
