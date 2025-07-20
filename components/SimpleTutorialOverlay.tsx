@@ -271,7 +271,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animations for web
-if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const existingStyle = document.getElementById('tutorial-animations');
   if (!existingStyle) {
     const style = document.createElement('style');
@@ -494,6 +494,11 @@ export default function SimpleTutorialOverlay({
   const currentStepData = TUTORIAL_STEPS[currentStep];
   const shouldShow = visible && !!currentStepData;
   
+  // Early return if not visible to prevent unnecessary processing
+  if (!visible) {
+    return null;
+  }
+  
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
   const progress = ((currentStep + 1) / TUTORIAL_STEPS.length) * 100;
@@ -505,32 +510,16 @@ export default function SimpleTutorialOverlay({
       
       setIsGeneratingImages(true);
       
-      const imagePrompts = {
-        'welcome-intro': 'Mobile app welcome screen for Zestora nutrition app, clean modern UI with chef hat logo, welcome text, green and orange color scheme, mobile phone mockup, professional app design',
-        'features-nutrition': 'Mobile app nutrition tracking screen, circular progress bars for calories and macros, daily nutrition dashboard, food logging interface, modern UI design, mobile phone mockup',
-        'features-planning': 'Mobile app meal planning screen, weekly calendar view with breakfast lunch dinner slots, meal planning interface, recipe cards, modern mobile UI design',
-        'features-grocery': 'Mobile app grocery shopping list screen, organized food items by categories, checkboxes, clean list interface, shopping cart icon, modern mobile app design',
-        'features-ai': 'Mobile app recipe discovery screen, grid of recipe cards with food photos, search and filter options, modern cooking app interface, mobile phone mockup',
-        'ready-to-start': 'Mobile app onboarding completion screen, success checkmark, ready to start message, modern app interface, celebration design, mobile phone mockup'
-      };
-
+      // Temporarily use static mockups instead of generating images
       const newImages: { [key: string]: string } = {};
       
-      for (const [key, prompt] of Object.entries(imagePrompts)) {
-        if (imageCache[key]) {
-          newImages[key] = imageCache[key];
-        } else {
-          try {
-            const imageData = await generateTutorialImage(prompt, key);
-            imageCache[key] = imageData;
-            newImages[key] = imageData;
-          } catch (error) {
-            console.error(`Failed to generate image for ${key}:`, error);
-            // Use fallback gradient
-            const imageData = await generateTutorialImage('', key);
-            imageCache[key] = imageData;
-            newImages[key] = imageData;
-          }
+      for (const stepId of Object.keys(TUTORIAL_STEPS.reduce((acc, step) => ({ ...acc, [step.id]: true }), {}))) {
+        try {
+          const imageData = createAppMockup(stepId);
+          imageCache[stepId] = imageData;
+          newImages[stepId] = imageData;
+        } catch (error) {
+          console.error(`Failed to create mockup for ${stepId}:`, error);
         }
       }
       
@@ -538,12 +527,14 @@ export default function SimpleTutorialOverlay({
       setIsGeneratingImages(false);
     };
 
-    generateImages();
-  }, []);
+    if (visible) {
+      generateImages();
+    }
+  }, [visible]);
 
   // Animations
   useEffect(() => {
-    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
+    if (isGeneratingImages && Platform.OS !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -601,10 +592,15 @@ export default function SimpleTutorialOverlay({
   }, [visible]);
   
   const handleNext = () => {
-    if (isLastStep) {
-      onComplete();
-    } else {
-      setCurrentStep(prev => prev + 1);
+    try {
+      if (isLastStep) {
+        onComplete();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error in handleNext:', error);
+      onSkip(); // Fallback to skip if there's an error
     }
   };
   
@@ -648,7 +644,7 @@ export default function SimpleTutorialOverlay({
           styles.tooltipContent,
           isCelebration && styles.celebrationTooltip,
           isSpotlight && styles.spotlightTooltip,
-          (Platform.OS as string) === 'web' && styles.webTooltip
+          Platform.OS === 'web' && styles.webTooltip
         ]}>
           <View style={styles.tooltipIconContainer}>
             {getHighlightIcon(tooltip.icon, 16, 
@@ -693,6 +689,34 @@ export default function SimpleTutorialOverlay({
   
   if (!shouldShow || !currentStepData) {
     return null;
+  }
+  
+  // Simplified version to prevent blocking
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.overlay, styles.webOverlay]}>
+        <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
+        <View style={styles.screenshotContainer}>
+          <View style={styles.tutorialCard}>
+            <View style={styles.loadingContainer}>
+              <Text style={styles.stepTitle}>{currentStepData.title}</Text>
+              <Text style={styles.stepDescription}>{currentStepData.description}</Text>
+              <View style={styles.navigationContainer}>
+                <Pressable style={styles.nextButton} onPress={handleNext}>
+                  <Text style={styles.nextButtonText}>
+                    {isLastStep ? 'Get Started' : 'Continue'}
+                  </Text>
+                  <ArrowRight size={16} color={Colors.white} />
+                </Pressable>
+              </View>
+              <Pressable style={styles.skipButton} onPress={onSkip}>
+                <Text style={styles.skipButtonText}>Skip tutorial</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
   }
   
   const TutorialCard = () => (
@@ -771,7 +795,7 @@ export default function SimpleTutorialOverlay({
           <View style={[styles.cardImageBackground, styles.loadingContainer]}>
             <View style={styles.loadingContent}>
               <Text style={styles.loadingText}>Loading preview...</Text>
-              {(Platform.OS as string) === 'web' ? (
+              {Platform.OS === 'web' ? (
                 <View 
                   style={styles.loadingSpinner}
                   // @ts-ignore - Web-specific className
@@ -800,7 +824,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if ((Platform.OS as string) === 'web') {
+  if (Platform.OS === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -814,13 +838,13 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={(Platform.OS as string) !== 'web'}
+      statusBarTranslucent={Platform.OS !== 'web'}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (Platform.OS as string) !== 'web' ? (
+        ) : Platform.OS !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
@@ -870,7 +894,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
     }),
   },
@@ -929,7 +953,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -954,7 +978,7 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 2px 16px rgba(0, 0, 0, 0.12)',
     }),
   },
@@ -963,7 +987,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 215, 102, 0.3)',
     shadowColor: Colors.accent,
     shadowOpacity: 0.2,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 4px 20px rgba(255, 215, 102, 0.2)',
     }),
   },
@@ -972,7 +996,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 107, 107, 0.3)',
     shadowColor: Colors.primary,
     shadowOpacity: 0.2,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 4px 20px rgba(255, 107, 107, 0.2)',
     }),
   },
@@ -1067,7 +1091,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
     }),
   },
@@ -1100,7 +1124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
   },
@@ -1125,7 +1149,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 2px 16px rgba(255, 107, 107, 0.2)',
     }),
@@ -1139,7 +1163,7 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
   },

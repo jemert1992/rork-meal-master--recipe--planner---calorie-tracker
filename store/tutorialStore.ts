@@ -218,6 +218,9 @@ export const useTutorialStore = create<TutorialState>()(
     {
       name: 'tutorial-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        console.log('Tutorial store rehydrated:', state);
+      },
     }
   )
 );

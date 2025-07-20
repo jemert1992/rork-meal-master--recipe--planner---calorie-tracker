@@ -37,11 +37,11 @@ export default function WelcomeScreen() {
       return;
     }
     
-    // Show tutorial immediately on first launch
-    if (isFirstLaunch && !tutorialCompleted) {
-      console.log('First launch detected - starting tutorial');
-      startTutorial();
-    }
+    // Temporarily disable auto-starting tutorial to prevent blocking
+    // if (isFirstLaunch && !tutorialCompleted) {
+    //   console.log('First launch detected - starting tutorial');
+    //   startTutorial();
+    // }
   }, [isFirstLaunch, tutorialCompleted, isLoggedIn, profile.onboardingCompleted]);
   
   // Handle redirect to onboarding after tutorial completion
@@ -165,13 +165,15 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Tutorial Overlay */}
-      <SimpleTutorialOverlay 
-        visible={showTutorial}
-        onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
-        currentScreen="welcome"
-      />
+      {/* Tutorial Overlay - Temporarily disabled to test if this is blocking */}
+      {showTutorial && (
+        <SimpleTutorialOverlay 
+          visible={showTutorial}
+          onComplete={handleTutorialComplete}
+          onSkip={handleTutorialSkip}
+          currentScreen="welcome"
+        />
+      )}
     </SafeAreaView>
   );
 }
