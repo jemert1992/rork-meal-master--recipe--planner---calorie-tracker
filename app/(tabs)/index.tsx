@@ -11,7 +11,7 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
-import ContextualTutorialOverlay from '@/components/ContextualTutorialOverlay';
+
 import { useTutorialStore } from '@/store/tutorialStore';
 import { useUserStore } from '@/store/userStore';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
@@ -371,7 +371,6 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ContextualTutorialOverlay />
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>

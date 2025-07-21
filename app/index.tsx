@@ -7,7 +7,7 @@ import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-import SimpleTutorialTest from '@/components/SimpleTutorialTest';
+import ContextualTutorialCoachMark from '@/components/ContextualTutorialCoachMark';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -35,13 +35,18 @@ export default function WelcomeScreen() {
     }
   }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, router]);
   
-  // Handle redirect to main app after tutorial completion
+  // Handle redirect after tutorial completion
   useEffect(() => {
-    if (tutorialCompleted && !showTutorial) {
-      // Tutorial is completed, redirect to main app
+    if (shouldRedirectToOnboarding && tutorialCompleted && !showTutorial) {
+      // Tutorial is completed, redirect to personal info
+      console.log('Redirecting to personal info from welcome screen');
+      router.replace('/onboarding/personal-info');
+      setShouldRedirectToOnboarding(false);
+    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding) {
+      // Tutorial is completed without redirect flag, go to main app
       router.replace('/(tabs)');
     }
-  }, [tutorialCompleted, showTutorial, router]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, router, setShouldRedirectToOnboarding]);
 
   const handleStartTutorial = () => {
     console.log('handleStartTutorial called');
@@ -150,13 +155,7 @@ export default function WelcomeScreen() {
       </View>
       
       {/* Tutorial Overlay */}
-      {showTutorial && (
-        <SimpleTutorialTest 
-          visible={showTutorial}
-          onComplete={handleTutorialComplete}
-          onSkip={handleTutorialSkip}
-        />
-      )}
+      <ContextualTutorialCoachMark />
     </SafeAreaView>
   );
 }

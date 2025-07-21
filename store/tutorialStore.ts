@@ -178,7 +178,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           tutorialCompleted: true,
           isFirstLaunch: false,
           tutorialActive: false,
-          shouldRedirectToOnboarding: false, // Don't redirect, tutorial is post-onboarding
+          shouldRedirectToOnboarding: true, // Redirect to personal info after skipping
         });
       },
       
@@ -191,7 +191,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           currentStep: 0,
           isFirstLaunch: false,
           tutorialActive: false,
-          shouldRedirectToOnboarding: false, // Don't redirect, tutorial is post-onboarding
+          shouldRedirectToOnboarding: true, // Redirect to personal info after tutorial
         });
       },
       

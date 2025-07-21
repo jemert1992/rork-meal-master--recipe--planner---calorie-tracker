@@ -5,7 +5,7 @@ import Colors from '@/constants/colors';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 import TutorialWelcome from '@/components/TutorialWelcome';
-import ContextualTutorialOverlay from '@/components/ContextualTutorialOverlay';
+import ContextualTutorialCoachMark from '@/components/ContextualTutorialCoachMark';
 
 export default function TabLayout() {
   const { profile } = useUserStore();
@@ -21,6 +21,7 @@ export default function TabLayout() {
   return (
     <>
       <TutorialWelcome />
+      <ContextualTutorialCoachMark />
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors.primary,
