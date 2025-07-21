@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ const isSmallScreen = screenHeight < 700;
 export default function WelcomeScreen() {
   const router = useRouter();
   const { isLoggedIn, profile } = useUserStore();
+  const tutorialStore = useTutorialStore();
   const { 
     isFirstLaunch, 
     tutorialCompleted, 
@@ -25,7 +26,7 @@ export default function WelcomeScreen() {
     shouldRedirectToOnboarding,
     setShouldRedirectToOnboarding,
     checkAndStartTutorial
-  } = useTutorialStore();
+  } = tutorialStore;
 
   // Check if tutorial should be shown immediately on first launch
   useEffect(() => {
@@ -53,9 +54,21 @@ export default function WelcomeScreen() {
     }
   }, [shouldRedirectToOnboarding, tutorialCompleted, setShouldRedirectToOnboarding, router]);
 
+  // Debug: Monitor showTutorial state changes
+  useEffect(() => {
+    console.log('showTutorial state changed:', showTutorial);
+  }, [showTutorial]);
+
   const handleGetStarted = () => {
     console.log('Starting tutorial manually');
+    console.log('Current tutorial state:', { showTutorial, tutorialCompleted, isFirstLaunch });
+    console.log('Full tutorial store state:', tutorialStore);
     startTutorial();
+    // Wait a bit for state to update
+    setTimeout(() => {
+      console.log('After startTutorial called:', { showTutorial: useTutorialStore.getState().showTutorial });
+      console.log('Full store after:', useTutorialStore.getState());
+    }, 100);
   };
   
   const handleTutorialComplete = () => {
@@ -173,13 +186,48 @@ export default function WelcomeScreen() {
       </View>
       
       {/* Tutorial Overlay */}
-      {showTutorial && (
-        <ModernTutorialOverlay 
-          visible={showTutorial}
-          onComplete={handleTutorialComplete}
-          onSkip={handleTutorialSkip}
-        />
-      )}
+      <ModernTutorialOverlay 
+        visible={showTutorial}
+        onComplete={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
+      />
+      
+      {/* Debug modal to test if modals work at all */}
+      <Modal
+        visible={showTutorial}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(255, 0, 0, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <View style={{
+            backgroundColor: 'white',
+            padding: 30,
+            borderRadius: 15,
+            margin: 20,
+            minWidth: 250
+          }}>
+            <Text style={{ color: 'black', fontSize: 20, marginBottom: 15, textAlign: 'center' }}>
+              🎉 Tutorial Started!
+            </Text>
+            <Text style={{ color: 'gray', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
+              This debug modal proves the tutorial system is working.
+            </Text>
+            <Pressable 
+              style={{ backgroundColor: Colors.primary, padding: 15, borderRadius: 8 }}
+              onPress={handleTutorialSkip}
+            >
+              <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+                Close & Continue to Setup
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

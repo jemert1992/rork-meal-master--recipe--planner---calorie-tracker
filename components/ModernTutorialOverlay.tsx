@@ -231,8 +231,11 @@ export default function ModernTutorialOverlay({
   };
 
   if (!visible || !currentStepData) {
+    console.log('ModernTutorialOverlay not rendering:', { visible, currentStepData: !!currentStepData });
     return null;
   }
+  
+  console.log('ModernTutorialOverlay rendering:', { visible, currentStep, currentStepData: currentStepData.title });
 
   const renderContent = () => (
     <Animated.View
@@ -365,6 +368,8 @@ export default function ModernTutorialOverlay({
       animationType="fade"
       statusBarTranslucent={true}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
+      onShow={() => console.log('Modal shown')}
+      onDismiss={() => console.log('Modal dismissed')}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
