@@ -236,7 +236,8 @@ export default function ModernTutorialOverlay({
     currentStep, 
     currentStepData: !!currentStepData,
     stepTitle: currentStepData?.title,
-    tutorialStepsLength: TUTORIAL_STEPS.length
+    tutorialStepsLength: TUTORIAL_STEPS.length,
+    timestamp: new Date().toISOString()
   });
 
   // Early return only if not visible

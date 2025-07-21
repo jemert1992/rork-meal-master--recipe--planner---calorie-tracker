@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform, Modal } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,7 +8,6 @@ import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
 import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
-import TestTutorialOverlay from '@/components/TestTutorialOverlay';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -17,96 +16,55 @@ const isSmallScreen = screenHeight < 700;
 export default function WelcomeScreen() {
   const router = useRouter();
   const { isLoggedIn, profile } = useUserStore();
-  const tutorialStore = useTutorialStore();
-  const [testModalVisible, setTestModalVisible] = useState(false);
   const { 
-    isFirstLaunch, 
     tutorialCompleted, 
     showTutorial, 
     startTutorial,
     skipTutorial,
     shouldRedirectToOnboarding,
-    setShouldRedirectToOnboarding,
-    checkAndStartTutorial
-  } = tutorialStore;
+    setShouldRedirectToOnboarding
+  } = useTutorialStore();
 
-  // Check if tutorial should be shown immediately on first launch
+  // Check if user is already set up, redirect to main app
   useEffect(() => {
-    console.log('Welcome screen mounted:', { isFirstLaunch, tutorialCompleted, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
-    
-    // If user is already set up, redirect to main app
     if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted) {
       router.replace('/(tabs)');
-      return;
     }
-    
-    // Temporarily disable auto-starting tutorial to prevent blocking
-    // if (isFirstLaunch && !tutorialCompleted) {
-    //   console.log('First launch detected - starting tutorial');
-    //   startTutorial();
-    // }
-  }, [isFirstLaunch, tutorialCompleted, isLoggedIn, profile.onboardingCompleted]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, router]);
   
   // Handle redirect to onboarding after tutorial completion
   useEffect(() => {
     if (shouldRedirectToOnboarding && tutorialCompleted) {
-      console.log('Redirecting to onboarding after tutorial completion');
       setShouldRedirectToOnboarding(false);
       router.push('/onboarding/personal-info');
     }
   }, [shouldRedirectToOnboarding, tutorialCompleted, setShouldRedirectToOnboarding, router]);
 
-  // Debug: Monitor showTutorial state changes
-  useEffect(() => {
-    console.log('showTutorial state changed in WelcomeScreen:', showTutorial);
-    console.log('Full tutorial store state on change:', tutorialStore);
-  }, [showTutorial]);
-
-  // Debug: Monitor all tutorial store changes
-  useEffect(() => {
-    console.log('Tutorial store changed:', tutorialStore);
-  }, [tutorialStore]);
-
-  const handleGetStarted = () => {
-    console.log('=== STARTING TUTORIAL ===');
-    console.log('Current tutorial state before:', { showTutorial, tutorialCompleted, isFirstLaunch });
-    console.log('Full tutorial store state before:', tutorialStore);
-    
+  const handleStartTutorial = () => {
+    console.log('handleStartTutorial called');
+    console.log('Current showTutorial state:', showTutorial);
     startTutorial();
+    console.log('After startTutorial, showTutorial should be true');
     
-    // Immediate check
-    const immediateState = useTutorialStore.getState();
-    console.log('Immediate state after startTutorial:', immediateState);
-    
-    // Wait a bit for state to update
+    // Force a re-render check
     setTimeout(() => {
-      const delayedState = useTutorialStore.getState();
-      console.log('Delayed state after startTutorial:', delayedState);
-      console.log('showTutorial value:', delayedState.showTutorial);
+      const currentState = useTutorialStore.getState();
+      console.log('Tutorial state after timeout:', currentState.showTutorial);
     }, 100);
   };
   
   const handleTutorialComplete = () => {
-    console.log('Tutorial completed');
-    // Redirect to onboarding after tutorial completion
     router.push('/onboarding/personal-info');
   };
   
   const handleTutorialSkip = () => {
-    console.log('Tutorial skipped');
     skipTutorial();
-    router.push('/onboarding/personal-info');
-  };
-
-  const handleSkipToOnboarding = () => {
     router.push('/onboarding/personal-info');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      
-
       
       {/* Background with subtle pattern */}
       <LinearGradient
@@ -173,7 +131,7 @@ export default function WelcomeScreen() {
               styles.startButton,
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
-            onPress={handleGetStarted}
+            onPress={handleStartTutorial}
             hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Start Tutorial"
@@ -186,79 +144,17 @@ export default function WelcomeScreen() {
               <ArrowRight size={20} color={Colors.white} />
             </LinearGradient>
           </Pressable>
-          
-
-          
-          <Pressable style={styles.skipButton} onPress={handleSkipToOnboarding}>
-            <Text style={styles.skipButtonText}>Skip to Setup</Text>
-          </Pressable>
-          
-          {/* Test Modal button */}
-          <Pressable 
-            style={[styles.emergencyButton, { backgroundColor: 'rgba(0, 255, 0, 0.2)' }]} 
-            onPress={() => {
-              console.log('Showing test modal');
-              setTestModalVisible(true);
-            }}
-          >
-            <Text style={styles.emergencyButtonText}>Test Modal</Text>
-          </Pressable>
-
-          {/* Debug button to force tutorial */}
-          <Pressable 
-            style={[styles.emergencyButton, { backgroundColor: 'rgba(255, 0, 0, 0.2)' }]} 
-            onPress={() => {
-              console.log('Force showing tutorial');
-              tutorialStore.setShowTutorial(true);
-              // Also try direct state update
-              setTimeout(() => {
-                console.log('State after force show:', useTutorialStore.getState());
-              }, 50);
-            }}
-          >
-            <Text style={styles.emergencyButtonText}>Force Show Tutorial (Debug)</Text>
-          </Pressable>
-
-          {/* Emergency fallback button */}
-          <Pressable style={styles.emergencyButton} onPress={() => router.push('/onboarding/personal-info')}>
-            <Text style={styles.emergencyButtonText}>Continue to App Setup →</Text>
-          </Pressable>
         </View>
       </View>
       
-      {/* Test Modal */}
-      <Modal
-        visible={testModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setTestModalVisible(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10 }}>
-            <Text style={{ color: 'black', marginBottom: 20 }}>Test Modal Works!</Text>
-            <Pressable 
-              style={{ backgroundColor: Colors.primary, padding: 10, borderRadius: 5 }}
-              onPress={() => setTestModalVisible(false)}
-            >
-              <Text style={{ color: 'white' }}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Tutorial Overlay - Test Version */}
-      <TestTutorialOverlay 
-        visible={showTutorial}
-        onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
-      />
-      
-      {/* Original Tutorial Overlay - Commented out for testing */}
-      {/* <ModernTutorialOverlay 
-        visible={showTutorial}
-        onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
-      /> */}
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <ModernTutorialOverlay 
+          visible={showTutorial}
+          onComplete={handleTutorialComplete}
+          onSkip={handleTutorialSkip}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -447,37 +343,6 @@ const styles = StyleSheet.create({
     fontSize: isSmallScreen ? 18 : 19,
     marginRight: 8,
   },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-    }),
-  },
-  skipButtonText: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: isSmallScreen ? 14 : 15,
-    textDecorationLine: 'underline',
-    fontWeight: '500',
-  },
-  emergencyButton: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    marginTop: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-    }),
-  },
-  emergencyButtonText: {
-    color: Colors.white,
-    fontSize: isSmallScreen ? 16 : 17,
-    fontWeight: '600',
-  },
+
 
 });

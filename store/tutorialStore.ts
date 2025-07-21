@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface TutorialStep {
   id: string;
@@ -90,9 +88,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
-export const useTutorialStore = create<TutorialState>()(
-  persist(
-    (set, get) => ({
+export const useTutorialStore = create<TutorialState>()((set, get) => ({
       isFirstLaunch: true,
       currentStep: 0,
       tutorialCompleted: false,
@@ -104,17 +100,14 @@ export const useTutorialStore = create<TutorialState>()(
       
       startTutorial: () => {
         console.log('Starting tutorial');
-        const newState = {
+        set({
           showTutorial: true,
           showWelcome: false,
           currentStep: 0,
           tutorialCompleted: false,
           isFirstLaunch: false,
           tutorialActive: true,
-        };
-        console.log('Setting tutorial state to:', newState);
-        set(newState);
-        console.log('Tutorial state after set:', get());
+        });
       },
       
       nextStep: () => {
@@ -217,13 +210,4 @@ export const useTutorialStore = create<TutorialState>()(
       setTutorialActive: (active: boolean) => {
         set({ tutorialActive: active });
       },
-    }),
-    {
-      name: 'tutorial-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-      onRehydrateStorage: () => (state) => {
-        console.log('Tutorial store rehydrated:', state);
-      },
-    }
-  )
-);
+    }));
