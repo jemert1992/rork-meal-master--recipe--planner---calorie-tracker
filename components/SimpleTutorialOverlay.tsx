@@ -510,21 +510,24 @@ export default function SimpleTutorialOverlay({
       
       setIsGeneratingImages(true);
       
-      // Temporarily use static mockups instead of generating images
+      // Use static mockups
       const newImages: { [key: string]: string } = {};
       
-      for (const stepId of Object.keys(TUTORIAL_STEPS.reduce((acc, step) => ({ ...acc, [step.id]: true }), {}))) {
-        try {
-          const imageData = createAppMockup(stepId);
-          imageCache[stepId] = imageData;
-          newImages[stepId] = imageData;
-        } catch (error) {
-          console.error(`Failed to create mockup for ${stepId}:`, error);
+      try {
+        for (const step of TUTORIAL_STEPS) {
+          const imageData = createAppMockup(step.id);
+          imageCache[step.id] = imageData;
+          newImages[step.id] = imageData;
         }
+        
+        setGeneratedImages(newImages);
+      } catch (error) {
+        console.error('Failed to create mockups:', error);
+        // Set empty images to prevent infinite loading
+        setGeneratedImages({});
+      } finally {
+        setIsGeneratingImages(false);
       }
-      
-      setGeneratedImages(newImages);
-      setIsGeneratingImages(false);
     };
 
     if (visible) {
@@ -691,35 +694,9 @@ export default function SimpleTutorialOverlay({
     return null;
   }
   
-  // Simplified version to prevent blocking
-  if ((Platform.OS as string) === 'web') {
-    return (
-      <View style={[styles.overlay, styles.webOverlay]}>
-        <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
-        <View style={styles.screenshotContainer}>
-          <View style={styles.tutorialCard}>
-            <View style={styles.loadingContainer}>
-              <Text style={styles.stepTitle}>{currentStepData.title}</Text>
-              <Text style={styles.stepDescription}>{currentStepData.description}</Text>
-              <View style={styles.navigationContainer}>
-                <Pressable style={styles.nextButton} onPress={handleNext}>
-                  <Text style={styles.nextButtonText}>
-                    {isLastStep ? 'Get Started' : 'Continue'}
-                  </Text>
-                  <ArrowRight size={16} color={Colors.white} />
-                </Pressable>
-              </View>
-              <Pressable style={styles.skipButton} onPress={onSkip}>
-                <Text style={styles.skipButtonText}>Skip tutorial</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  }
+
   
-  const TutorialCard = () => (
+  const renderTutorialCard = () => (
     <View style={styles.screenshotContainer}>
       {/* Single Card with Image Background and Overlaid Content */}
       <Animated.View
@@ -731,8 +708,8 @@ export default function SimpleTutorialOverlay({
           },
         ]}
       >
-        {/* Background Image */}
-        {currentImage ? (
+        {/* Background Image or Fallback */}
+        {currentImage && !isGeneratingImages ? (
           <ImageBackground
             source={{ uri: currentImage }}
             style={styles.cardImageBackground}
@@ -796,30 +773,57 @@ export default function SimpleTutorialOverlay({
             </View>
           </ImageBackground>
         ) : (
-          <View style={[styles.cardImageBackground, styles.loadingContainer]}>
-            <View style={styles.loadingContent}>
-              <Text style={styles.loadingText}>Loading preview...</Text>
-              {((Platform.OS as string) === 'web') ? (
-                <View 
-                  style={styles.loadingSpinner}
-                  // @ts-ignore - Web-specific className
-                  className="tutorial-loading-spinner"
-                />
-              ) : (
-                <Animated.View
-                  style={[
-                    styles.loadingSpinner,
-                    {
-                      transform: [{
-                        rotate: spinAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0deg', '360deg'],
-                        }),
-                      }],
-                    },
-                  ]}
-                />
-              )}
+          <View style={[styles.cardImageBackground, styles.fallbackContainer]}>
+            {/* Fallback content without image */}
+            <View style={styles.fallbackGradient}>
+              {/* Progress indicator - Top */}
+              <View style={styles.progressContainer}>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                </View>
+                <Text style={styles.progressText}>
+                  {currentStep + 1} / {TUTORIAL_STEPS.length}
+                </Text>
+              </View>
+              
+              {/* Close button - Top Right */}
+              <Pressable style={styles.closeButton} onPress={onSkip}>
+                <X size={18} color={Colors.white} />
+              </Pressable>
+              
+              {/* Main content */}
+              <View style={styles.fallbackContent}>
+                <View style={styles.fallbackIconContainer}>
+                  {getHighlightIcon('chef-hat', 48, Colors.primary)}
+                </View>
+                
+                <Text style={styles.stepTitle}>{currentStepData.title}</Text>
+                <Text style={styles.stepDescription}>{currentStepData.description}</Text>
+                
+                {/* Navigation */}
+                <View style={styles.navigationContainer}>
+                  {!isFirstStep && (
+                    <Pressable style={styles.backButton} onPress={handlePrevious}>
+                      <ArrowLeft size={16} color={Colors.textSecondary} />
+                      <Text style={styles.backButtonText}>Back</Text>
+                    </Pressable>
+                  )}
+                  
+                  <View style={styles.navigationSpacer} />
+                  
+                  <Pressable style={styles.nextButton} onPress={handleNext}>
+                    <Text style={styles.nextButtonText}>
+                      {isLastStep ? 'Get Started' : 'Continue'}
+                    </Text>
+                    <ArrowRight size={16} color={Colors.white} />
+                  </Pressable>
+                </View>
+                
+                {/* Skip option */}
+                <Pressable style={styles.skipButton} onPress={onSkip}>
+                  <Text style={styles.skipButtonText}>Skip tutorial</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         )}
@@ -828,11 +832,11 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if (Platform.OS === 'ios' || Platform.OS === 'android' || Platform.OS === 'macos' || Platform.OS === 'windows' ? false : true) {
+  if ((Platform.OS as string) === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
-        <TutorialCard />
+        {renderTutorialCard()}
       </View>
     ) : null;
   }
@@ -842,19 +846,17 @@ export default function SimpleTutorialOverlay({
       visible={shouldShow}
       transparent={true}
       animationType="fade"
-      statusBarTranslucent={Platform.OS !== 'ios' && Platform.OS !== 'android' && Platform.OS !== 'macos' && Platform.OS !== 'windows' ? false : true}
+      statusBarTranslucent={true}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (Platform.OS === 'android' || Platform.OS === 'macos' || Platform.OS === 'windows') ? (
-          <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         ) : (
-          <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
+          <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
         )}
         
-        <TutorialCard />
+        {renderTutorialCard()}
       </View>
     </Modal>
   );
@@ -1212,5 +1214,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     top: -20,
     left: -20,
+  },
+  fallbackContainer: {
+    backgroundColor: Colors.backgroundLight,
+  },
+  fallbackGradient: {
+    flex: 1,
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    ...(((Platform.OS as string) !== 'web') && {
+      backgroundColor: Colors.primary,
+    }),
+  },
+  fallbackContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+  },
+  fallbackIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
 });
