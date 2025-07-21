@@ -10,7 +10,7 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+
 import { 
   ArrowRight, 
   ArrowLeft, 
@@ -359,47 +359,17 @@ export default function ModernTutorialOverlay({
     </Animated.View>
   );
 
-  // Web version
-  if (Platform.OS === 'web') {
-    return (
-      <View style={[styles.overlay, styles.webOverlay]}>
-        <View style={[StyleSheet.absoluteFill, styles.webBlur]} />
-        <View style={styles.container}>
-          {renderContent()}
-        </View>
-      </View>
-    );
-  }
-
-  // Native version
-  console.log('About to render Modal with visible:', visible);
+  // Render directly without Modal for now to debug
+  console.log('About to render tutorial overlay directly');
   
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      statusBarTranslucent={true}
-      presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
-      onShow={() => console.log('Modal shown successfully')}
-      onDismiss={() => console.log('Modal dismissed')}
-      onRequestClose={() => {
-        console.log('Modal onRequestClose called');
-        onSkip();
-      }}
-    >
-      <View style={styles.overlay}>
-        {Platform.OS === 'ios' ? (
-          <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
-        )}
-        
-        <View style={styles.container}>
-          {renderContent()}
-        </View>
+    <View style={[styles.overlay, styles.absoluteOverlay]}>
+      <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
+      
+      <View style={styles.container}>
+        {renderContent()}
       </View>
-    </Modal>
+    </View>
   );
 }
 
@@ -408,6 +378,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     zIndex: 9999,
+  },
+  absoluteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10000,
   },
   webOverlay: {
     position: 'fixed' as any,
@@ -430,6 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 40,
+    zIndex: 10001,
   },
   tutorialCard: {
     width: Math.min(screenWidth - 40, 400),

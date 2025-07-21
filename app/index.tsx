@@ -25,6 +25,8 @@ export default function WelcomeScreen() {
     setShouldRedirectToOnboarding
   } = useTutorialStore();
 
+  console.log('WelcomeScreen render - showTutorial:', showTutorial);
+
   // Check if user is already set up, redirect to main app
   useEffect(() => {
     if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted) {
@@ -42,15 +44,7 @@ export default function WelcomeScreen() {
 
   const handleStartTutorial = () => {
     console.log('handleStartTutorial called');
-    console.log('Current showTutorial state:', showTutorial);
     startTutorial();
-    console.log('After startTutorial, showTutorial should be true');
-    
-    // Force a re-render check
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      console.log('Tutorial state after timeout:', currentState.showTutorial);
-    }, 100);
   };
   
   const handleTutorialComplete = () => {
