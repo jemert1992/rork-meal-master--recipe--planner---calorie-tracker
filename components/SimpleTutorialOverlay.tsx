@@ -271,7 +271,7 @@ const imageCache: { [key: string]: string } = {};
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Add CSS animations for web
-if ((Platform.OS as string) === 'web' && typeof document !== 'undefined') {
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const existingStyle = document.getElementById('tutorial-animations');
   if (!existingStyle) {
     const style = document.createElement('style');
@@ -537,7 +537,7 @@ export default function SimpleTutorialOverlay({
 
   // Animations
   useEffect(() => {
-    if (isGeneratingImages && (Platform.OS as string) !== 'web') {
+    if (isGeneratingImages && Platform.OS !== 'web') {
       const spinAnimation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -832,7 +832,7 @@ export default function SimpleTutorialOverlay({
   );
   
   // Web fallback - render as absolute positioned overlay
-  if ((Platform.OS as string) === 'web') {
+  if (Platform.OS === 'web') {
     return shouldShow ? (
       <View style={[styles.overlay, styles.webOverlay]}>
         <View style={[StyleSheet.absoluteFill, styles.webBlur]} />

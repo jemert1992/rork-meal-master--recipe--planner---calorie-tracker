@@ -4,6 +4,7 @@ import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
+import TutorialWelcome from '@/components/TutorialWelcome';
 
 export default function TabLayout() {
   const { profile } = useUserStore();
@@ -17,31 +18,33 @@ export default function TabLayout() {
   }, [profile.onboardingCompleted, checkShouldShowWelcome]);
   
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: Colors.borderLight,
-          elevation: 0,
-          shadowOpacity: 0,
-          height: 88,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-          marginTop: 4,
-        },
-        tabBarIconStyle: {
-          marginTop: 4,
-        },
-        headerShown: false,
-      }}
-    >
+    <>
+      <TutorialWelcome />
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: Colors.primary,
+          tabBarInactiveTintColor: Colors.textMuted,
+          tabBarStyle: {
+            backgroundColor: Colors.surface,
+            borderTopWidth: 1,
+            borderTopColor: Colors.borderLight,
+            elevation: 0,
+            shadowOpacity: 0,
+            height: 88,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
+            marginTop: 4,
+          },
+          tabBarIconStyle: {
+            marginTop: 4,
+          },
+          headerShown: false,
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -71,6 +74,7 @@ export default function TabLayout() {
         }}
       />
       {/* Removed API settings tab */}
-    </Tabs>
+      </Tabs>
+    </>
   );
 }
