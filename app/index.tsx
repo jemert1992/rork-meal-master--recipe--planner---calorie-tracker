@@ -247,11 +247,6 @@ export default function WelcomeScreen() {
       </Modal>
 
       {/* Tutorial Overlay - Test Version */}
-      {console.log('Rendering TestTutorialOverlay with props:', { 
-        visible: showTutorial, 
-        showTutorialValue: showTutorial,
-        tutorialStoreShowTutorial: tutorialStore.showTutorial 
-      })}
       <TestTutorialOverlay 
         visible={showTutorial}
         onComplete={handleTutorialComplete}
