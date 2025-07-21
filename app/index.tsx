@@ -38,7 +38,7 @@ export default function WelcomeScreen() {
       setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, hasRedirectedToTabs]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, hasRedirectedToTabs, router]);
   
   // Handle redirect after tutorial completion
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function WelcomeScreen() {
       setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, setShouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, setShouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, router]);
 
   const handleStartTutorial = () => {
     if (isProcessingAction) {

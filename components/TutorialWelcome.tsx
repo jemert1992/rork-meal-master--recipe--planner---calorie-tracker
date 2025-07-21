@@ -68,7 +68,7 @@ export default function TutorialWelcome() {
       
       return () => clearTimeout(timeout);
     }
-  }, [showWelcome]);
+  }, [showWelcome, forceHideTutorial]);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -88,7 +88,7 @@ export default function TutorialWelcome() {
         }),
       ]).start();
     }
-  }, [showWelcome, fadeAnim, slideAnim]);
+  }, [showWelcome]);
   
   if (!showWelcome) {
     return null;

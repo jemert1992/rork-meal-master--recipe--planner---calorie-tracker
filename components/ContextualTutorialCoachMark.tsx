@@ -358,7 +358,7 @@ export default function ContextualTutorialCoachMark() {
         setIsNavigating(false);
       };
     }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, router]);
 
   // Handle redirect to personal info after tutorial completion with proper guards
   useEffect(() => {
@@ -379,34 +379,35 @@ export default function ContextualTutorialCoachMark() {
     }, 200);
     
     return () => clearTimeout(redirectTimeout);
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, router]);
 
   // Try to find and measure target elements
   useEffect(() => {
-    if (showTutorial && step && step.targetElement) {
-      // For now, use predefined positions for common elements
-      // In a real implementation, you'd use refs and measure() to get actual positions
-      const getElementPosition = (targetElement: string): ElementPosition | undefined => {
-        switch (targetElement) {
-          case 'search-input':
-            return { x: 20, y: 180, width: screenWidth - 100, height: 48 };
-          case 'quick-actions':
-            return { x: 20, y: 280, width: screenWidth - 40, height: 80 };
-          case 'meal-plan-content':
-            return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-          case 'grocery-content':
-            return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-          case 'profile-content':
-            return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-          default:
-            return undefined;
-        }
-      };
-      
-      setElementPosition(getElementPosition(step.targetElement));
-    } else {
+    if (!showTutorial || !step || !step.targetElement) {
       setElementPosition(undefined);
+      return;
     }
+    
+    // For now, use predefined positions for common elements
+    // In a real implementation, you'd use refs and measure() to get actual positions
+    const getElementPosition = (targetElement: string): ElementPosition | undefined => {
+      switch (targetElement) {
+        case 'search-input':
+          return { x: 20, y: 180, width: screenWidth - 100, height: 48 };
+        case 'quick-actions':
+          return { x: 20, y: 280, width: screenWidth - 40, height: 80 };
+        case 'meal-plan-content':
+          return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+        case 'grocery-content':
+          return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+        case 'profile-content':
+          return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+        default:
+          return undefined;
+      }
+    };
+    
+    setElementPosition(getElementPosition(step.targetElement));
   }, [currentStep, showTutorial, step?.targetElement]);
 
   const [isHandlingAction, setIsHandlingAction] = useState(false);
