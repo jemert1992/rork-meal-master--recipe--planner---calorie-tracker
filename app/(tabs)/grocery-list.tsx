@@ -192,7 +192,7 @@ export default function GroceryListScreen() {
   );
   
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']} testID="grocery-content">
       <TutorialOverlay currentScreen="grocery-list" />
       <View style={styles.header}>
         <Text style={styles.title}>Grocery List</Text>

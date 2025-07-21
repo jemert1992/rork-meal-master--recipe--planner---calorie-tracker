@@ -95,7 +95,7 @@ export default function ProfileScreen() {
   const remainingFat = (profile.fatGoal || 70) - dayLog.totalFat;
   
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']} testID="profile-content">
       <TutorialOverlay currentScreen="profile" />
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>

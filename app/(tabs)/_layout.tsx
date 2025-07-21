@@ -5,6 +5,7 @@ import Colors from '@/constants/colors';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 import TutorialWelcome from '@/components/TutorialWelcome';
+import ContextualTutorialOverlay from '@/components/ContextualTutorialOverlay';
 
 export default function TabLayout() {
   const { profile } = useUserStore();

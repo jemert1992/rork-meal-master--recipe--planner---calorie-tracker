@@ -11,7 +11,7 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import SnacksBanner from '@/components/SnacksBanner';
-import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
+import ContextualTutorialOverlay from '@/components/ContextualTutorialOverlay';
 import { useTutorialStore } from '@/store/tutorialStore';
 import { useUserStore } from '@/store/userStore';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
@@ -307,7 +307,7 @@ export default function RecipesScreen() {
 
   const renderListHeader = () => (
     <View>
-      <View style={{ marginHorizontal: 20, marginBottom: 8 }}>
+      <View style={{ marginHorizontal: 20, marginBottom: 8 }} testID="weekly-planner">
         <WeeklyMealPlanner onGenerateGroceryList={handleGenerateGroceryList} />
       </View>
       
@@ -370,11 +370,7 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ModernTutorialOverlay 
-        visible={showTutorial}
-        onComplete={skipTutorial}
-        onSkip={skipTutorial}
-      />
+      <ContextualTutorialOverlay />
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
@@ -407,7 +403,7 @@ export default function RecipesScreen() {
       </View>
 
       {/* Quick Actions */}
-      <View style={styles.quickActions}>
+      <View style={styles.quickActions} testID="quick-actions">
         <Pressable style={styles.quickActionButton} onPress={() => router.push('/add-meal/today')}>
           <Text style={styles.quickActionEmoji}>🍽️</Text>
           <Text style={styles.quickActionText}>Add Meal</Text>
@@ -423,7 +419,7 @@ export default function RecipesScreen() {
       </View>
       
       <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
+        <View style={styles.searchInputContainer} testID="search-input">
           <Search size={20} color={Colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}

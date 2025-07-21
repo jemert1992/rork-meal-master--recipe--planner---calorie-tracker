@@ -535,7 +535,7 @@ export default function MealPlanScreen() {
   const fatProgress = profile.fatGoal ? (dailyNutrition.fat / profile.fatGoal) * 100 : 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']} testID="meal-plan-content">
       <TutorialOverlay currentScreen="meal-plan" />
       <View style={styles.header}>
         <Text style={styles.title}>Meal Plan</Text>

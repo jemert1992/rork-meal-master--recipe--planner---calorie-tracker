@@ -5,15 +5,15 @@ export interface TutorialStep {
   title: string;
   description: string;
   screen: string;
+  route: string;
   targetElement?: string;
-  position?: 'top' | 'bottom' | 'center';
+  position: 'top' | 'bottom' | 'left' | 'right' | 'center';
   action?: 'tap' | 'swipe' | 'scroll';
-  completed: boolean;
   actionText?: string;
   icon?: string;
   color?: string;
-  features?: string[];
-  tip?: string;
+  highlightElement?: boolean;
+  skipNavigation?: boolean;
 }
 
 interface TutorialState {
@@ -44,112 +44,83 @@ interface TutorialState {
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    id: 'welcome',
-    title: 'Welcome to Zestora! 🎉',
-    description: 'Your personal nutrition companion that makes healthy eating simple and enjoyable.',
-    screen: 'welcome',
-    position: 'center',
-    completed: false,
-    actionText: 'Let\'s explore what you can do',
-    icon: 'chef-hat',
-    color: '#FF6B6B',
-    features: [
-      'Track nutrition with visual insights',
-      'Plan meals for the entire week',
-      'Generate smart grocery lists',
-      'Discover personalized recipes'
-    ]
-  },
-  {
-    id: 'recipes',
-    title: 'Discover Amazing Recipes 🍽️',
-    description: 'Browse thousands of recipes tailored to your dietary preferences and fitness goals.',
+    id: 'recipes-search',
+    title: 'Search for Recipes',
+    description: 'Use the search bar to find recipes by ingredients, cuisine, or dietary preferences. Try searching for "chicken" or "vegetarian".',
     screen: 'recipes',
-    position: 'center',
-    completed: false,
-    actionText: 'Try searching for "chicken" or "vegetarian"',
+    route: '/(tabs)',
+    targetElement: 'search-input',
+    position: 'bottom',
+    actionText: 'Try searching for a recipe',
     icon: 'search',
     color: '#4ECDC4',
-    features: [
-      'Search by ingredients or cuisine',
-      'Filter by dietary preferences',
-      'Save favorites with a tap',
-      'Get nutrition info for every recipe'
-    ],
-    tip: 'Tap the heart icon to save recipes you love!'
+    highlightElement: true
   },
   {
-    id: 'meal-planning',
-    title: 'Plan Your Week Ahead 📅',
-    description: 'Drag and drop recipes into your weekly meal plan. Never wonder "what\'s for dinner?" again.',
-    screen: 'meal-plan',
-    position: 'center',
-    completed: false,
-    actionText: 'Tap "Add Meal" to plan your first meal',
+    id: 'quick-actions',
+    title: 'Quick Actions',
+    description: 'Use these shortcuts to quickly add meals, generate grocery lists, or view your favorites.',
+    screen: 'recipes',
+    route: '/(tabs)',
+    targetElement: 'quick-actions',
+    position: 'bottom',
+    actionText: 'Tap any quick action to try it',
+    icon: 'zap',
+    color: '#FF6B6B',
+    highlightElement: true
+  },
+  {
+    id: 'meal-planner',
+    title: 'Weekly Meal Planner',
+    description: 'Plan your entire week at a glance. Tap on any day to add meals or view your planned nutrition.',
+    screen: 'recipes',
+    route: '/(tabs)',
+    targetElement: 'weekly-planner',
+    position: 'bottom',
+    actionText: 'Tap a day to add a meal',
     icon: 'calendar',
     color: '#45B7D1',
-    features: [
-      'Visual weekly calendar view',
-      'Drag & drop meal planning',
-      'AI-powered meal suggestions',
-      'Automatic nutrition calculations'
-    ],
-    tip: 'Plan similar meals for the week to save time shopping!'
+    highlightElement: true
   },
   {
-    id: 'nutrition',
-    title: 'Track Your Nutrition 📊',
-    description: 'See your daily calories, macros, and nutrients with beautiful visual charts.',
-    screen: 'nutrition',
-    position: 'center',
-    completed: false,
-    actionText: 'Log your first meal to see it in action',
-    icon: 'target',
-    color: '#96CEB4',
-    features: [
-      'Visual calorie and macro tracking',
-      'Daily nutrition goals',
-      'Progress charts and insights',
-      'Meal timing recommendations'
-    ],
-    tip: 'Set realistic goals and track your progress over time!'
+    id: 'meal-plan-tab',
+    title: 'Detailed Meal Planning',
+    description: 'Switch to the Meal Plan tab for a detailed view of your weekly meals and nutrition tracking.',
+    screen: 'meal-plan',
+    route: '/(tabs)/meal-plan',
+    targetElement: 'meal-plan-content',
+    position: 'top',
+    actionText: 'Explore your meal plan',
+    icon: 'calendar',
+    color: '#45B7D1',
+    highlightElement: false
   },
   {
-    id: 'grocery',
-    title: 'Smart Grocery Lists 🛒',
-    description: 'Your shopping list is automatically generated from your meal plan, organized by store sections.',
-    screen: 'grocery',
-    position: 'center',
-    completed: false,
-    actionText: 'Generate your first grocery list',
+    id: 'grocery-list-tab',
+    title: 'Smart Grocery Lists',
+    description: 'Your shopping list is automatically generated from your meal plan, organized by store sections for efficient shopping.',
+    screen: 'grocery-list',
+    route: '/(tabs)/grocery-list',
+    targetElement: 'grocery-content',
+    position: 'top',
+    actionText: 'Check off items as you shop',
     icon: 'shopping-cart',
     color: '#FECA57',
-    features: [
-      'Auto-generated from meal plans',
-      'Organized by store sections',
-      'Check off items as you shop',
-      'Add custom items anytime'
-    ],
-    tip: 'The app groups ingredients by store sections to make shopping faster!'
+    highlightElement: false
   },
   {
-    id: 'ready',
-    title: 'You\'re All Set! 🚀',
-    description: 'You now know the basics of Zestora. Start with setting up your profile and nutrition goals.',
+    id: 'profile-setup',
+    title: 'Complete Your Profile',
+    description: 'Set up your nutrition goals, dietary preferences, and fitness targets for personalized recommendations.',
     screen: 'profile',
-    position: 'center',
-    completed: false,
-    actionText: 'Let\'s set up your profile',
-    icon: 'check-circle',
-    color: '#FF6B6B',
-    features: [
-      'Personalized nutrition goals',
-      'Dietary preference settings',
-      'Fitness goal tracking',
-      'Progress monitoring'
-    ],
-    tip: 'You can always restart this tutorial from Settings > Help!'
-  },
+    route: '/(tabs)/profile',
+    targetElement: 'profile-content',
+    position: 'top',
+    actionText: 'Tap to edit your profile',
+    icon: 'user',
+    color: '#96CEB4',
+    highlightElement: false
+  }
 ];
 
 export const useTutorialStore = create<TutorialState>()((set, get) => ({
