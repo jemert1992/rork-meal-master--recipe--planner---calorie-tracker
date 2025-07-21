@@ -234,6 +234,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
         
         // Prevent infinite loops by checking if we've already performed this check
         if (welcomeCheckPerformed) {
+          console.log('Welcome check already performed, skipping');
           return;
         }
         
@@ -242,6 +243,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           console.log('Setting showWelcome to true after onboarding');
           set({ showWelcome: true, welcomeCheckPerformed: true });
         } else {
+          console.log('Not showing welcome, marking check as performed');
           set({ welcomeCheckPerformed: true });
         }
       },

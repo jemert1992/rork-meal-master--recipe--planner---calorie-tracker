@@ -313,20 +313,25 @@ export default function ContextualTutorialCoachMark() {
   // Navigate to the correct screen for each step
   useEffect(() => {
     if (showTutorial && step && step.route !== currentRoute && !step.skipNavigation) {
-      console.log('Navigating to:', step.route);
+      console.log('Navigating to:', step.route, 'from:', currentRoute);
       try {
-        router.push(step.route as any);
+        // Use replace instead of push to avoid navigation stack issues
+        router.replace(step.route as any);
         setCurrentRoute(step.route);
       } catch (error) {
         console.warn('Navigation failed:', error);
       }
     }
-  }, [currentStep, step, showTutorial, currentRoute]);
+  }, [currentStep, step, showTutorial]);
 
   // Handle redirect to personal info after tutorial completion
   useEffect(() => {
     if (shouldRedirectToOnboarding && !showTutorial) {
       console.log('Redirecting to personal info after tutorial completion');
+      // Clear the redirect flag first to prevent infinite loops
+      const { setShouldRedirectToOnboarding } = useTutorialStore.getState();
+      setShouldRedirectToOnboarding(false);
+      // Then navigate
       router.replace('/onboarding/personal-info');
     }
   }, [shouldRedirectToOnboarding, showTutorial, router]);

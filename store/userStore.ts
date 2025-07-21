@@ -7,6 +7,7 @@ import { DietType, UserProfile } from '@/types';
 interface UserState {
   isLoggedIn: boolean;
   profile: UserProfile;
+  isCalculatingGoals: boolean;
   login: (profile: Partial<UserProfile>) => void;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
@@ -30,6 +31,7 @@ export const useUserStore = create<UserState>()(
     (set, get) => ({
       isLoggedIn: false,
       profile: DEFAULT_PROFILE,
+      isCalculatingGoals: false,
       
       login: (profile) => {
         set({
@@ -72,10 +74,13 @@ export const useUserStore = create<UserState>()(
         if (shouldRecalculate) {
           const newProfile = { ...currentProfile, ...updates };
           if (newProfile.gender && newProfile.weight && newProfile.height && newProfile.age && newProfile.activityLevel) {
-            // Use a microtask to avoid infinite loops
-            Promise.resolve().then(() => {
-              get().calculateNutritionGoals();
-            });
+            // Use setTimeout to avoid infinite loops and ensure state is updated
+            setTimeout(() => {
+              const store = get();
+              if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
+                store.calculateNutritionGoals();
+              }
+            }, 0);
           }
         }
       },
@@ -93,9 +98,12 @@ export const useUserStore = create<UserState>()(
         
         // Only recalculate if we have all required fields
         if (currentProfile.gender && currentProfile.weight && currentProfile.age && currentProfile.activityLevel) {
-          Promise.resolve().then(() => {
-            get().calculateNutritionGoals();
-          });
+          setTimeout(() => {
+            const store = get();
+            if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
+              store.calculateNutritionGoals();
+            }
+          }, 0);
         }
       },
       
@@ -112,43 +120,58 @@ export const useUserStore = create<UserState>()(
         
         // Only recalculate if we have all required fields
         if (currentProfile.gender && currentProfile.height && currentProfile.age && currentProfile.activityLevel) {
-          Promise.resolve().then(() => {
-            get().calculateNutritionGoals();
-          });
+          setTimeout(() => {
+            const store = get();
+            if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
+              store.calculateNutritionGoals();
+            }
+          }, 0);
         }
       },
       
       calculateNutritionGoals: () => {
-        const { profile } = get();
-        
-        // Skip calculation if required fields are missing
-        if (!profile.gender || !profile.weight || !profile.height || !profile.age || !profile.activityLevel) {
-          return;
-        }
-        
-        // Skip if goals are already calculated to prevent infinite loops
-        if (profile.calorieGoal && profile.proteinGoal && profile.carbsGoal && profile.fatGoal) {
-          // Only recalculate if the current goals seem outdated (basic check)
-          const expectedBMR = profile.gender === 'male' 
-            ? 10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5
-            : 10 * profile.weight + 6.25 * profile.height - 5 * profile.age - 161;
+        try {
+          const { profile, isCalculatingGoals } = get();
           
-          const activityMultipliers: Record<string, number> = {
-            'sedentary': 1.2,
-            'light': 1.375,
-            'moderate': 1.55,
-            'active': 1.725,
-            'very-active': 1.9,
-          };
-          
-          const multiplier = activityMultipliers[profile.activityLevel] || 1.2;
-          const expectedCalories = Math.round(expectedBMR * multiplier);
-          
-          // If current calorie goal is within 10% of expected, don't recalculate
-          if (Math.abs(profile.calorieGoal - expectedCalories) / expectedCalories < 0.1) {
+          // Skip if already calculating to prevent infinite loops
+          if (isCalculatingGoals) {
+            console.log('Already calculating nutrition goals, skipping');
             return;
           }
-        }
+          
+          // Skip calculation if required fields are missing
+          if (!profile.gender || !profile.weight || !profile.height || !profile.age || !profile.activityLevel) {
+            console.log('Missing required fields for nutrition calculation');
+            return;
+          }
+          
+          // Skip if goals are already calculated to prevent infinite loops
+          if (profile.calorieGoal && profile.proteinGoal && profile.carbsGoal && profile.fatGoal) {
+            // Only recalculate if the current goals seem outdated (basic check)
+            const expectedBMR = profile.gender === 'male' 
+              ? 10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5
+              : 10 * profile.weight + 6.25 * profile.height - 5 * profile.age - 161;
+            
+            const activityMultipliers: Record<string, number> = {
+              'sedentary': 1.2,
+              'light': 1.375,
+              'moderate': 1.55,
+              'active': 1.725,
+              'very-active': 1.9,
+            };
+            
+            const multiplier = activityMultipliers[profile.activityLevel] || 1.2;
+            const expectedCalories = Math.round(expectedBMR * multiplier);
+            
+            // If current calorie goal is within 10% of expected, don't recalculate
+            if (Math.abs(profile.calorieGoal - expectedCalories) / expectedCalories < 0.1) {
+              console.log('Nutrition goals are up to date, skipping recalculation');
+              return;
+            }
+          }
+          
+          // Set calculating flag
+          set({ isCalculatingGoals: true });
         
         // Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor Equation
         let bmr = 0;
@@ -208,7 +231,10 @@ export const useUserStore = create<UserState>()(
             carbsGoal,
             fatGoal,
           },
+          isCalculatingGoals: false, // Clear the calculating flag
         }));
+        
+        console.log('Nutrition goals calculated:', { calorieGoal, proteinGoal, carbsGoal, fatGoal });
       },
     }),
     {

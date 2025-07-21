@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -9,14 +9,17 @@ import ContextualTutorialCoachMark from '@/components/ContextualTutorialCoachMar
 
 export default function TabLayout() {
   const { profile } = useUserStore();
-  const { checkShouldShowWelcome } = useTutorialStore();
+  const { checkShouldShowWelcome, welcomeCheckPerformed } = useTutorialStore();
+  const hasCheckedWelcome = useRef(false);
   
   useEffect(() => {
-    // Check if we should show the welcome tutorial after onboarding is completed
-    if (profile.onboardingCompleted) {
+    // Only check once when onboarding is completed and we haven't checked before
+    if (profile.onboardingCompleted && !hasCheckedWelcome.current && !welcomeCheckPerformed) {
+      console.log('TabLayout: Checking if should show welcome tutorial');
+      hasCheckedWelcome.current = true;
       checkShouldShowWelcome(true);
     }
-  }, [profile.onboardingCompleted]);
+  }, [profile.onboardingCompleted, welcomeCheckPerformed, checkShouldShowWelcome]);
   
   return (
     <>
