@@ -7,7 +7,7 @@ import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
+import SimpleTutorialTest from '@/components/SimpleTutorialTest';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -146,7 +146,7 @@ export default function WelcomeScreen() {
       
       {/* Tutorial Overlay */}
       {showTutorial && (
-        <ModernTutorialOverlay 
+        <SimpleTutorialTest 
           visible={showTutorial}
           onComplete={handleTutorialComplete}
           onSkip={handleTutorialSkip}

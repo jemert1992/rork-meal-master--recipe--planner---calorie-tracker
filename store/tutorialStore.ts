@@ -50,6 +50,15 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     screen: 'welcome',
     position: 'center',
     completed: false,
+    actionText: 'Let\'s explore what you can do',
+    icon: 'chef-hat',
+    color: '#FF6B6B',
+    features: [
+      'Track nutrition with visual insights',
+      'Plan meals for the entire week',
+      'Generate smart grocery lists',
+      'Discover personalized recipes'
+    ]
   },
   {
     id: 'recipes',
@@ -58,6 +67,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     screen: 'recipes',
     position: 'center',
     completed: false,
+    actionText: 'Try searching for "chicken" or "vegetarian"',
+    icon: 'search',
+    color: '#4ECDC4',
+    features: [
+      'Search by ingredients or cuisine',
+      'Filter by dietary preferences',
+      'Save favorites with a tap',
+      'Get nutrition info for every recipe'
+    ],
+    tip: 'Tap the heart icon to save recipes you love!'
   },
   {
     id: 'meal-planning',
@@ -66,6 +85,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     screen: 'meal-plan',
     position: 'center',
     completed: false,
+    actionText: 'Tap "Add Meal" to plan your first meal',
+    icon: 'calendar',
+    color: '#45B7D1',
+    features: [
+      'Visual weekly calendar view',
+      'Drag & drop meal planning',
+      'AI-powered meal suggestions',
+      'Automatic nutrition calculations'
+    ],
+    tip: 'Plan similar meals for the week to save time shopping!'
   },
   {
     id: 'nutrition',
@@ -74,6 +103,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     screen: 'nutrition',
     position: 'center',
     completed: false,
+    actionText: 'Log your first meal to see it in action',
+    icon: 'target',
+    color: '#96CEB4',
+    features: [
+      'Visual calorie and macro tracking',
+      'Daily nutrition goals',
+      'Progress charts and insights',
+      'Meal timing recommendations'
+    ],
+    tip: 'Set realistic goals and track your progress over time!'
   },
   {
     id: 'grocery',
@@ -82,6 +121,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     screen: 'grocery',
     position: 'center',
     completed: false,
+    actionText: 'Generate your first grocery list',
+    icon: 'shopping-cart',
+    color: '#FECA57',
+    features: [
+      'Auto-generated from meal plans',
+      'Organized by store sections',
+      'Check off items as you shop',
+      'Add custom items anytime'
+    ],
+    tip: 'The app groups ingredients by store sections to make shopping faster!'
   },
   {
     id: 'ready',
@@ -90,6 +139,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     screen: 'profile',
     position: 'center',
     completed: false,
+    actionText: 'Let\'s set up your profile',
+    icon: 'check-circle',
+    color: '#FF6B6B',
+    features: [
+      'Personalized nutrition goals',
+      'Dietary preference settings',
+      'Fitness goal tracking',
+      'Progress monitoring'
+    ],
+    tip: 'You can always restart this tutorial from Settings > Help!'
   },
 ];
 
@@ -104,7 +163,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       tutorialActive: false,
       
       startTutorial: () => {
-        console.log('Starting tutorial');
+        console.log('[TutorialStore] START TUTORIAL');
         const state = get();
         console.log('Current state before starting tutorial:', state);
         set({

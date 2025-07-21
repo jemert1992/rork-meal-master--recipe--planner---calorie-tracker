@@ -50,113 +50,54 @@ export default function ModernTutorialOverlay({
     previousStep,
   } = useTutorialStore();
   
+  console.log('[ModernTutorialOverlay] Component render:', {
+    visible,
+    currentStep,
+    stepsLength: steps?.length,
+    hasSteps: !!steps,
+    firstStepTitle: steps?.[0]?.title
+  });
+  
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   
-  // Create enhanced steps with UI properties for the tutorial overlay
-  const enhancedSteps = [
-    {
-      id: 'welcome',
-      title: 'Welcome to Zestora! 🎉',
-      description: 'Your personal nutrition companion that makes healthy eating simple and enjoyable.',
-      actionText: 'Let\'s explore what you can do',
-      icon: 'chef-hat',
-      color: Colors.primary,
-      features: [
-        'Track nutrition with visual insights',
-        'Plan meals for the entire week',
-        'Generate smart grocery lists',
-        'Discover personalized recipes'
-      ]
-    },
-    {
-      id: 'recipes',
-      title: 'Discover Amazing Recipes 🍽️',
-      description: 'Browse thousands of recipes tailored to your dietary preferences and fitness goals.',
-      actionText: 'Try searching for "chicken" or "vegetarian"',
-      icon: 'search',
-      color: Colors.secondary,
-      features: [
-        'Search by ingredients or cuisine',
-        'Filter by dietary preferences',
-        'Save favorites with a tap',
-        'Get nutrition info for every recipe'
-      ],
-      tip: 'Tap the heart icon to save recipes you love!'
-    },
-    {
-      id: 'meal-planning',
-      title: 'Plan Your Week Ahead 📅',
-      description: 'Drag and drop recipes into your weekly meal plan. Never wonder "what\'s for dinner?" again.',
-      actionText: 'Tap "Add Meal" to plan your first meal',
-      icon: 'calendar',
-      color: Colors.accent,
-      features: [
-        'Visual weekly calendar view',
-        'Drag & drop meal planning',
-        'AI-powered meal suggestions',
-        'Automatic nutrition calculations'
-      ],
-      tip: 'Plan similar meals for the week to save time shopping!'
-    },
-    {
-      id: 'nutrition',
-      title: 'Track Your Nutrition 📊',
-      description: 'See your daily calories, macros, and nutrients with beautiful visual charts.',
-      actionText: 'Log your first meal to see it in action',
-      icon: 'target',
-      color: Colors.info,
-      features: [
-        'Visual calorie and macro tracking',
-        'Daily nutrition goals',
-        'Progress charts and insights',
-        'Meal timing recommendations'
-      ],
-      tip: 'Set realistic goals and track your progress over time!'
-    },
-    {
-      id: 'grocery',
-      title: 'Smart Grocery Lists 🛒',
-      description: 'Your shopping list is automatically generated from your meal plan, organized by store sections.',
-      actionText: 'Generate your first grocery list',
-      icon: 'shopping-cart',
-      color: Colors.success,
-      features: [
-        'Auto-generated from meal plans',
-        'Organized by store sections',
-        'Check off items as you shop',
-        'Add custom items anytime'
-      ],
-      tip: 'The app groups ingredients by store sections to make shopping faster!'
-    },
-    {
-      id: 'ready',
-      title: 'You\'re All Set! 🚀',
-      description: 'You now know the basics of Zestora. Start with setting up your profile and nutrition goals.',
-      actionText: 'Let\'s set up your profile',
-      icon: 'check-circle',
-      color: Colors.primary,
-      features: [
-        'Personalized nutrition goals',
-        'Dietary preference settings',
-        'Fitness goal tracking',
-        'Progress monitoring'
-      ],
-      tip: 'You can always restart this tutorial from Settings > Help!'
-    }
-  ];
+  // Use steps from the store
+  console.log('[Overlay] Render: visible', visible, 'currentStep', currentStep, 'steps:', steps);
+  const currentStepData = steps[currentStep];
+  console.log('[Overlay] currentStepData:', currentStepData);
   
-  // Ensure we always have valid step data
-  const currentStepData = enhancedSteps[currentStep] || enhancedSteps[0];
   const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === enhancedSteps.length - 1;
-  const progress = ((currentStep + 1) / enhancedSteps.length) * 100;
+  const isLastStep = currentStep === steps.length - 1;
+  const progress = ((currentStep + 1) / steps.length) * 100;
   
-  // Safety check - if no step data, don't render
+  // Safety check - if no step data, show error state
   if (!currentStepData) {
-    console.log('No current step data available, returning null');
-    return null;
+    console.warn('[Overlay] No step data found for step', currentStep, 'steps:', steps);
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        statusBarTranslucent={true}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.container}>
+            <View style={[styles.tutorialCard, { backgroundColor: 'red', justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Step data missing!</Text>
+              <Text style={{ color: 'white', marginTop: 10 }}>Current step: {currentStep}</Text>
+              <Text style={{ color: 'white', marginTop: 5 }}>Steps length: {steps.length}</Text>
+              <Pressable 
+                style={{ marginTop: 20, padding: 10, backgroundColor: 'white', borderRadius: 8 }}
+                onPress={onSkip}
+              >
+                <Text style={{ color: 'red' }}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   }
   
   useEffect(() => {
@@ -239,7 +180,6 @@ export default function ModernTutorialOverlay({
     currentStepData: !!currentStepData,
     stepTitle: currentStepData?.title,
     stepsLength: steps.length,
-    enhancedStepsLength: enhancedSteps.length,
     timestamp: new Date().toISOString()
   });
 
@@ -251,7 +191,7 @@ export default function ModernTutorialOverlay({
   
   console.log('ModernTutorialOverlay rendering step:', currentStepData?.title);
   console.log('Current step data:', currentStepData);
-  console.log('Enhanced steps length:', enhancedSteps.length);
+  console.log('Steps length:', steps.length);
   console.log('Current step index:', currentStep);
 
   const renderContent = () => (
@@ -275,13 +215,13 @@ export default function ModernTutorialOverlay({
               styles.progressFill, 
               { 
                 width: `${progress}%`,
-                backgroundColor: currentStepData.color 
+                backgroundColor: currentStepData.color || Colors.primary 
               }
             ]} 
           />
         </View>
         <Text style={styles.progressText}>
-          {currentStep + 1} of {enhancedSteps.length}
+          {currentStep + 1} of {steps.length}
         </Text>
       </View>
 
@@ -296,8 +236,8 @@ export default function ModernTutorialOverlay({
         contentContainerStyle={styles.scrollContentContainer}
       >
         {/* Icon */}
-        <View style={[styles.iconContainer, { backgroundColor: currentStepData.color }]}>
-          {getIcon(currentStepData.icon, 40, Colors.white)}
+        <View style={[styles.iconContainer, { backgroundColor: currentStepData.color || Colors.primary }]}>
+          {getIcon(currentStepData.icon || 'chef-hat', 40, Colors.white)}
         </View>
 
         {/* Title */}
@@ -307,14 +247,16 @@ export default function ModernTutorialOverlay({
         <Text style={styles.stepDescription}>{currentStepData.description}</Text>
 
         {/* Features List */}
-        <View style={styles.featuresContainer}>
-          {currentStepData.features.map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <View style={[styles.featureBullet, { backgroundColor: currentStepData.color }]} />
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
-        </View>
+        {currentStepData.features && currentStepData.features.length > 0 && (
+          <View style={styles.featuresContainer}>
+            {currentStepData.features.map((feature, index) => (
+              <View key={index} style={styles.featureItem}>
+                <View style={[styles.featureBullet, { backgroundColor: currentStepData.color || Colors.primary }]} />
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Tip */}
         {currentStepData.tip && (
@@ -327,9 +269,11 @@ export default function ModernTutorialOverlay({
         )}
 
         {/* Action Text */}
-        <View style={styles.actionContainer}>
-          <Text style={styles.actionText}>{currentStepData.actionText}</Text>
-        </View>
+        {currentStepData.actionText && (
+          <View style={styles.actionContainer}>
+            <Text style={styles.actionText}>{currentStepData.actionText}</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Navigation */}
@@ -344,7 +288,7 @@ export default function ModernTutorialOverlay({
         <View style={styles.navigationSpacer} />
         
         <Pressable 
-          style={[styles.nextButton, { backgroundColor: currentStepData.color }]} 
+          style={[styles.nextButton, { backgroundColor: currentStepData.color || Colors.primary }]} 
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>
