@@ -191,43 +191,6 @@ export default function WelcomeScreen() {
         onComplete={handleTutorialComplete}
         onSkip={handleTutorialSkip}
       />
-      
-      {/* Debug modal to test if modals work at all */}
-      <Modal
-        visible={showTutorial}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(255, 0, 0, 0.8)',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <View style={{
-            backgroundColor: 'white',
-            padding: 30,
-            borderRadius: 15,
-            margin: 20,
-            minWidth: 250
-          }}>
-            <Text style={{ color: 'black', fontSize: 20, marginBottom: 15, textAlign: 'center' }}>
-              🎉 Tutorial Started!
-            </Text>
-            <Text style={{ color: 'gray', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
-              This debug modal proves the tutorial system is working.
-            </Text>
-            <Pressable 
-              style={{ backgroundColor: Colors.primary, padding: 15, borderRadius: 8 }}
-              onPress={handleTutorialSkip}
-            >
-              <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
-                Close & Continue to Setup
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
