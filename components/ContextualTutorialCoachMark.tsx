@@ -321,7 +321,7 @@ export default function ContextualTutorialCoachMark() {
         console.warn('Navigation failed:', error);
       }
     }
-  }, [currentStep, step, showTutorial]);
+  }, [currentStep, step, showTutorial, currentRoute]);
 
   // Handle redirect to personal info after tutorial completion
   useEffect(() => {
@@ -329,7 +329,7 @@ export default function ContextualTutorialCoachMark() {
       console.log('Redirecting to personal info after tutorial completion');
       router.replace('/onboarding/personal-info');
     }
-  }, [shouldRedirectToOnboarding, showTutorial]);
+  }, [shouldRedirectToOnboarding, showTutorial, router]);
 
   // Try to find and measure target elements
   useEffect(() => {

@@ -25,6 +25,7 @@ interface TutorialState {
   steps: TutorialStep[];
   shouldRedirectToOnboarding: boolean;
   tutorialActive: boolean;
+  welcomeCheckPerformed: boolean;
   
   // Actions
   startTutorial: () => void;
@@ -40,6 +41,7 @@ interface TutorialState {
   setShouldRedirectToOnboarding: (should: boolean) => void;
   checkAndStartTutorial: () => void;
   setTutorialActive: (active: boolean) => void;
+  resetWelcomeCheck: () => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -132,6 +134,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       steps: TUTORIAL_STEPS,
       shouldRedirectToOnboarding: false,
       tutorialActive: false,
+      welcomeCheckPerformed: false,
       
       startTutorial: () => {
         console.log('[TutorialStore] START TUTORIAL');
@@ -179,6 +182,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           isFirstLaunch: false,
           tutorialActive: false,
           shouldRedirectToOnboarding: true, // Redirect to personal info after skipping
+          welcomeCheckPerformed: true,
         });
       },
       
@@ -192,6 +196,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           isFirstLaunch: false,
           tutorialActive: false,
           shouldRedirectToOnboarding: true, // Redirect to personal info after tutorial
+          welcomeCheckPerformed: true,
         });
       },
       
@@ -205,6 +210,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           isFirstLaunch: true,
           tutorialActive: false,
           shouldRedirectToOnboarding: false,
+          welcomeCheckPerformed: false,
           steps: TUTORIAL_STEPS.map(step => ({ ...step, completed: false })),
         });
       },
@@ -223,12 +229,20 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
-        const { isFirstLaunch, tutorialCompleted, showWelcome } = get();
-        console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome });
-        // Only show welcome after onboarding is completed, if tutorial hasn't been completed
-        if (onboardingCompleted && !tutorialCompleted && !showWelcome) {
+        const { isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed } = get();
+        console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed });
+        
+        // Prevent infinite loops by checking if we've already performed this check
+        if (welcomeCheckPerformed) {
+          return;
+        }
+        
+        // Only show welcome after onboarding is completed, if tutorial hasn't been completed and not already showing
+        if (onboardingCompleted && !tutorialCompleted && !showWelcome && !showTutorial) {
           console.log('Setting showWelcome to true after onboarding');
-          set({ showWelcome: true });
+          set({ showWelcome: true, welcomeCheckPerformed: true });
+        } else {
+          set({ welcomeCheckPerformed: true });
         }
       },
       
@@ -238,6 +252,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           showTutorial: false,
           showWelcome: false,
           tutorialActive: false,
+          welcomeCheckPerformed: true,
         });
       },
       
@@ -254,5 +269,9 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       
       setTutorialActive: (active: boolean) => {
         set({ tutorialActive: active });
+      },
+      
+      resetWelcomeCheck: () => {
+        set({ welcomeCheckPerformed: false });
       },
     }));

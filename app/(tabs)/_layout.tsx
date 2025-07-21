@@ -16,7 +16,7 @@ export default function TabLayout() {
     if (profile.onboardingCompleted) {
       checkShouldShowWelcome(true);
     }
-  }, [profile.onboardingCompleted, checkShouldShowWelcome]);
+  }, [profile.onboardingCompleted]);
   
   return (
     <>

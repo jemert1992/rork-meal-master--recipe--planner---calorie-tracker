@@ -55,7 +55,7 @@ export default function TutorialWelcome() {
       
       return () => clearTimeout(timeout);
     }
-  }, [showWelcome, forceHideTutorial]);
+  }, [showWelcome]);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
