@@ -235,6 +235,10 @@ export const useUserStore = create<UserState>()(
         }));
         
         console.log('Nutrition goals calculated:', { calorieGoal, proteinGoal, carbsGoal, fatGoal });
+        } catch (error) {
+          console.error('Error calculating nutrition goals:', error);
+          set({ isCalculatingGoals: false });
+        }
       },
     }),
     {
