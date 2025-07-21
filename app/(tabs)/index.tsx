@@ -103,14 +103,15 @@ export default function RecipesScreen() {
 
   // Show tutorial for new users after onboarding
   useEffect(() => {
-    if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted) {
+    if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted && !showTutorial) {
       // Show tutorial after a brief delay to let the user see the main screen first
       const timer = setTimeout(() => {
+        console.log('Auto-starting tutorial for new user');
         startTutorial();
-      }, 1500);
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, startTutorial]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, startTutorial]);
 
   // Update category counts
   useEffect(() => {
@@ -379,9 +380,12 @@ export default function RecipesScreen() {
           </View>
           <Pressable 
             style={styles.helpButton}
-            onPress={() => startTutorial()}
+            onPress={() => {
+              console.log('Help button pressed, starting tutorial');
+              startTutorial();
+            }}
           >
-            <Text style={styles.helpButtonText}>Help</Text>
+            <Text style={styles.helpButtonText}>Tutorial</Text>
           </Pressable>
         </View>
         

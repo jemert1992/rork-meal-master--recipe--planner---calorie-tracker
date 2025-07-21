@@ -44,6 +44,9 @@ export default function SimpleTutorialTest({ visible, onComplete, onSkip }: Simp
     console.log('[SimpleTutorialTest] Next button pressed, isLastStep:', isLastStep);
     if (isLastStep) {
       console.log('[SimpleTutorialTest] Calling onComplete');
+      // Let the tutorial store handle completion
+      const { completeTutorial } = useTutorialStore.getState();
+      completeTutorial();
       onComplete();
     } else {
       console.log('[SimpleTutorialTest] Calling nextStep');
@@ -58,6 +61,9 @@ export default function SimpleTutorialTest({ visible, onComplete, onSkip }: Simp
   
   const handleSkip = () => {
     console.log('[SimpleTutorialTest] Skip button pressed');
+    // Let the tutorial store handle skipping
+    const { skipTutorial } = useTutorialStore.getState();
+    skipTutorial();
     onSkip();
   };
   

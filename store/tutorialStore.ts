@@ -44,79 +44,79 @@ interface TutorialState {
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    id: 'recipes-search',
-    title: 'Search for Recipes',
-    description: 'Use the search bar to find recipes by ingredients, cuisine, or dietary preferences. Try searching for "chicken" or "vegetarian".',
+    id: 'welcome',
+    title: 'Welcome to Zestora! 🎉',
+    description: 'Your personal nutrition companion that makes healthy eating simple and enjoyable. Let\'s take a quick tour of the key features.',
+    screen: 'recipes',
+    route: '/(tabs)',
+    targetElement: 'search-input',
+    position: 'center',
+    actionText: 'Let\'s explore what you can do',
+    icon: 'chef-hat',
+    color: '#4ECDC4',
+    highlightElement: false
+  },
+  {
+    id: 'search-recipes',
+    title: 'Find Perfect Recipes',
+    description: 'Search for recipes by ingredients, cuisine, or dietary preferences. Our AI helps you discover meals that match your goals.',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'search-input',
     position: 'bottom',
-    actionText: 'Try searching for a recipe',
+    actionText: 'Try searching for "chicken" or "vegetarian"',
     icon: 'search',
     color: '#4ECDC4',
     highlightElement: true
   },
   {
     id: 'quick-actions',
-    title: 'Quick Actions',
-    description: 'Use these shortcuts to quickly add meals, generate grocery lists, or view your favorites.',
+    title: 'Quick Actions Hub',
+    description: 'Access your most-used features instantly. Add meals, generate grocery lists, or browse your favorites with one tap.',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'quick-actions',
     position: 'bottom',
-    actionText: 'Tap any quick action to try it',
+    actionText: 'Tap any action to try it out',
     icon: 'zap',
     color: '#FF6B6B',
     highlightElement: true
   },
   {
-    id: 'meal-planner',
-    title: 'Weekly Meal Planner',
-    description: 'Plan your entire week at a glance. Tap on any day to add meals or view your planned nutrition.',
-    screen: 'recipes',
-    route: '/(tabs)',
-    targetElement: 'weekly-planner',
-    position: 'bottom',
-    actionText: 'Tap a day to add a meal',
-    icon: 'calendar',
-    color: '#45B7D1',
-    highlightElement: true
-  },
-  {
-    id: 'meal-plan-tab',
-    title: 'Detailed Meal Planning',
-    description: 'Switch to the Meal Plan tab for a detailed view of your weekly meals and nutrition tracking.',
+    id: 'meal-planning',
+    title: 'Smart Meal Planning',
+    description: 'Plan your entire week at a glance. Drag and drop meals, see nutrition summaries, and never wonder "what\'s for dinner?" again.',
     screen: 'meal-plan',
     route: '/(tabs)/meal-plan',
     targetElement: 'meal-plan-content',
     position: 'top',
-    actionText: 'Explore your meal plan',
+    actionText: 'Explore detailed meal planning',
     icon: 'calendar',
     color: '#45B7D1',
     highlightElement: false
   },
   {
-    id: 'grocery-list-tab',
-    title: 'Smart Grocery Lists',
-    description: 'Your shopping list is automatically generated from your meal plan, organized by store sections for efficient shopping.',
+    id: 'grocery-lists',
+    title: 'Auto-Generated Shopping',
+    description: 'Your grocery list updates automatically based on your meal plan. Organized by store sections for efficient shopping.',
     screen: 'grocery-list',
     route: '/(tabs)/grocery-list',
     targetElement: 'grocery-content',
     position: 'top',
-    actionText: 'Check off items as you shop',
+    actionText: 'See your smart shopping list',
     icon: 'shopping-cart',
     color: '#FECA57',
     highlightElement: false
   },
   {
     id: 'profile-setup',
-    title: 'Complete Your Profile',
-    description: 'Set up your nutrition goals, dietary preferences, and fitness targets for personalized recommendations.',
+    title: 'Personalize Your Experience',
+    description: 'Complete your profile to get personalized recommendations, nutrition goals, and meal suggestions tailored just for you.',
     screen: 'profile',
     route: '/(tabs)/profile',
     targetElement: 'profile-content',
     position: 'top',
-    actionText: 'Tap to edit your profile',
+    actionText: 'Set up your profile now',
     icon: 'user',
     color: '#96CEB4',
     highlightElement: false
@@ -171,13 +171,14 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       skipTutorial: () => {
+        console.log('Skipping tutorial');
         set({
           showTutorial: false,
           showWelcome: false,
           tutorialCompleted: true,
           isFirstLaunch: false,
           tutorialActive: false,
-          shouldRedirectToOnboarding: true,
+          shouldRedirectToOnboarding: false, // Don't redirect, tutorial is post-onboarding
         });
       },
       
@@ -190,7 +191,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           currentStep: 0,
           isFirstLaunch: false,
           tutorialActive: false,
-          shouldRedirectToOnboarding: true,
+          shouldRedirectToOnboarding: false, // Don't redirect, tutorial is post-onboarding
         });
       },
       

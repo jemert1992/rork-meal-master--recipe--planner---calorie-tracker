@@ -35,13 +35,13 @@ export default function WelcomeScreen() {
     }
   }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, router]);
   
-  // Handle redirect to onboarding after tutorial completion
+  // Handle redirect to main app after tutorial completion
   useEffect(() => {
-    if (shouldRedirectToOnboarding && tutorialCompleted) {
-      setShouldRedirectToOnboarding(false);
-      router.push('/onboarding/personal-info');
+    if (tutorialCompleted && !showTutorial) {
+      // Tutorial is completed, redirect to main app
+      router.replace('/(tabs)');
     }
-  }, [shouldRedirectToOnboarding, tutorialCompleted, setShouldRedirectToOnboarding, router]);
+  }, [tutorialCompleted, showTutorial, router]);
 
   const handleStartTutorial = () => {
     console.log('handleStartTutorial called');
@@ -55,12 +55,13 @@ export default function WelcomeScreen() {
   };
   
   const handleTutorialComplete = () => {
-    router.push('/onboarding/personal-info');
+    // Tutorial completion is handled by the tutorial store
+    // User will be redirected to profile setup
   };
   
   const handleTutorialSkip = () => {
     skipTutorial();
-    router.push('/onboarding/personal-info');
+    // Skip handling is done by the tutorial store
   };
 
   return (
@@ -133,7 +134,7 @@ export default function WelcomeScreen() {
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
             onPress={handleStartTutorial}
-            hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={(Platform.OS as string) === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Start Tutorial"
           >
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 280,
     marginBottom: 16,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
     }),

@@ -25,6 +25,16 @@ import {
 import Colors from '@/constants/colors';
 import { useTutorialStore } from '@/store/tutorialStore';
 
+// Helper function for safe base64 encoding
+function utf8ToBase64(str: string): string {
+  try {
+    return btoa(unescape(encodeURIComponent(str)));
+  } catch (error) {
+    console.warn('Base64 encoding failed:', error);
+    return '';
+  }
+}
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface TooltipProps {
@@ -89,31 +99,46 @@ const Tooltip: React.FC<TooltipProps> = ({
   };
 
   const getTooltipPosition = () => {
-    // Position tooltip based on step position
+    // Position tooltip based on step position and screen size
+    const padding = 20;
+    const tooltipHeight = 200; // Approximate tooltip height
+    
     switch (step.position) {
       case 'top':
         return {
-          top: 100,
-          left: 20,
-          right: 20,
+          top: 120,
+          left: padding,
+          right: padding,
         };
       case 'bottom':
         return {
-          bottom: 120,
-          left: 20,
-          right: 20,
+          bottom: 140,
+          left: padding,
+          right: padding,
         };
       case 'center':
         return {
-          top: screenHeight * 0.3,
-          left: 20,
-          right: 20,
+          top: (screenHeight - tooltipHeight) / 2,
+          left: padding,
+          right: padding,
+        };
+      case 'left':
+        return {
+          top: screenHeight * 0.4,
+          left: padding,
+          width: screenWidth * 0.7,
+        };
+      case 'right':
+        return {
+          top: screenHeight * 0.4,
+          right: padding,
+          width: screenWidth * 0.7,
         };
       default:
         return {
-          bottom: 120,
-          left: 20,
-          right: 20,
+          bottom: 140,
+          left: padding,
+          right: padding,
         };
     }
   };
@@ -226,14 +251,22 @@ export default function ContextualTutorialOverlay() {
   useEffect(() => {
     if (showTutorial && step && step.route !== currentRoute && !step.skipNavigation) {
       console.log('Navigating to:', step.route);
-      router.push(step.route as any);
-      setCurrentRoute(step.route);
+      try {
+        router.push(step.route as any);
+        setCurrentRoute(step.route);
+      } catch (error) {
+        console.warn('Navigation failed:', error);
+      }
     }
   }, [currentStep, step, showTutorial]);
 
   const handleNext = () => {
     if (isLast) {
       completeTutorial();
+      // Navigate to profile for setup after tutorial completion
+      setTimeout(() => {
+        router.push('/(tabs)/profile');
+      }, 500);
     } else {
       nextStep();
     }
@@ -247,6 +280,10 @@ export default function ContextualTutorialOverlay() {
 
   const handleSkip = () => {
     skipTutorial();
+    // Navigate to profile for setup after skipping tutorial
+    setTimeout(() => {
+      router.push('/(tabs)/profile');
+    }, 500);
   };
 
   if (!showTutorial || !step) {
@@ -259,10 +296,33 @@ export default function ContextualTutorialOverlay() {
       <View style={styles.backdrop} pointerEvents="none" />
       
       {/* Highlight overlay for target elements */}
-      {step.highlightElement && (
+      {step.highlightElement && step.targetElement && (
         <View style={styles.highlightOverlay} pointerEvents="none">
-          {/* This would need to be positioned based on the target element */}
-          <View style={styles.highlightSpotlight} />
+          {/* Highlight specific elements based on targetElement */}
+          {step.targetElement === 'search-input' && (
+            <View style={[styles.highlightSpotlight, {
+              top: 180,
+              left: 20,
+              right: 80,
+              height: 48,
+            }]} />
+          )}
+          {step.targetElement === 'quick-actions' && (
+            <View style={[styles.highlightSpotlight, {
+              top: 280,
+              left: 20,
+              right: 20,
+              height: 80,
+            }]} />
+          )}
+          {step.targetElement === 'weekly-planner' && (
+            <View style={[styles.highlightSpotlight, {
+              top: 380,
+              left: 20,
+              right: 20,
+              height: 120,
+            }]} />
+          )}
         </View>
       )}
 
@@ -291,6 +351,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     zIndex: 9998,
+    ...((Platform.OS as string) === 'web' && {
+      position: 'fixed' as any,
+    }),
   },
   highlightOverlay: {
     position: 'absolute',
@@ -302,15 +365,18 @@ const styles = StyleSheet.create({
   },
   highlightSpotlight: {
     position: 'absolute',
-    backgroundColor: 'transparent',
-    borderRadius: 8,
+    backgroundColor: 'rgba(76, 205, 196, 0.1)',
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: Colors.primary,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
     elevation: 8,
+    ...((Platform.OS as string) === 'web' && {
+      boxShadow: '0 0 20px rgba(76, 205, 196, 0.4)',
+    }),
   },
   tooltip: {
     position: 'absolute',
@@ -324,8 +390,9 @@ const styles = StyleSheet.create({
     elevation: 16,
     zIndex: 10000,
     maxWidth: screenWidth - 40,
-    ...(Platform.OS === 'web' && {
+    ...((Platform.OS as string) === 'web' && {
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+      position: 'fixed' as any,
     }),
   },
   pointer: {
