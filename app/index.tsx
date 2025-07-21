@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -32,13 +32,21 @@ export default function WelcomeScreen() {
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
 
+  // Memoize user setup status to prevent unnecessary re-renders
+  const isUserSetup = useMemo(() => {
+    return isLoggedIn && profile.onboardingCompleted && tutorialCompleted;
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted]);
+  
   // Check if user is already set up, redirect to main app
   useEffect(() => {
-    if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted && !hasRedirectedToTabs) {
+    if (isUserSetup && !hasRedirectedToTabs) {
       setHasRedirectedToTabs(true);
-      router.replace('/(tabs)');
+      // Use setTimeout to prevent immediate navigation that could cause loops
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 100);
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, hasRedirectedToTabs, router]);
+  }, [isUserSetup, hasRedirectedToTabs, router]);
   
   // Handle redirect after tutorial completion
   useEffect(() => {
@@ -46,43 +54,50 @@ export default function WelcomeScreen() {
       // Tutorial is completed, redirect to personal info
       console.log('Redirecting to personal info from welcome screen');
       setHasRedirectedToOnboarding(true);
-      router.replace('/onboarding/personal-info');
       setShouldRedirectToOnboarding(false);
-    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs) {
+      // Use setTimeout to prevent immediate navigation that could cause loops
+      setTimeout(() => {
+        router.replace('/onboarding/personal-info');
+      }, 200);
+    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup) {
       // Tutorial is completed without redirect flag, go to main app
       setHasRedirectedToTabs(true);
-      router.replace('/(tabs)');
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 200);
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, setShouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, router]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, setShouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, router]);
 
-  const handleStartTutorial = () => {
+  const handleStartTutorial = useCallback(() => {
     if (isProcessingAction) {
       console.log('Already processing tutorial action, skipping start');
       return;
     }
     console.log('handleStartTutorial called');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
-    startTutorial();
-    // Add a small delay to check the state after it's updated
+    
+    // Use setTimeout to prevent rapid state changes
     setTimeout(() => {
-      const newState = useTutorialStore.getState();
-      console.log('Tutorial state after startTutorial:', newState);
-    }, 100);
-  };
+      startTutorial();
+    }, 50);
+  }, [isProcessingAction, showTutorial, tutorialCompleted, currentStep, startTutorial]);
   
   const handleTutorialComplete = () => {
     // Tutorial completion is handled by the tutorial store
     // User will be redirected to profile setup
   };
   
-  const handleTutorialSkip = () => {
+  const handleTutorialSkip = useCallback(() => {
     if (isProcessingAction) {
       console.log('Already processing tutorial action, skipping skip');
       return;
     }
-    skipTutorial();
-    // Skip handling is done by the tutorial store
-  };
+    
+    // Use setTimeout to prevent rapid state changes
+    setTimeout(() => {
+      skipTutorial();
+    }, 50);
+  }, [isProcessingAction, skipTutorial]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -154,7 +169,7 @@ export default function WelcomeScreen() {
               pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
             ]}
             onPress={handleStartTutorial}
-            hitSlop={(Platform.OS as string) === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Start Tutorial"
           >
@@ -340,7 +355,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 280,
     marginBottom: 16,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
     }),

@@ -341,17 +341,21 @@ export default function ContextualTutorialCoachMark() {
       console.log('Navigating to:', step.route, 'from:', currentRoute);
       setIsNavigating(true);
       
-      // Use a timeout to prevent rapid navigation calls
+      // Use a longer timeout to prevent rapid navigation calls and ensure state stability
       const navigationTimeout = setTimeout(() => {
         try {
-          router.replace(step.route as any);
-          setCurrentRoute(step.route);
+          // Check if we're still in the same state before navigating
+          const currentState = useTutorialStore.getState();
+          if (currentState.showTutorial && !currentState.isProcessingAction) {
+            router.replace(step.route as any);
+            setCurrentRoute(step.route);
+          }
         } catch (error) {
           console.warn('Navigation failed:', error);
         } finally {
           setIsNavigating(false);
         }
-      }, 100);
+      }, 300); // Increased timeout
       
       return () => {
         clearTimeout(navigationTimeout);
@@ -371,12 +375,13 @@ export default function ContextualTutorialCoachMark() {
     const { setShouldRedirectToOnboarding } = useTutorialStore.getState();
     setShouldRedirectToOnboarding(false);
     
-    // Use a timeout to ensure state is fully updated
+    // Use a longer timeout to ensure state is fully updated and prevent loops
     const redirectTimeout = setTimeout(() => {
-      if (!showTutorial && !isProcessingAction) {
+      const currentState = useTutorialStore.getState();
+      if (!currentState.showTutorial && !currentState.isProcessingAction) {
         router.replace('/onboarding/personal-info');
       }
-    }, 200);
+    }, 500); // Increased timeout
     
     return () => clearTimeout(redirectTimeout);
   }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, router]);
@@ -415,26 +420,36 @@ export default function ContextualTutorialCoachMark() {
   const handleNext = () => {
     if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
-    if (isLast) {
-      completeTutorial();
-    } else {
-      nextStep();
-    }
-    setTimeout(() => setIsHandlingAction(false), 300);
+    
+    // Use setTimeout to prevent rapid state changes
+    setTimeout(() => {
+      if (isLast) {
+        completeTutorial();
+      } else {
+        nextStep();
+      }
+      setIsHandlingAction(false);
+    }, 100);
   };
 
   const handlePrevious = () => {
     if (isHandlingAction || isProcessingAction || isFirst || !isMounted) return;
     setIsHandlingAction(true);
-    previousStep();
-    setTimeout(() => setIsHandlingAction(false), 300);
+    
+    setTimeout(() => {
+      previousStep();
+      setIsHandlingAction(false);
+    }, 100);
   };
 
   const handleSkip = () => {
     if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
-    skipTutorial();
-    setTimeout(() => setIsHandlingAction(false), 300);
+    
+    setTimeout(() => {
+      skipTutorial();
+      setIsHandlingAction(false);
+    }, 100);
   };
 
   if (!showTutorial || !step || !isMounted || isProcessingAction) {
@@ -466,7 +481,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     zIndex: 9998,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       position: 'fixed' as any,
     }),
   },
@@ -482,7 +497,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     zIndex: 9999,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 0 20px rgba(76, 205, 196, 0.4)',
       position: 'fixed' as any,
     }),
@@ -500,7 +515,7 @@ const styles = StyleSheet.create({
     zIndex: 10000,
     maxWidth: 320,
     minWidth: 280,
-    ...((Platform.OS as string) === 'web' && {
+    ...(Platform.OS === 'web' && {
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
       position: 'fixed' as any,
     }),

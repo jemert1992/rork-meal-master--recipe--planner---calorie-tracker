@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -13,6 +13,11 @@ export default function TabLayout() {
   const hasCheckedWelcome = useRef(false);
   const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Memoize the onboarding completion status to prevent unnecessary re-renders
+  const isOnboardingCompleted = useMemo(() => {
+    return profile.onboardingCompleted;
+  }, [profile.onboardingCompleted]);
+  
   useEffect(() => {
     // Clear any existing timeout
     if (checkTimeoutRef.current) {
@@ -20,17 +25,18 @@ export default function TabLayout() {
     }
     
     // Only check once when onboarding is completed and we haven't checked before
-    if (profile.onboardingCompleted && !hasCheckedWelcome.current && !welcomeCheckPerformed && !isProcessingAction) {
+    if (isOnboardingCompleted && !hasCheckedWelcome.current && !welcomeCheckPerformed && !isProcessingAction) {
       console.log('TabLayout: Scheduling welcome tutorial check');
       hasCheckedWelcome.current = true;
       
       // Use a timeout to prevent rapid calls and ensure state is stable
       checkTimeoutRef.current = setTimeout(() => {
-        if (!welcomeCheckPerformed && !isProcessingAction) {
+        const currentState = useTutorialStore.getState();
+        if (!currentState.welcomeCheckPerformed && !currentState.isProcessingAction) {
           console.log('TabLayout: Executing welcome tutorial check');
           checkShouldShowWelcome(true);
         }
-      }, 500);
+      }, 1000); // Increased timeout to 1 second
     }
     
     return () => {
@@ -38,7 +44,7 @@ export default function TabLayout() {
         clearTimeout(checkTimeoutRef.current);
       }
     };
-  }, [profile.onboardingCompleted, welcomeCheckPerformed, isProcessingAction, checkShouldShowWelcome]);
+  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction, checkShouldShowWelcome]);
   
   return (
     <>

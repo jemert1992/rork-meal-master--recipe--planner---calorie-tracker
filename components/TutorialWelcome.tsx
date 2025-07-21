@@ -99,11 +99,14 @@ export default function TutorialWelcome() {
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
     
-    // Use a timeout to prevent rapid state changes
+    // Use a longer timeout to prevent rapid state changes and ensure stability
     setTimeout(() => {
-      startTutorial();
+      const currentState = useTutorialStore.getState();
+      if (!currentState.showTutorial && !currentState.isProcessingAction) {
+        startTutorial();
+      }
       setIsHandlingAction(false);
-    }, 100);
+    }, 200);
   };
   
   const handleSkip = () => {
@@ -111,11 +114,14 @@ export default function TutorialWelcome() {
     setIsHandlingAction(true);
     console.log('Skipping tutorial from welcome screen');
     
-    // Use a timeout to prevent rapid state changes
+    // Use a longer timeout to prevent rapid state changes and ensure stability
     setTimeout(() => {
-      skipTutorial();
+      const currentState = useTutorialStore.getState();
+      if (!currentState.tutorialCompleted && !currentState.isProcessingAction) {
+        skipTutorial();
+      }
       setIsHandlingAction(false);
-    }, 100);
+    }, 200);
   };
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
