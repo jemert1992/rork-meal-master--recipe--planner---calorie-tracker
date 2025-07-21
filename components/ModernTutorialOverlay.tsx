@@ -150,7 +150,8 @@ export default function ModernTutorialOverlay({
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   
-  const currentStepData = TUTORIAL_STEPS[currentStep];
+  // Ensure we always have valid step data
+  const currentStepData = TUTORIAL_STEPS[currentStep] || TUTORIAL_STEPS[0];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
   const progress = ((currentStep + 1) / TUTORIAL_STEPS.length) * 100;
@@ -230,12 +231,21 @@ export default function ModernTutorialOverlay({
     }
   };
 
-  if (!visible || !currentStepData) {
-    console.log('ModernTutorialOverlay not rendering:', { visible, currentStepData: !!currentStepData });
+  console.log('ModernTutorialOverlay render check:', { 
+    visible, 
+    currentStep, 
+    currentStepData: !!currentStepData,
+    stepTitle: currentStepData?.title,
+    tutorialStepsLength: TUTORIAL_STEPS.length
+  });
+
+  // Early return only if not visible
+  if (!visible) {
+    console.log('ModernTutorialOverlay not visible, returning null');
     return null;
   }
   
-  console.log('ModernTutorialOverlay rendering:', { visible, currentStep, currentStepData: currentStepData.title });
+  console.log('ModernTutorialOverlay rendering step:', currentStepData.title);
 
   const renderContent = () => (
     <Animated.View
@@ -361,6 +371,8 @@ export default function ModernTutorialOverlay({
   }
 
   // Native version
+  console.log('About to render Modal with visible:', visible);
+  
   return (
     <Modal
       visible={visible}
@@ -368,8 +380,12 @@ export default function ModernTutorialOverlay({
       animationType="fade"
       statusBarTranslucent={true}
       presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
-      onShow={() => console.log('Modal shown')}
+      onShow={() => console.log('Modal shown successfully')}
       onDismiss={() => console.log('Modal dismissed')}
+      onRequestClose={() => {
+        console.log('Modal onRequestClose called');
+        onSkip();
+      }}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (

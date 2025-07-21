@@ -8,6 +8,7 @@ import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
 import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
+import TestTutorialOverlay from '@/components/TestTutorialOverlay';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -17,6 +18,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const { isLoggedIn, profile } = useUserStore();
   const tutorialStore = useTutorialStore();
+  const [testModalVisible, setTestModalVisible] = useState(false);
   const { 
     isFirstLaunch, 
     tutorialCompleted, 
@@ -56,18 +58,31 @@ export default function WelcomeScreen() {
 
   // Debug: Monitor showTutorial state changes
   useEffect(() => {
-    console.log('showTutorial state changed:', showTutorial);
+    console.log('showTutorial state changed in WelcomeScreen:', showTutorial);
+    console.log('Full tutorial store state on change:', tutorialStore);
   }, [showTutorial]);
 
+  // Debug: Monitor all tutorial store changes
+  useEffect(() => {
+    console.log('Tutorial store changed:', tutorialStore);
+  }, [tutorialStore]);
+
   const handleGetStarted = () => {
-    console.log('Starting tutorial manually');
-    console.log('Current tutorial state:', { showTutorial, tutorialCompleted, isFirstLaunch });
-    console.log('Full tutorial store state:', tutorialStore);
+    console.log('=== STARTING TUTORIAL ===');
+    console.log('Current tutorial state before:', { showTutorial, tutorialCompleted, isFirstLaunch });
+    console.log('Full tutorial store state before:', tutorialStore);
+    
     startTutorial();
+    
+    // Immediate check
+    const immediateState = useTutorialStore.getState();
+    console.log('Immediate state after startTutorial:', immediateState);
+    
     // Wait a bit for state to update
     setTimeout(() => {
-      console.log('After startTutorial called:', { showTutorial: useTutorialStore.getState().showTutorial });
-      console.log('Full store after:', useTutorialStore.getState());
+      const delayedState = useTutorialStore.getState();
+      console.log('Delayed state after startTutorial:', delayedState);
+      console.log('showTutorial value:', delayedState.showTutorial);
     }, 100);
   };
   
@@ -178,6 +193,32 @@ export default function WelcomeScreen() {
             <Text style={styles.skipButtonText}>Skip to Setup</Text>
           </Pressable>
           
+          {/* Test Modal button */}
+          <Pressable 
+            style={[styles.emergencyButton, { backgroundColor: 'rgba(0, 255, 0, 0.2)' }]} 
+            onPress={() => {
+              console.log('Showing test modal');
+              setTestModalVisible(true);
+            }}
+          >
+            <Text style={styles.emergencyButtonText}>Test Modal</Text>
+          </Pressable>
+
+          {/* Debug button to force tutorial */}
+          <Pressable 
+            style={[styles.emergencyButton, { backgroundColor: 'rgba(255, 0, 0, 0.2)' }]} 
+            onPress={() => {
+              console.log('Force showing tutorial');
+              tutorialStore.setShowTutorial(true);
+              // Also try direct state update
+              setTimeout(() => {
+                console.log('State after force show:', useTutorialStore.getState());
+              }, 50);
+            }}
+          >
+            <Text style={styles.emergencyButtonText}>Force Show Tutorial (Debug)</Text>
+          </Pressable>
+
           {/* Emergency fallback button */}
           <Pressable style={styles.emergencyButton} onPress={() => router.push('/onboarding/personal-info')}>
             <Text style={styles.emergencyButtonText}>Continue to App Setup →</Text>
@@ -185,12 +226,44 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Tutorial Overlay */}
-      <ModernTutorialOverlay 
+      {/* Test Modal */}
+      <Modal
+        visible={testModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setTestModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10 }}>
+            <Text style={{ color: 'black', marginBottom: 20 }}>Test Modal Works!</Text>
+            <Pressable 
+              style={{ backgroundColor: Colors.primary, padding: 10, borderRadius: 5 }}
+              onPress={() => setTestModalVisible(false)}
+            >
+              <Text style={{ color: 'white' }}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Tutorial Overlay - Test Version */}
+      {console.log('Rendering TestTutorialOverlay with props:', { 
+        visible: showTutorial, 
+        showTutorialValue: showTutorial,
+        tutorialStoreShowTutorial: tutorialStore.showTutorial 
+      })}
+      <TestTutorialOverlay 
         visible={showTutorial}
         onComplete={handleTutorialComplete}
         onSkip={handleTutorialSkip}
       />
+      
+      {/* Original Tutorial Overlay - Commented out for testing */}
+      {/* <ModernTutorialOverlay 
+        visible={showTutorial}
+        onComplete={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
+      /> */}
     </SafeAreaView>
   );
 }
