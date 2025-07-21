@@ -22,7 +22,8 @@ export default function WelcomeScreen() {
     startTutorial,
     skipTutorial,
     shouldRedirectToOnboarding,
-    setShouldRedirectToOnboarding
+    setShouldRedirectToOnboarding,
+    currentStep
   } = useTutorialStore();
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
@@ -44,7 +45,9 @@ export default function WelcomeScreen() {
 
   const handleStartTutorial = () => {
     console.log('handleStartTutorial called');
+    console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     startTutorial();
+    console.log('Tutorial started, new state should be showTutorial: true');
   };
   
   const handleTutorialComplete = () => {

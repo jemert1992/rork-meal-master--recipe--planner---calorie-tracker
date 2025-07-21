@@ -9,6 +9,11 @@ export interface TutorialStep {
   position?: 'top' | 'bottom' | 'center';
   action?: 'tap' | 'swipe' | 'scroll';
   completed: boolean;
+  actionText?: string;
+  icon?: string;
+  color?: string;
+  features?: string[];
+  tip?: string;
 }
 
 interface TutorialState {
@@ -100,6 +105,8 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       
       startTutorial: () => {
         console.log('Starting tutorial');
+        const state = get();
+        console.log('Current state before starting tutorial:', state);
         set({
           showTutorial: true,
           showWelcome: false,
@@ -108,22 +115,28 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           isFirstLaunch: false,
           tutorialActive: true,
         });
-        console.log('Tutorial state set to showTutorial: true');
+        const newState = get();
+        console.log('Tutorial state after starting:', newState);
       },
       
       nextStep: () => {
         const { currentStep, steps } = get();
+        console.log('nextStep called, current:', currentStep, 'total steps:', steps.length);
         if (currentStep < steps.length - 1) {
           set({ currentStep: currentStep + 1 });
+          console.log('Advanced to step:', currentStep + 1);
         } else {
+          console.log('Last step reached, completing tutorial');
           get().completeTutorial();
         }
       },
       
       previousStep: () => {
         const { currentStep } = get();
+        console.log('previousStep called, current:', currentStep);
         if (currentStep > 0) {
           set({ currentStep: currentStep - 1 });
+          console.log('Went back to step:', currentStep - 1);
         }
       },
       

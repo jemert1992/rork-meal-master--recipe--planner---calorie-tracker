@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -28,111 +28,9 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { GlobalStyles } from '@/styles/globalStyles';
+import { useTutorialStore } from '@/store/tutorialStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-interface TutorialStep {
-  id: string;
-  title: string;
-  description: string;
-  actionText: string;
-  icon: string;
-  color: string;
-  features: string[];
-  tip?: string;
-}
-
-const TUTORIAL_STEPS: TutorialStep[] = [
-  {
-    id: 'welcome',
-    title: 'Welcome to Zestora! 🎉',
-    description: 'Your personal nutrition companion that makes healthy eating simple and enjoyable.',
-    actionText: 'Let\'s explore what you can do',
-    icon: 'chef-hat',
-    color: Colors.primary,
-    features: [
-      'Track nutrition with visual insights',
-      'Plan meals for the entire week',
-      'Generate smart grocery lists',
-      'Discover personalized recipes'
-    ]
-  },
-  {
-    id: 'recipes',
-    title: 'Discover Amazing Recipes 🍽️',
-    description: 'Browse thousands of recipes tailored to your dietary preferences and fitness goals.',
-    actionText: 'Try searching for "chicken" or "vegetarian"',
-    icon: 'search',
-    color: Colors.secondary,
-    features: [
-      'Search by ingredients or cuisine',
-      'Filter by dietary preferences',
-      'Save favorites with a tap',
-      'Get nutrition info for every recipe'
-    ],
-    tip: 'Tap the heart icon to save recipes you love!'
-  },
-  {
-    id: 'meal-planning',
-    title: 'Plan Your Week Ahead 📅',
-    description: 'Drag and drop recipes into your weekly meal plan. Never wonder "what\'s for dinner?" again.',
-    actionText: 'Tap "Add Meal" to plan your first meal',
-    icon: 'calendar',
-    color: Colors.accent,
-    features: [
-      'Visual weekly calendar view',
-      'Drag & drop meal planning',
-      'AI-powered meal suggestions',
-      'Automatic nutrition calculations'
-    ],
-    tip: 'Plan similar meals for the week to save time shopping!'
-  },
-  {
-    id: 'nutrition',
-    title: 'Track Your Nutrition 📊',
-    description: 'See your daily calories, macros, and nutrients with beautiful visual charts.',
-    actionText: 'Log your first meal to see it in action',
-    icon: 'target',
-    color: Colors.info,
-    features: [
-      'Visual calorie and macro tracking',
-      'Daily nutrition goals',
-      'Progress charts and insights',
-      'Meal timing recommendations'
-    ],
-    tip: 'Set realistic goals and track your progress over time!'
-  },
-  {
-    id: 'grocery',
-    title: 'Smart Grocery Lists 🛒',
-    description: 'Your shopping list is automatically generated from your meal plan, organized by store sections.',
-    actionText: 'Generate your first grocery list',
-    icon: 'shopping-cart',
-    color: Colors.success,
-    features: [
-      'Auto-generated from meal plans',
-      'Organized by store sections',
-      'Check off items as you shop',
-      'Add custom items anytime'
-    ],
-    tip: 'The app groups ingredients by store sections to make shopping faster!'
-  },
-  {
-    id: 'ready',
-    title: 'You\'re All Set! 🚀',
-    description: 'You now know the basics of Zestora. Start with setting up your profile and nutrition goals.',
-    actionText: 'Let\'s set up your profile',
-    icon: 'check-circle',
-    color: Colors.primary,
-    features: [
-      'Personalized nutrition goals',
-      'Dietary preference settings',
-      'Fitness goal tracking',
-      'Progress monitoring'
-    ],
-    tip: 'You can always restart this tutorial from Settings > Help!'
-  }
-];
 
 interface ModernTutorialOverlayProps {
   visible: boolean;
@@ -145,20 +43,124 @@ export default function ModernTutorialOverlay({
   onComplete, 
   onSkip 
 }: ModernTutorialOverlayProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const {
+    currentStep,
+    steps,
+    nextStep,
+    previousStep,
+  } = useTutorialStore();
+  
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   
+  // Create enhanced steps with UI properties for the tutorial overlay
+  const enhancedSteps = [
+    {
+      id: 'welcome',
+      title: 'Welcome to Zestora! 🎉',
+      description: 'Your personal nutrition companion that makes healthy eating simple and enjoyable.',
+      actionText: 'Let\'s explore what you can do',
+      icon: 'chef-hat',
+      color: Colors.primary,
+      features: [
+        'Track nutrition with visual insights',
+        'Plan meals for the entire week',
+        'Generate smart grocery lists',
+        'Discover personalized recipes'
+      ]
+    },
+    {
+      id: 'recipes',
+      title: 'Discover Amazing Recipes 🍽️',
+      description: 'Browse thousands of recipes tailored to your dietary preferences and fitness goals.',
+      actionText: 'Try searching for "chicken" or "vegetarian"',
+      icon: 'search',
+      color: Colors.secondary,
+      features: [
+        'Search by ingredients or cuisine',
+        'Filter by dietary preferences',
+        'Save favorites with a tap',
+        'Get nutrition info for every recipe'
+      ],
+      tip: 'Tap the heart icon to save recipes you love!'
+    },
+    {
+      id: 'meal-planning',
+      title: 'Plan Your Week Ahead 📅',
+      description: 'Drag and drop recipes into your weekly meal plan. Never wonder "what\'s for dinner?" again.',
+      actionText: 'Tap "Add Meal" to plan your first meal',
+      icon: 'calendar',
+      color: Colors.accent,
+      features: [
+        'Visual weekly calendar view',
+        'Drag & drop meal planning',
+        'AI-powered meal suggestions',
+        'Automatic nutrition calculations'
+      ],
+      tip: 'Plan similar meals for the week to save time shopping!'
+    },
+    {
+      id: 'nutrition',
+      title: 'Track Your Nutrition 📊',
+      description: 'See your daily calories, macros, and nutrients with beautiful visual charts.',
+      actionText: 'Log your first meal to see it in action',
+      icon: 'target',
+      color: Colors.info,
+      features: [
+        'Visual calorie and macro tracking',
+        'Daily nutrition goals',
+        'Progress charts and insights',
+        'Meal timing recommendations'
+      ],
+      tip: 'Set realistic goals and track your progress over time!'
+    },
+    {
+      id: 'grocery',
+      title: 'Smart Grocery Lists 🛒',
+      description: 'Your shopping list is automatically generated from your meal plan, organized by store sections.',
+      actionText: 'Generate your first grocery list',
+      icon: 'shopping-cart',
+      color: Colors.success,
+      features: [
+        'Auto-generated from meal plans',
+        'Organized by store sections',
+        'Check off items as you shop',
+        'Add custom items anytime'
+      ],
+      tip: 'The app groups ingredients by store sections to make shopping faster!'
+    },
+    {
+      id: 'ready',
+      title: 'You\'re All Set! 🚀',
+      description: 'You now know the basics of Zestora. Start with setting up your profile and nutrition goals.',
+      actionText: 'Let\'s set up your profile',
+      icon: 'check-circle',
+      color: Colors.primary,
+      features: [
+        'Personalized nutrition goals',
+        'Dietary preference settings',
+        'Fitness goal tracking',
+        'Progress monitoring'
+      ],
+      tip: 'You can always restart this tutorial from Settings > Help!'
+    }
+  ];
+  
   // Ensure we always have valid step data
-  const currentStepData = TUTORIAL_STEPS[currentStep] || TUTORIAL_STEPS[0];
+  const currentStepData = enhancedSteps[currentStep] || enhancedSteps[0];
   const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
-  const progress = ((currentStep + 1) / TUTORIAL_STEPS.length) * 100;
+  const isLastStep = currentStep === enhancedSteps.length - 1;
+  const progress = ((currentStep + 1) / enhancedSteps.length) * 100;
+  
+  // Safety check - if no step data, don't render
+  if (!currentStepData) {
+    console.log('No current step data available, returning null');
+    return null;
+  }
   
   useEffect(() => {
     if (visible) {
-      setCurrentStep(0);
       // Animate in
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -207,13 +209,13 @@ export default function ModernTutorialOverlay({
     if (isLastStep) {
       onComplete();
     } else {
-      setCurrentStep(prev => prev + 1);
+      nextStep();
     }
   };
   
   const handlePrevious = () => {
     if (!isFirstStep) {
-      setCurrentStep(prev => prev - 1);
+      previousStep();
     }
   };
   
@@ -236,7 +238,8 @@ export default function ModernTutorialOverlay({
     currentStep, 
     currentStepData: !!currentStepData,
     stepTitle: currentStepData?.title,
-    tutorialStepsLength: TUTORIAL_STEPS.length,
+    stepsLength: steps.length,
+    enhancedStepsLength: enhancedSteps.length,
     timestamp: new Date().toISOString()
   });
 
@@ -246,7 +249,10 @@ export default function ModernTutorialOverlay({
     return null;
   }
   
-  console.log('ModernTutorialOverlay rendering step:', currentStepData.title);
+  console.log('ModernTutorialOverlay rendering step:', currentStepData?.title);
+  console.log('Current step data:', currentStepData);
+  console.log('Enhanced steps length:', enhancedSteps.length);
+  console.log('Current step index:', currentStep);
 
   const renderContent = () => (
     <Animated.View
@@ -275,7 +281,7 @@ export default function ModernTutorialOverlay({
           />
         </View>
         <Text style={styles.progressText}>
-          {currentStep + 1} of {TUTORIAL_STEPS.length}
+          {currentStep + 1} of {enhancedSteps.length}
         </Text>
       </View>
 
@@ -359,17 +365,24 @@ export default function ModernTutorialOverlay({
     </Animated.View>
   );
 
-  // Render directly without Modal for now to debug
-  console.log('About to render tutorial overlay directly');
+  // Render with Modal to ensure it appears on top
+  console.log('About to render tutorial overlay with Modal');
   
   return (
-    <View style={[styles.overlay, styles.absoluteOverlay]}>
-      <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
-      
-      <View style={styles.container}>
-        {renderContent()}
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View style={styles.overlay}>
+        <View style={[StyleSheet.absoluteFill, Platform.OS === 'web' ? styles.webBlur : styles.androidBlur]} />
+        
+        <View style={styles.container}>
+          {renderContent()}
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
