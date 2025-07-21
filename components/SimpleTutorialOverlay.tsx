@@ -742,7 +742,11 @@ export default function SimpleTutorialOverlay({
             <View style={styles.imageOverlay} />
             
             {/* Contextual tooltips */}
-            {currentTooltips?.tooltips.map((tooltip, index) => renderTooltip(tooltip, index))}
+            {currentTooltips?.tooltips.map((tooltip, index) => (
+              <React.Fragment key={`tooltip-${tooltip.id}-${index}`}>
+                {renderTooltip(tooltip, index)}
+              </React.Fragment>
+            ))}
             
             {/* Progress indicator - Top */}
             <View style={styles.progressContainer}>

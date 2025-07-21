@@ -60,16 +60,18 @@ export default function WelcomeScreen() {
   
   const handleTutorialComplete = () => {
     console.log('Tutorial completed');
-    // Tutorial completion is handled by the store
+    // Redirect to onboarding after tutorial completion
+    router.push('/onboarding/personal-info');
   };
   
   const handleTutorialSkip = () => {
     console.log('Tutorial skipped');
     skipTutorial();
+    router.push('/onboarding/personal-info');
   };
 
   const handleSkipToOnboarding = () => {
-    router.push('/onboarding/welcome');
+    router.push('/onboarding/personal-info');
   };
 
   return (
@@ -161,6 +163,11 @@ export default function WelcomeScreen() {
           
           <Pressable style={styles.skipButton} onPress={handleSkipToOnboarding}>
             <Text style={styles.skipButtonText}>Skip to Setup</Text>
+          </Pressable>
+          
+          {/* Emergency fallback button */}
+          <Pressable style={styles.emergencyButton} onPress={() => router.push('/onboarding/personal-info')}>
+            <Text style={styles.emergencyButtonText}>Continue to App Setup →</Text>
           </Pressable>
         </View>
       </View>
@@ -374,6 +381,24 @@ const styles = StyleSheet.create({
     fontSize: isSmallScreen ? 14 : 15,
     textDecorationLine: 'underline',
     fontWeight: '500',
+  },
+  emergencyButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
+  },
+  emergencyButtonText: {
+    color: Colors.white,
+    fontSize: isSmallScreen ? 16 : 17,
+    fontWeight: '600',
   },
 
 });
