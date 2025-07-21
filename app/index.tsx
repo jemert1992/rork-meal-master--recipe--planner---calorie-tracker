@@ -47,7 +47,11 @@ export default function WelcomeScreen() {
     console.log('handleStartTutorial called');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     startTutorial();
-    console.log('Tutorial started, new state should be showTutorial: true');
+    // Add a small delay to check the state after it's updated
+    setTimeout(() => {
+      const newState = useTutorialStore.getState();
+      console.log('Tutorial state after startTutorial:', newState);
+    }, 100);
   };
   
   const handleTutorialComplete = () => {

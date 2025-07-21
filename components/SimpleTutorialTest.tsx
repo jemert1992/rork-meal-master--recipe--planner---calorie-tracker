@@ -13,6 +13,8 @@ export default function SimpleTutorialTest({ visible, onComplete, onSkip }: Simp
   const { currentStep, steps, nextStep, previousStep } = useTutorialStore();
   
   console.log('[SimpleTutorialTest] Render:', { visible, currentStep, stepsLength: steps.length });
+  console.log('[SimpleTutorialTest] Steps array:', steps);
+  console.log('[SimpleTutorialTest] Current step data:', steps[currentStep]);
   
   if (!visible) return null;
   
@@ -38,31 +40,53 @@ export default function SimpleTutorialTest({ visible, onComplete, onSkip }: Simp
   
   const isLastStep = currentStep === steps.length - 1;
   
+  const handleNext = () => {
+    console.log('[SimpleTutorialTest] Next button pressed, isLastStep:', isLastStep);
+    if (isLastStep) {
+      console.log('[SimpleTutorialTest] Calling onComplete');
+      onComplete();
+    } else {
+      console.log('[SimpleTutorialTest] Calling nextStep');
+      nextStep();
+    }
+  };
+  
+  const handlePrevious = () => {
+    console.log('[SimpleTutorialTest] Previous button pressed');
+    previousStep();
+  };
+  
+  const handleSkip = () => {
+    console.log('[SimpleTutorialTest] Skip button pressed');
+    onSkip();
+  };
+  
   return (
     <Modal visible={visible} transparent>
       <View style={styles.overlay}>
         <View style={styles.card}>
+          <Text style={styles.progress}>Step {currentStep + 1} of {steps.length}</Text>
           <Text style={styles.title}>{currentStepData.title}</Text>
           <Text style={styles.description}>{currentStepData.description}</Text>
           
           <View style={styles.buttons}>
             {currentStep > 0 && (
-              <Pressable style={styles.button} onPress={previousStep}>
+              <Pressable style={styles.button} onPress={handlePrevious}>
                 <Text style={styles.buttonText}>Back</Text>
               </Pressable>
             )}
             
             <Pressable 
               style={[styles.button, styles.primaryButton]} 
-              onPress={isLastStep ? onComplete : nextStep}
+              onPress={handleNext}
             >
-              <Text style={styles.buttonText}>
+              <Text style={[styles.buttonText, { color: Colors.white }]}>
                 {isLastStep ? 'Complete' : 'Next'}
               </Text>
             </Pressable>
           </View>
           
-          <Pressable style={styles.skipButton} onPress={onSkip}>
+          <Pressable style={styles.skipButton} onPress={handleSkip}>
             <Text style={styles.skipText}>Skip Tutorial</Text>
           </Pressable>
         </View>
@@ -119,6 +143,10 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '600',
   },
+  primaryButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+  },
   skipButton: {
     padding: 8,
   },
@@ -131,5 +159,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
+  },
+  progress: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginBottom: 8,
+    textAlign: 'center',
   },
 });
