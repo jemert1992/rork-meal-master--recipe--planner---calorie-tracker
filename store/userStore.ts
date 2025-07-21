@@ -52,6 +52,13 @@ export const useUserStore = create<UserState>()(
       
       updateProfile: (updates) => {
         const currentProfile = get().profile;
+        const { isCalculatingGoals } = get();
+        
+        // Skip if already calculating to prevent infinite loops
+        if (isCalculatingGoals) {
+          console.log('Already calculating goals, skipping profile update');
+          return;
+        }
         
         // Check if we need to recalculate nutrition goals
         const shouldRecalculate = 
@@ -80,7 +87,7 @@ export const useUserStore = create<UserState>()(
               if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
                 store.calculateNutritionGoals();
               }
-            }, 0);
+            }, 100);
           }
         }
       },
@@ -88,6 +95,13 @@ export const useUserStore = create<UserState>()(
       updateHeightImperial: (feet, inches) => {
         const heightInCm = feetInchesToCm(feet, inches);
         const currentProfile = get().profile;
+        const { isCalculatingGoals } = get();
+        
+        // Skip if already calculating to prevent infinite loops
+        if (isCalculatingGoals) {
+          console.log('Already calculating goals, skipping height update');
+          return;
+        }
         
         set((state) => ({
           profile: {
@@ -103,13 +117,20 @@ export const useUserStore = create<UserState>()(
             if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
               store.calculateNutritionGoals();
             }
-          }, 0);
+          }, 100);
         }
       },
       
       updateWeightImperial: (pounds) => {
         const weightInKg = poundsToKg(pounds);
         const currentProfile = get().profile;
+        const { isCalculatingGoals } = get();
+        
+        // Skip if already calculating to prevent infinite loops
+        if (isCalculatingGoals) {
+          console.log('Already calculating goals, skipping weight update');
+          return;
+        }
         
         set((state) => ({
           profile: {
@@ -125,7 +146,7 @@ export const useUserStore = create<UserState>()(
             if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
               store.calculateNutritionGoals();
             }
-          }, 0);
+          }, 100);
         }
       },
       

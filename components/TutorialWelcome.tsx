@@ -20,9 +20,16 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenHeight < 700;
 
 export default function TutorialWelcome() {
-  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial } = useTutorialStore();
+  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial, isProcessingAction } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
   const [isHandlingAction, setIsHandlingAction] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Prevent multiple instances
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
   
   console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
   
@@ -83,7 +90,7 @@ export default function TutorialWelcome() {
   }
   
   const handleStartTutorial = () => {
-    if (isHandlingAction) return;
+    if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
     startTutorial();
@@ -92,7 +99,7 @@ export default function TutorialWelcome() {
   };
   
   const handleSkip = () => {
-    if (isHandlingAction) return;
+    if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
     console.log('Skipping tutorial from welcome screen');
     skipTutorial();
@@ -101,7 +108,7 @@ export default function TutorialWelcome() {
   };
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
-  const shouldShow = showWelcome && !showTutorial;
+  const shouldShow = showWelcome && !showTutorial && isMounted && !isProcessingAction;
   
   if (!shouldShow) {
     return null;

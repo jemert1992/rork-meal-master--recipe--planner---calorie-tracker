@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -23,32 +23,43 @@ export default function WelcomeScreen() {
     skipTutorial,
     shouldRedirectToOnboarding,
     setShouldRedirectToOnboarding,
-    currentStep
+    currentStep,
+    isProcessingAction
   } = useTutorialStore();
+  
+  const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
+  const [hasRedirectedToOnboarding, setHasRedirectedToOnboarding] = useState(false);
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
 
   // Check if user is already set up, redirect to main app
   useEffect(() => {
-    if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted) {
+    if (isLoggedIn && profile.onboardingCompleted && tutorialCompleted && !hasRedirectedToTabs) {
+      setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, router]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, hasRedirectedToTabs]);
   
   // Handle redirect after tutorial completion
   useEffect(() => {
-    if (shouldRedirectToOnboarding && tutorialCompleted && !showTutorial) {
+    if (shouldRedirectToOnboarding && tutorialCompleted && !showTutorial && !hasRedirectedToOnboarding) {
       // Tutorial is completed, redirect to personal info
       console.log('Redirecting to personal info from welcome screen');
+      setHasRedirectedToOnboarding(true);
       router.replace('/onboarding/personal-info');
       setShouldRedirectToOnboarding(false);
-    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding) {
+    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs) {
       // Tutorial is completed without redirect flag, go to main app
+      setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, router, setShouldRedirectToOnboarding]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, setShouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs]);
 
   const handleStartTutorial = () => {
+    if (isProcessingAction) {
+      console.log('Already processing tutorial action, skipping start');
+      return;
+    }
     console.log('handleStartTutorial called');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     startTutorial();
@@ -65,6 +76,10 @@ export default function WelcomeScreen() {
   };
   
   const handleTutorialSkip = () => {
+    if (isProcessingAction) {
+      console.log('Already processing tutorial action, skipping skip');
+      return;
+    }
     skipTutorial();
     // Skip handling is done by the tutorial store
   };

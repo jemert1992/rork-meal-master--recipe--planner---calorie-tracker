@@ -300,13 +300,33 @@ export default function ContextualTutorialCoachMark() {
     previousStep,
     completeTutorial,
     skipTutorial,
-    shouldRedirectToOnboarding
+    shouldRedirectToOnboarding,
+    isProcessingAction
   } = useTutorialStore();
 
   const [currentRoute, setCurrentRoute] = useState('/(tabs)');
   const [elementPosition, setElementPosition] = useState<ElementPosition | undefined>();
   const [isNavigating, setIsNavigating] = useState(false);
   const [hasRedirected, setHasRedirected] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Prevent multiple instances
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+  
+  // Safety timeout - auto-complete tutorial after 5 minutes if stuck
+  useEffect(() => {
+    if (showTutorial) {
+      const timeout = setTimeout(() => {
+        console.log('Tutorial timeout - auto completing after 5 minutes');
+        completeTutorial();
+      }, 5 * 60 * 1000); // 5 minutes
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [showTutorial, completeTutorial]);
   
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
@@ -328,7 +348,7 @@ export default function ContextualTutorialCoachMark() {
         setTimeout(() => setIsNavigating(false), 500);
       }
     }
-  }, [currentStep, showTutorial]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating]);
 
   // Handle redirect to personal info after tutorial completion
   useEffect(() => {
@@ -343,7 +363,7 @@ export default function ContextualTutorialCoachMark() {
         router.replace('/onboarding/personal-info');
       }, 100);
     }
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, router]);
 
   // Try to find and measure target elements
   useEffect(() => {
@@ -368,13 +388,15 @@ export default function ContextualTutorialCoachMark() {
       };
       
       setElementPosition(getElementPosition(step.targetElement));
+    } else {
+      setElementPosition(undefined);
     }
-  }, [currentStep, showTutorial]);
+  }, [currentStep, showTutorial, step?.targetElement]);
 
   const [isHandlingAction, setIsHandlingAction] = useState(false);
 
   const handleNext = () => {
-    if (isHandlingAction) return;
+    if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
     if (isLast) {
       completeTutorial();
@@ -385,20 +407,20 @@ export default function ContextualTutorialCoachMark() {
   };
 
   const handlePrevious = () => {
-    if (isHandlingAction || isFirst) return;
+    if (isHandlingAction || isProcessingAction || isFirst || !isMounted) return;
     setIsHandlingAction(true);
     previousStep();
     setTimeout(() => setIsHandlingAction(false), 300);
   };
 
   const handleSkip = () => {
-    if (isHandlingAction) return;
+    if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
     skipTutorial();
     setTimeout(() => setIsHandlingAction(false), 300);
   };
 
-  if (!showTutorial || !step) {
+  if (!showTutorial || !step || !isMounted || isProcessingAction) {
     return null;
   }
 
