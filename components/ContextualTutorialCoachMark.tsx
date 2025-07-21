@@ -332,38 +332,54 @@ export default function ContextualTutorialCoachMark() {
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
 
-  // Navigate to the correct screen for each step
+  // Navigate to the correct screen for each step with proper guards
   useEffect(() => {
-    if (showTutorial && step && step.route !== currentRoute && !step.skipNavigation && !isNavigating) {
+    if (!showTutorial || !step || isNavigating || isProcessingAction) return;
+    
+    // Only navigate if we're on a different route and navigation is needed
+    if (step.route && step.route !== currentRoute && !step.skipNavigation) {
       console.log('Navigating to:', step.route, 'from:', currentRoute);
       setIsNavigating(true);
-      try {
-        // Use replace instead of push to avoid navigation stack issues
-        router.replace(step.route as any);
-        setCurrentRoute(step.route);
-      } catch (error) {
-        console.warn('Navigation failed:', error);
-      } finally {
-        // Reset navigation flag after a delay
-        setTimeout(() => setIsNavigating(false), 500);
-      }
-    }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating]);
-
-  // Handle redirect to personal info after tutorial completion
-  useEffect(() => {
-    if (shouldRedirectToOnboarding && !showTutorial && !hasRedirected) {
-      console.log('Redirecting to personal info after tutorial completion');
-      setHasRedirected(true);
-      // Clear the redirect flag first to prevent infinite loops
-      const { setShouldRedirectToOnboarding } = useTutorialStore.getState();
-      setShouldRedirectToOnboarding(false);
-      // Use a timeout to ensure state is updated before navigation
-      setTimeout(() => {
-        router.replace('/onboarding/personal-info');
+      
+      // Use a timeout to prevent rapid navigation calls
+      const navigationTimeout = setTimeout(() => {
+        try {
+          router.replace(step.route as any);
+          setCurrentRoute(step.route);
+        } catch (error) {
+          console.warn('Navigation failed:', error);
+        } finally {
+          setIsNavigating(false);
+        }
       }, 100);
+      
+      return () => {
+        clearTimeout(navigationTimeout);
+        setIsNavigating(false);
+      };
     }
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, router]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction]);
+
+  // Handle redirect to personal info after tutorial completion with proper guards
+  useEffect(() => {
+    if (!shouldRedirectToOnboarding || showTutorial || hasRedirected || isProcessingAction) return;
+    
+    console.log('Redirecting to personal info after tutorial completion');
+    setHasRedirected(true);
+    
+    // Clear the redirect flag immediately to prevent loops
+    const { setShouldRedirectToOnboarding } = useTutorialStore.getState();
+    setShouldRedirectToOnboarding(false);
+    
+    // Use a timeout to ensure state is fully updated
+    const redirectTimeout = setTimeout(() => {
+      if (!showTutorial && !isProcessingAction) {
+        router.replace('/onboarding/personal-info');
+      }
+    }, 200);
+    
+    return () => clearTimeout(redirectTimeout);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction]);
 
   // Try to find and measure target elements
   useEffect(() => {

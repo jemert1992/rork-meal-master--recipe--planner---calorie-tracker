@@ -84,8 +84,19 @@ export const useUserStore = create<UserState>()(
             // Use setTimeout to avoid infinite loops and ensure state is updated
             setTimeout(() => {
               const store = get();
-              if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
-                store.calculateNutritionGoals();
+              // Double-check all conditions before calculating
+              if (store.profile.gender && 
+                  store.profile.weight && 
+                  store.profile.height && 
+                  store.profile.age && 
+                  store.profile.activityLevel && 
+                  !store.isCalculatingGoals) {
+                try {
+                  store.calculateNutritionGoals();
+                } catch (error) {
+                  console.error('Error in delayed nutrition calculation:', error);
+                  set({ isCalculatingGoals: false });
+                }
               }
             }, 100);
           }
@@ -114,8 +125,18 @@ export const useUserStore = create<UserState>()(
         if (currentProfile.gender && currentProfile.weight && currentProfile.age && currentProfile.activityLevel) {
           setTimeout(() => {
             const store = get();
-            if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
-              store.calculateNutritionGoals();
+            if (store.profile.gender && 
+                store.profile.weight && 
+                store.profile.height && 
+                store.profile.age && 
+                store.profile.activityLevel && 
+                !store.isCalculatingGoals) {
+              try {
+                store.calculateNutritionGoals();
+              } catch (error) {
+                console.error('Error in height update nutrition calculation:', error);
+                set({ isCalculatingGoals: false });
+              }
             }
           }, 100);
         }
@@ -143,8 +164,18 @@ export const useUserStore = create<UserState>()(
         if (currentProfile.gender && currentProfile.height && currentProfile.age && currentProfile.activityLevel) {
           setTimeout(() => {
             const store = get();
-            if (store.profile.gender && store.profile.weight && store.profile.height && store.profile.age && store.profile.activityLevel && !store.isCalculatingGoals) {
-              store.calculateNutritionGoals();
+            if (store.profile.gender && 
+                store.profile.weight && 
+                store.profile.height && 
+                store.profile.age && 
+                store.profile.activityLevel && 
+                !store.isCalculatingGoals) {
+              try {
+                store.calculateNutritionGoals();
+              } catch (error) {
+                console.error('Error in weight update nutrition calculation:', error);
+                set({ isCalculatingGoals: false });
+              }
             }
           }, 100);
         }

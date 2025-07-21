@@ -9,17 +9,36 @@ import ContextualTutorialCoachMark from '@/components/ContextualTutorialCoachMar
 
 export default function TabLayout() {
   const { profile } = useUserStore();
-  const { checkShouldShowWelcome, welcomeCheckPerformed } = useTutorialStore();
+  const { checkShouldShowWelcome, welcomeCheckPerformed, isProcessingAction } = useTutorialStore();
   const hasCheckedWelcome = useRef(false);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
-    // Only check once when onboarding is completed and we haven't checked before
-    if (profile.onboardingCompleted && !hasCheckedWelcome.current && !welcomeCheckPerformed) {
-      console.log('TabLayout: Checking if should show welcome tutorial');
-      hasCheckedWelcome.current = true;
-      checkShouldShowWelcome(true);
+    // Clear any existing timeout
+    if (checkTimeoutRef.current) {
+      clearTimeout(checkTimeoutRef.current);
     }
-  }, [profile.onboardingCompleted, welcomeCheckPerformed, checkShouldShowWelcome]);
+    
+    // Only check once when onboarding is completed and we haven't checked before
+    if (profile.onboardingCompleted && !hasCheckedWelcome.current && !welcomeCheckPerformed && !isProcessingAction) {
+      console.log('TabLayout: Scheduling welcome tutorial check');
+      hasCheckedWelcome.current = true;
+      
+      // Use a timeout to prevent rapid calls and ensure state is stable
+      checkTimeoutRef.current = setTimeout(() => {
+        if (!welcomeCheckPerformed && !isProcessingAction) {
+          console.log('TabLayout: Executing welcome tutorial check');
+          checkShouldShowWelcome(true);
+        }
+      }, 500);
+    }
+    
+    return () => {
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+    };
+  }, [profile.onboardingCompleted, welcomeCheckPerformed, isProcessingAction]);
   
   return (
     <>

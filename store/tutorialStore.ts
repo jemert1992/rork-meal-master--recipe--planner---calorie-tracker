@@ -143,15 +143,13 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       actionCount: 0,
       
       startTutorial: () => {
-        const { isProcessingAction } = get();
-        if (isProcessingAction) {
-          console.log('Already processing tutorial action, skipping start');
+        const { isProcessingAction, showTutorial, tutorialCompleted } = get();
+        if (isProcessingAction || showTutorial || tutorialCompleted) {
+          console.log('Cannot start tutorial - already processing, showing, or completed');
           return;
         }
         
         console.log('[TutorialStore] START TUTORIAL');
-        const state = get();
-        console.log('Current state before starting tutorial:', state);
         set({
           showTutorial: true,
           showWelcome: false,
@@ -164,11 +162,11 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
         
         // Reset processing flag after a delay
         setTimeout(() => {
-          set({ isProcessingAction: false });
+          const currentState = get();
+          if (currentState.showTutorial) {
+            set({ isProcessingAction: false });
+          }
         }, 500);
-        
-        const newState = get();
-        console.log('Tutorial state after starting:', newState);
       },
       
       nextStep: () => {
@@ -193,9 +191,9 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       skipTutorial: () => {
-        const { isProcessingAction } = get();
-        if (isProcessingAction) {
-          console.log('Already processing tutorial action, skipping skip');
+        const { isProcessingAction, tutorialCompleted } = get();
+        if (isProcessingAction || tutorialCompleted) {
+          console.log('Cannot skip tutorial - already processing or completed');
           return;
         }
         
@@ -206,7 +204,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           tutorialCompleted: true,
           isFirstLaunch: false,
           tutorialActive: false,
-          shouldRedirectToOnboarding: true, // Redirect to personal info after skipping
+          shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
           isProcessingAction: true,
         });
@@ -218,9 +216,9 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       completeTutorial: () => {
-        const { isProcessingAction } = get();
-        if (isProcessingAction) {
-          console.log('Already processing tutorial action, skipping complete');
+        const { isProcessingAction, tutorialCompleted } = get();
+        if (isProcessingAction || tutorialCompleted) {
+          console.log('Cannot complete tutorial - already processing or completed');
           return;
         }
         
@@ -232,7 +230,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           currentStep: 0,
           isFirstLaunch: false,
           tutorialActive: false,
-          shouldRedirectToOnboarding: true, // Redirect to personal info after tutorial
+          shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
           isProcessingAction: true,
         });
@@ -273,7 +271,13 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
         const state = get();
-        const { isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed, lastActionTime, actionCount } = state;
+        const { isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed, lastActionTime, actionCount, isProcessingAction } = state;
+        
+        // Skip if already processing to prevent infinite loops
+        if (isProcessingAction) {
+          console.log('Already processing tutorial action, skipping welcome check');
+          return;
+        }
         
         // Circuit breaker: prevent too many rapid actions
         const now = Date.now();
@@ -290,22 +294,23 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           return;
         }
         
-        // Update action tracking
+        // Update action tracking and mark check as performed immediately
         const newActionCount = now - lastActionTime < 1000 ? actionCount + 1 : 1;
         
-        // Mark check as performed immediately to prevent re-entry
         set({ 
           welcomeCheckPerformed: true,
           lastActionTime: now,
-          actionCount: newActionCount
+          actionCount: newActionCount,
+          isProcessingAction: true
         });
         
         // Only show welcome after onboarding is completed, if tutorial hasn't been completed and not already showing
         if (onboardingCompleted && !tutorialCompleted && !showWelcome && !showTutorial) {
           console.log('Setting showWelcome to true after onboarding');
-          set({ showWelcome: true });
+          set({ showWelcome: true, isProcessingAction: false });
         } else {
           console.log('Not showing welcome');
+          set({ isProcessingAction: false });
         }
       },
       

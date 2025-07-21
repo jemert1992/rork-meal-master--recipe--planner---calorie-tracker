@@ -33,6 +33,11 @@ export default function TutorialWelcome() {
   
   console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
   
+  // Early returns to prevent rendering conflicts
+  if (!isMounted || isProcessingAction) {
+    return null;
+  }
+  
   // Don't render if tutorial is completed
   if (tutorialCompleted) {
     return null;
@@ -43,13 +48,13 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  // Don't render if user hasn't completed onboarding yet (main welcome screen handles this)
+  // Don't render if user hasn't completed onboarding yet
   if (!isLoggedIn || !profile.onboardingCompleted) {
     return null;
   }
   
-  // Don't render if not first launch and welcome is not explicitly shown
-  if (!isFirstLaunch && !showWelcome) {
+  // Don't render if welcome is not explicitly shown
+  if (!showWelcome) {
     return null;
   }
   
@@ -90,21 +95,27 @@ export default function TutorialWelcome() {
   }
   
   const handleStartTutorial = () => {
-    if (isHandlingAction || isProcessingAction || !isMounted) return;
+    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
-    startTutorial();
-    // Reset after a delay to prevent rapid clicks
-    setTimeout(() => setIsHandlingAction(false), 1000);
+    
+    // Use a timeout to prevent rapid state changes
+    setTimeout(() => {
+      startTutorial();
+      setIsHandlingAction(false);
+    }, 100);
   };
   
   const handleSkip = () => {
-    if (isHandlingAction || isProcessingAction || !isMounted) return;
+    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;
     setIsHandlingAction(true);
     console.log('Skipping tutorial from welcome screen');
-    skipTutorial();
-    // Reset after a delay to prevent rapid clicks
-    setTimeout(() => setIsHandlingAction(false), 1000);
+    
+    // Use a timeout to prevent rapid state changes
+    setTimeout(() => {
+      skipTutorial();
+      setIsHandlingAction(false);
+    }, 100);
   };
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
