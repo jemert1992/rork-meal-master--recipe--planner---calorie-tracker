@@ -229,7 +229,8 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
-        const { isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed } = get();
+        const state = get();
+        const { isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed } = state;
         console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed });
         
         // Prevent infinite loops by checking if we've already performed this check

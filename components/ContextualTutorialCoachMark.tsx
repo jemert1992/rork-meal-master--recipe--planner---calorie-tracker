@@ -305,6 +305,8 @@ export default function ContextualTutorialCoachMark() {
 
   const [currentRoute, setCurrentRoute] = useState('/(tabs)');
   const [elementPosition, setElementPosition] = useState<ElementPosition | undefined>();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [hasRedirected, setHasRedirected] = useState(false);
   
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
@@ -312,29 +314,36 @@ export default function ContextualTutorialCoachMark() {
 
   // Navigate to the correct screen for each step
   useEffect(() => {
-    if (showTutorial && step && step.route !== currentRoute && !step.skipNavigation) {
+    if (showTutorial && step && step.route !== currentRoute && !step.skipNavigation && !isNavigating) {
       console.log('Navigating to:', step.route, 'from:', currentRoute);
+      setIsNavigating(true);
       try {
         // Use replace instead of push to avoid navigation stack issues
         router.replace(step.route as any);
         setCurrentRoute(step.route);
       } catch (error) {
         console.warn('Navigation failed:', error);
+      } finally {
+        // Reset navigation flag after a delay
+        setTimeout(() => setIsNavigating(false), 500);
       }
     }
-  }, [currentStep, step, showTutorial]);
+  }, [currentStep, showTutorial]);
 
   // Handle redirect to personal info after tutorial completion
   useEffect(() => {
-    if (shouldRedirectToOnboarding && !showTutorial) {
+    if (shouldRedirectToOnboarding && !showTutorial && !hasRedirected) {
       console.log('Redirecting to personal info after tutorial completion');
+      setHasRedirected(true);
       // Clear the redirect flag first to prevent infinite loops
       const { setShouldRedirectToOnboarding } = useTutorialStore.getState();
       setShouldRedirectToOnboarding(false);
-      // Then navigate
-      router.replace('/onboarding/personal-info');
+      // Use a timeout to ensure state is updated before navigation
+      setTimeout(() => {
+        router.replace('/onboarding/personal-info');
+      }, 100);
     }
-  }, [shouldRedirectToOnboarding, showTutorial, router]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected]);
 
   // Try to find and measure target elements
   useEffect(() => {
@@ -360,24 +369,33 @@ export default function ContextualTutorialCoachMark() {
       
       setElementPosition(getElementPosition(step.targetElement));
     }
-  }, [currentStep, step, showTutorial]);
+  }, [currentStep, showTutorial]);
+
+  const [isHandlingAction, setIsHandlingAction] = useState(false);
 
   const handleNext = () => {
+    if (isHandlingAction) return;
+    setIsHandlingAction(true);
     if (isLast) {
       completeTutorial();
     } else {
       nextStep();
     }
+    setTimeout(() => setIsHandlingAction(false), 300);
   };
 
   const handlePrevious = () => {
-    if (!isFirst) {
-      previousStep();
-    }
+    if (isHandlingAction || isFirst) return;
+    setIsHandlingAction(true);
+    previousStep();
+    setTimeout(() => setIsHandlingAction(false), 300);
   };
 
   const handleSkip = () => {
+    if (isHandlingAction) return;
+    setIsHandlingAction(true);
     skipTutorial();
+    setTimeout(() => setIsHandlingAction(false), 300);
   };
 
   if (!showTutorial || !step) {

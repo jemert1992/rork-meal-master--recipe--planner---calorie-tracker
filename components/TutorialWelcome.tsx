@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -22,6 +22,7 @@ const isSmallScreen = screenHeight < 700;
 export default function TutorialWelcome() {
   const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
+  const [isHandlingAction, setIsHandlingAction] = useState(false);
   
   console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
   
@@ -82,13 +83,21 @@ export default function TutorialWelcome() {
   }
   
   const handleStartTutorial = () => {
+    if (isHandlingAction) return;
+    setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
     startTutorial();
+    // Reset after a delay to prevent rapid clicks
+    setTimeout(() => setIsHandlingAction(false), 1000);
   };
   
   const handleSkip = () => {
+    if (isHandlingAction) return;
+    setIsHandlingAction(true);
     console.log('Skipping tutorial from welcome screen');
     skipTutorial();
+    // Reset after a delay to prevent rapid clicks
+    setTimeout(() => setIsHandlingAction(false), 1000);
   };
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing

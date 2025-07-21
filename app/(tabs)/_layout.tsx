@@ -19,7 +19,7 @@ export default function TabLayout() {
       hasCheckedWelcome.current = true;
       checkShouldShowWelcome(true);
     }
-  }, [profile.onboardingCompleted, welcomeCheckPerformed, checkShouldShowWelcome]);
+  }, [profile.onboardingCompleted, welcomeCheckPerformed]);
   
   return (
     <>
