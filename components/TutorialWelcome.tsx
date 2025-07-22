@@ -25,7 +25,7 @@ export default function TutorialWelcome() {
   const [isHandlingAction, setIsHandlingAction] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
-  // Prevent multiple instances
+  // GUARD: Set mounted state only once
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
@@ -58,7 +58,7 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  // Safety timeout - auto-hide after 30 seconds if stuck
+  // GUARD: Safety timeout - auto-hide after 30 seconds if stuck
   useEffect(() => {
     if (showWelcome) {
       const timeout = setTimeout(() => {
@@ -73,6 +73,7 @@ export default function TutorialWelcome() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   
+  // GUARD: Animate only when showWelcome changes
   useEffect(() => {
     if (showWelcome) {
       Animated.parallel([

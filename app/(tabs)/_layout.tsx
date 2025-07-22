@@ -18,6 +18,7 @@ export default function TabLayout() {
     return profile.onboardingCompleted;
   }, [profile.onboardingCompleted]);
   
+  // GUARD: Only check welcome tutorial once when onboarding completes
   useEffect(() => {
     // Clear any existing timeout
     if (checkTimeoutRef.current) {
@@ -44,7 +45,7 @@ export default function TabLayout() {
         clearTimeout(checkTimeoutRef.current);
       }
     };
-  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction]);
+  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction, checkShouldShowWelcome]);
   
   return (
     <>

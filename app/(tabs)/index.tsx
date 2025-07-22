@@ -91,7 +91,7 @@ export default function RecipesScreen() {
   const [displayedRecipes, setDisplayedRecipes] = useState<Recipe[]>([]);
   const [edamamConfigured, setEdamamConfigured] = useState(false);
   
-  // Check if Edamam credentials are configured
+  // GUARD: Check Edamam credentials only once on mount
   useEffect(() => {
     const checkEdamamCredentials = async () => {
       const isConfigured = await edamamService.checkEdamamCredentials();
@@ -101,7 +101,7 @@ export default function RecipesScreen() {
     checkEdamamCredentials();
   }, []);
 
-  // Show tutorial for new users after onboarding - with proper guards to prevent loops
+  // GUARD: Auto-start tutorial only once for new users after onboarding
   const hasAutoStartedTutorial = useRef(false);
   useEffect(() => {
     if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted && !showTutorial && !hasAutoStartedTutorial.current) {
@@ -115,7 +115,7 @@ export default function RecipesScreen() {
     }
   }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, startTutorial]);
 
-  // Update category counts
+  // GUARD: Update category counts only when recipes change
   useEffect(() => {
     const updatedCategories = initialRecipeCategories.map(category => {
       let count = 0;
@@ -135,12 +135,16 @@ export default function RecipesScreen() {
     setRecipeCategories(updatedCategories);
   }, [recipes]);
 
-  // Load recipes from API on first render
+  // GUARD: Load recipes from API only once on mount
+  const hasLoadedRecipes = useRef(false);
   useEffect(() => {
-    loadRecipesFromApi();
+    if (!hasLoadedRecipes.current) {
+      hasLoadedRecipes.current = true;
+      loadRecipesFromApi();
+    }
   }, [loadRecipesFromApi]);
 
-  // Update displayed recipes when filters or search results change
+  // GUARD: Update displayed recipes only when search results or filters change
   useEffect(() => {
     const updateDisplayedRecipes = async () => {
       if (searchQuery.trim().length >= 2) {
@@ -152,7 +156,7 @@ export default function RecipesScreen() {
     };
     
     updateDisplayedRecipes();
-  }, [searchResults, filters]);
+  }, [searchResults, filters, filterRecipes, searchQuery]);
 
   // Memoize the search function to prevent recreating it on every render
   const performSearch = useCallback(async (query: string) => {
@@ -166,7 +170,7 @@ export default function RecipesScreen() {
     }
   }, [searchRecipes]);
 
-  // Handle search with debounce
+  // GUARD: Handle search with debounce - only when search query changes
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       performSearch(searchQuery);

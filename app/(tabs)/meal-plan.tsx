@@ -59,7 +59,7 @@ export default function MealPlanScreen() {
   const dateString = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
   const dayPlan = useMemo(() => mealPlan[dateString] || {}, [mealPlan, dateString]);
 
-  // Show error modal when generation error occurs
+  // GUARD: Show error modal only when generation error occurs
   useEffect(() => {
     if (lastGenerationError) {
       setShowErrorModal(true);
@@ -89,7 +89,7 @@ export default function MealPlanScreen() {
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }, []);
 
-  // Calculate daily nutrition whenever dayPlan or recipes change
+  // GUARD: Calculate daily nutrition only when dayPlan or recipes change
   useEffect(() => {
     let totalCalories = 0;
     let totalProtein = 0;
@@ -128,7 +128,7 @@ export default function MealPlanScreen() {
     });
   }, [dayPlan, recipes, addNutritionFromMeal]);
 
-  // Check if the current meal plan meets dietary requirements
+  // GUARD: Check dietary requirements only when relevant data changes
   useEffect(() => {
     if (Object.keys(dayPlan).length === 0 || !profile.dietType || profile.dietType === 'any') {
       setShowDietaryWarning(false);
@@ -152,7 +152,7 @@ export default function MealPlanScreen() {
     const dinnerOk = !dayPlan.dinner || checkMeal(dayPlan.dinner);
 
     setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk));
-  }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, recipes]);
+  }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, recipes, isRecipeSuitable]);
 
   // Load recipes from Firestore when needed
   useEffect(() => {

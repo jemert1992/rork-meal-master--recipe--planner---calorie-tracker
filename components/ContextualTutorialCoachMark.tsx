@@ -310,13 +310,13 @@ export default function ContextualTutorialCoachMark() {
   const [hasRedirected, setHasRedirected] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
-  // Prevent multiple instances
+  // GUARD: Set mounted state only once
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
   }, []);
   
-  // Safety timeout - auto-complete tutorial after 5 minutes if stuck
+  // GUARD: Safety timeout - auto-complete tutorial after 5 minutes if stuck
   useEffect(() => {
     if (showTutorial) {
       const timeout = setTimeout(() => {
@@ -332,7 +332,7 @@ export default function ContextualTutorialCoachMark() {
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
 
-  // Navigate to the correct screen for each step with proper guards
+  // GUARD: Navigate to correct screen only when step changes and navigation is needed
   useEffect(() => {
     if (!showTutorial || !step || isNavigating || isProcessingAction) return;
     
@@ -362,9 +362,9 @@ export default function ContextualTutorialCoachMark() {
         setIsNavigating(false);
       };
     }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, router]);
 
-  // Handle redirect to personal info after tutorial completion with proper guards
+  // GUARD: Handle redirect to personal info only once after tutorial completion
   useEffect(() => {
     if (!shouldRedirectToOnboarding || showTutorial || hasRedirected || isProcessingAction) return;
     
@@ -384,9 +384,9 @@ export default function ContextualTutorialCoachMark() {
     }, 500); // Increased timeout
     
     return () => clearTimeout(redirectTimeout);
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, router]);
 
-  // Try to find and measure target elements
+  // GUARD: Update element position only when step or tutorial state changes
   useEffect(() => {
     if (!showTutorial || !step || !step.targetElement) {
       setElementPosition(undefined);

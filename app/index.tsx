@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
     return isLoggedIn && profile.onboardingCompleted && tutorialCompleted;
   }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted]);
   
-  // Check if user is already set up, redirect to main app
+  // Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
     if (isUserSetup && !hasRedirectedToTabs) {
       setHasRedirectedToTabs(true);
@@ -46,9 +46,9 @@ export default function WelcomeScreen() {
         router.replace('/(tabs)');
       }, 100);
     }
-  }, [isUserSetup, hasRedirectedToTabs]);
+  }, [isUserSetup, hasRedirectedToTabs, router]);
   
-  // Handle redirect after tutorial completion
+  // Handle redirect after tutorial completion - GUARD: prevent multiple redirects
   useEffect(() => {
     if (shouldRedirectToOnboarding && tutorialCompleted && !showTutorial && !hasRedirectedToOnboarding) {
       // Tutorial is completed, redirect to personal info
@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
         router.replace('/(tabs)');
       }, 200);
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, setShouldRedirectToOnboarding, router]);
 
   const handleStartTutorial = useCallback(() => {
     if (isProcessingAction) {
