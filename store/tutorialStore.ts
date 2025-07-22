@@ -76,7 +76,7 @@ interface TutorialState {
   pauseTutorial: () => void;
   resumeTutorial: () => void;
   saveProgress: () => Promise<void>;
-  loadProgress: () => Promise<void>;
+  loadProgress: () => Promise<TutorialProgress | null>;
   setCurrentRoute: (route: string) => void;
   markInteractionComplete: () => void;
   

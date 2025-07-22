@@ -29,7 +29,7 @@ export default function TutorialInitializer() {
           if (!tutorialCompleted && isFirstLaunch) {
             // For new users, show welcome after onboarding
             checkShouldShowWelcome(false);
-          } else if (savedProgress && savedProgress.skipped && !tutorialCompleted) {
+          } else if (savedProgress && 'skipped' in savedProgress && savedProgress.skipped && !tutorialCompleted) {
             // For users who skipped, they can resume later
             console.log('Tutorial was previously skipped, can be resumed');
           }

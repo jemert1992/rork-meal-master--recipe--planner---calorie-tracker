@@ -338,13 +338,10 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
           },
         ]}
         {...panResponder.panHandlers}
-        {...createTutorialAccessibilityProps(
-          currentStep + 1,
-          totalSteps,
-          step.title,
-          step.description,
-          true
-        )}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Tutorial step ${currentStep + 1} of ${totalSteps}: ${step.title}`}
+        accessibilityHint={step.description}
       >
         {/* Enhanced progress indicator */}
         <View style={styles.progressContainer}>
@@ -667,9 +664,9 @@ export default function ContextualTutorialCoachMark() {
   
   // Track current route for tutorial step alignment
   useEffect(() => {
-    const currentPath = router.pathname || '';
+    const currentPath = (router as any).pathname || '';
     storeActions.setCurrentRoute(currentPath);
-  }, [router.pathname]);
+  }, [(router as any).pathname]);
 
   // Stable action handlers with guards - memoized to prevent recreating
   const handleNext = useCallback(() => {
