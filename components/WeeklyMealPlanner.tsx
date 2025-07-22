@@ -14,6 +14,7 @@ import {
   Share,
   Platform
 } from 'react-native';
+import type { FlatList as FlatListType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
   Calendar, 
@@ -94,7 +95,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   }, []);
   
   const [weekDays, setWeekDays] = useState(getWeekDays(0));
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatListType<any>>(null);
   
   // Update week days when current week index changes
   React.useEffect(() => {

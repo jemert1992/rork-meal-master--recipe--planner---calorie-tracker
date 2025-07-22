@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
+import type { FlatList as FlatListType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Filter, RefreshCw, ChevronRight, Database, Cloud } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
@@ -61,7 +62,7 @@ const initialRecipeCategories = [
 
 export default function RecipesScreen() {
   const router = useRouter();
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatListType<any>>(null);
   const { showTutorial, tutorialCompleted, startTutorial, skipTutorial, forceHideTutorial, resetTutorial } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
   
