@@ -62,6 +62,7 @@ const CoachMark: React.FC<CoachMarkProps> = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
+  // Guard: Only animate when visibility changes
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -81,9 +82,9 @@ const CoachMark: React.FC<CoachMarkProps> = ({
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.8);
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim]);
 
-  const getIcon = (iconType: string, size = 24, color = Colors.white) => {
+  const getIcon = useCallback((iconType: string, size = 24, color = Colors.white) => {
     switch (iconType) {
       case 'chef-hat': return <ChefHat size={size} color={color} />;
       case 'search': return <Search size={size} color={color} />;
@@ -95,9 +96,9 @@ const CoachMark: React.FC<CoachMarkProps> = ({
       case 'user': return <User size={size} color={color} />;
       default: return <ChefHat size={size} color={color} />;
     }
-  };
+  }, []);
 
-  const getCoachMarkPosition = () => {
+  const getCoachMarkPosition = useCallback(() => {
     const padding = 20;
     const coachMarkWidth = Math.min(screenWidth - 40, 320);
     const coachMarkHeight = 200; // Approximate height
@@ -179,7 +180,7 @@ const CoachMark: React.FC<CoachMarkProps> = ({
           pointerStyle: {}
         };
     }
-  };
+  }, [elementPosition, step.position]);
 
   if (!visible) return null;
 
@@ -310,6 +311,7 @@ export default function ContextualTutorialCoachMark() {
   // Stable state with refs to prevent infinite loops
   const hasNavigatedRef = useRef<Record<string, boolean>>({});
   const hasRedirectedRef = useRef(false);
+  const hasMeasuredRef = useRef<Record<string, boolean>>({});
   const [elementPosition, setElementPosition] = useState<ElementPosition | undefined>();
   
   // Memoize current step data to prevent unnecessary recalculations
@@ -317,6 +319,24 @@ export default function ContextualTutorialCoachMark() {
     if (!stepData) return null;
     return stepData;
   }, [stepData]);
+  
+  // Helper function for fallback positions - memoized to prevent recreating
+  const getFallbackPosition = useCallback((targetElement: string): ElementPosition | undefined => {
+    switch (targetElement) {
+      case 'search-input':
+        return { x: 20, y: 180, width: screenWidth - 100, height: 48 };
+      case 'quick-actions':
+        return { x: 20, y: 280, width: screenWidth - 40, height: 80 };
+      case 'meal-plan-content':
+        return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+      case 'grocery-content':
+        return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+      case 'profile-content':
+        return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+      default:
+        return undefined;
+    }
+  }, []);
   
   // Guard: Only measure element position when step changes and has target element
   useEffect(() => {
@@ -326,19 +346,28 @@ export default function ContextualTutorialCoachMark() {
     }
     
     const { step } = currentStepInfo;
+    const measureKey = `${currentStep}-${step.targetElement}`;
+    
+    // Guard: prevent repeated measurements
+    if (hasMeasuredRef.current[measureKey]) {
+      return;
+    }
+    
     const targetRef = elementRefs[step.targetElement];
     
     if (targetRef?.current) {
       // Use ref.current.measure() to get real position
       targetRef.current.measure?.((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+        hasMeasuredRef.current[measureKey] = true;
         setElementPosition({ x: pageX, y: pageY, width, height });
       });
     } else {
       // Fallback to predefined positions
       const fallbackPosition = getFallbackPosition(step.targetElement);
+      hasMeasuredRef.current[measureKey] = true;
       setElementPosition(fallbackPosition);
     }
-  }, [currentStep, isTutorialActive, currentStepInfo?.step?.targetElement, elementRefs]);
+  }, [currentStep, isTutorialActive, currentStepInfo?.step?.targetElement, elementRefs, getFallbackPosition]);
   
   // Guard: Navigate only when needed and prevent duplicate navigation
   useEffect(() => {
@@ -347,6 +376,7 @@ export default function ContextualTutorialCoachMark() {
     const { step } = currentStepInfo;
     const navigationKey = `${currentStep}-${step.route}`;
     
+    // Guard: prevent duplicate navigation
     if (step.route && !step.skipNavigation && !hasNavigatedRef.current[navigationKey]) {
       hasNavigatedRef.current[navigationKey] = true;
       
@@ -377,7 +407,7 @@ export default function ContextualTutorialCoachMark() {
     return () => clearTimeout(timeoutId);
   }, [shouldRedirectToOnboarding, isTutorialActive, setShouldRedirectToOnboarding, router]);
   
-  // Stable action handlers with guards
+  // Stable action handlers with guards - memoized to prevent recreating
   const handleNext = useCallback(() => {
     if (!isTutorialActive) return;
     
@@ -425,24 +455,6 @@ export default function ContextualTutorialCoachMark() {
       />
     </Modal>
   );
-}
-
-// Helper function for fallback positions
-function getFallbackPosition(targetElement: string): ElementPosition | undefined {
-  switch (targetElement) {
-    case 'search-input':
-      return { x: 20, y: 180, width: screenWidth - 100, height: 48 };
-    case 'quick-actions':
-      return { x: 20, y: 280, width: screenWidth - 40, height: 80 };
-    case 'meal-plan-content':
-      return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-    case 'grocery-content':
-      return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-    case 'profile-content':
-      return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-    default:
-      return undefined;
-  }
 }
 
 const styles = StyleSheet.create({
