@@ -18,7 +18,7 @@ export default function TabLayout() {
     return profile.onboardingCompleted;
   }, [profile.onboardingCompleted]);
   
-  // GUARD: Only check welcome tutorial once when onboarding completes
+  // PERMANENT FIX: Only check welcome tutorial once when onboarding completes
   useEffect(() => {
     // Clear any existing timeout
     if (checkTimeoutRef.current) {
@@ -26,18 +26,29 @@ export default function TabLayout() {
     }
     
     // Only check once when onboarding is completed and we haven't checked before
-    if (isOnboardingCompleted && !hasCheckedWelcome.current && !welcomeCheckPerformed && !isProcessingAction) {
+    if (isOnboardingCompleted && 
+        !hasCheckedWelcome.current && 
+        !welcomeCheckPerformed && 
+        !isProcessingAction) {
       console.log('TabLayout: Scheduling welcome tutorial check');
       hasCheckedWelcome.current = true;
       
       // Use a timeout to prevent rapid calls and ensure state is stable
       checkTimeoutRef.current = setTimeout(() => {
         const currentState = useTutorialStore.getState();
-        if (!currentState.welcomeCheckPerformed && !currentState.isProcessingAction) {
+        // Additional safety checks to prevent loops
+        if (!currentState.welcomeCheckPerformed && 
+            !currentState.isProcessingAction &&
+            !currentState.tutorialCompleted &&
+            !currentState.showTutorial &&
+            !currentState.showWelcome &&
+            hasCheckedWelcome.current) {
           console.log('TabLayout: Executing welcome tutorial check');
           checkShouldShowWelcome(true);
+        } else {
+          console.log('TabLayout: Skipping welcome check - conditions not met');
         }
-      }, 1000); // Increased timeout to 1 second
+      }, 1500); // Increased timeout for maximum stability
     }
     
     return () => {
@@ -45,7 +56,7 @@ export default function TabLayout() {
         clearTimeout(checkTimeoutRef.current);
       }
     };
-  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction]);
+  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction, checkShouldShowWelcome]);
   
   return (
     <>

@@ -332,9 +332,9 @@ export default function ContextualTutorialCoachMark() {
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
 
-  // GUARD: Navigate to correct screen only when step changes and navigation is needed
+  // PERMANENT FIX: Navigate to correct screen only when step changes and navigation is needed
   useEffect(() => {
-    if (!showTutorial || !step || isNavigating || isProcessingAction) return;
+    if (!showTutorial || !step || isNavigating || isProcessingAction || !isMounted) return;
     
     // Only navigate if we're on a different route and navigation is needed
     if (step.route && step.route !== currentRoute && !step.skipNavigation) {
@@ -346,7 +346,10 @@ export default function ContextualTutorialCoachMark() {
         try {
           // Check if we're still in the same state before navigating
           const currentState = useTutorialStore.getState();
-          if (currentState.showTutorial && !currentState.isProcessingAction) {
+          if (currentState.showTutorial && 
+              !currentState.isProcessingAction && 
+              currentState.currentStep === currentStep &&
+              isMounted) {
             router.replace(step.route as any);
             setCurrentRoute(step.route);
           }
@@ -355,18 +358,18 @@ export default function ContextualTutorialCoachMark() {
         } finally {
           setIsNavigating(false);
         }
-      }, 300); // Increased timeout
+      }, 500); // Increased timeout for stability
       
       return () => {
         clearTimeout(navigationTimeout);
         setIsNavigating(false);
       };
     }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, router]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, isMounted, router]);
 
-  // GUARD: Handle redirect to personal info only once after tutorial completion
+  // PERMANENT FIX: Handle redirect to personal info only once after tutorial completion
   useEffect(() => {
-    if (!shouldRedirectToOnboarding || showTutorial || hasRedirected || isProcessingAction) return;
+    if (!shouldRedirectToOnboarding || showTutorial || hasRedirected || isProcessingAction || !isMounted) return;
     
     console.log('Redirecting to personal info after tutorial completion');
     setHasRedirected(true);
@@ -378,17 +381,20 @@ export default function ContextualTutorialCoachMark() {
     // Use a longer timeout to ensure state is fully updated and prevent loops
     const redirectTimeout = setTimeout(() => {
       const currentState = useTutorialStore.getState();
-      if (!currentState.showTutorial && !currentState.isProcessingAction) {
+      if (!currentState.showTutorial && 
+          !currentState.isProcessingAction && 
+          currentState.tutorialCompleted &&
+          isMounted) {
         router.replace('/onboarding/personal-info');
       }
-    }, 500); // Increased timeout
+    }, 800); // Increased timeout for maximum stability
     
     return () => clearTimeout(redirectTimeout);
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, router]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, isMounted, router]);
 
-  // GUARD: Update element position only when step or tutorial state changes
+  // PERMANENT FIX: Update element position only when step or tutorial state changes
   useEffect(() => {
-    if (!showTutorial || !step || !step.targetElement) {
+    if (!showTutorial || !step || !step.targetElement || !isMounted) {
       setElementPosition(undefined);
       return;
     }
@@ -413,44 +419,53 @@ export default function ContextualTutorialCoachMark() {
     };
     
     setElementPosition(getElementPosition(step.targetElement));
-  }, [currentStep, showTutorial, step?.targetElement, screenWidth]);
+  }, [currentStep, showTutorial, step?.targetElement, screenWidth, isMounted]);
 
   const [isHandlingAction, setIsHandlingAction] = useState(false);
 
   const handleNext = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted) return;
+    if (isHandlingAction || isProcessingAction || !isMounted || !showTutorial) return;
     setIsHandlingAction(true);
     
     // Use setTimeout to prevent rapid state changes
     setTimeout(() => {
-      if (isLast) {
-        completeTutorial();
-      } else {
-        nextStep();
+      const currentState = useTutorialStore.getState();
+      if (currentState.showTutorial && !currentState.isProcessingAction && isMounted) {
+        if (isLast) {
+          completeTutorial();
+        } else {
+          nextStep();
+        }
       }
       setIsHandlingAction(false);
-    }, 100);
-  }, [isHandlingAction, isProcessingAction, isMounted, isLast, completeTutorial, nextStep]);
+    }, 150); // Increased timeout
+  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, isLast, completeTutorial, nextStep]);
 
   const handlePrevious = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || isFirst || !isMounted) return;
+    if (isHandlingAction || isProcessingAction || isFirst || !isMounted || !showTutorial) return;
     setIsHandlingAction(true);
     
     setTimeout(() => {
-      previousStep();
+      const currentState = useTutorialStore.getState();
+      if (currentState.showTutorial && !currentState.isProcessingAction && isMounted) {
+        previousStep();
+      }
       setIsHandlingAction(false);
-    }, 100);
-  }, [isHandlingAction, isProcessingAction, isFirst, isMounted, previousStep]);
+    }, 150); // Increased timeout
+  }, [isHandlingAction, isProcessingAction, isFirst, isMounted, showTutorial, previousStep]);
 
   const handleSkip = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted) return;
+    if (isHandlingAction || isProcessingAction || !isMounted || !showTutorial) return;
     setIsHandlingAction(true);
     
     setTimeout(() => {
-      skipTutorial();
+      const currentState = useTutorialStore.getState();
+      if (currentState.showTutorial && !currentState.isProcessingAction && isMounted) {
+        skipTutorial();
+      }
       setIsHandlingAction(false);
-    }, 100);
-  }, [isHandlingAction, isProcessingAction, isMounted, skipTutorial]);
+    }, 150); // Increased timeout
+  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, skipTutorial]);
 
   if (!showTutorial || !step || !isMounted || isProcessingAction) {
     return null;

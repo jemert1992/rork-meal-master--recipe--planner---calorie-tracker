@@ -276,59 +276,39 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
         const state = get();
-        const { isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed, lastActionTime, actionCount, isProcessingAction, globalLock } = state;
+        const { tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed, isProcessingAction, globalLock } = state;
         
-        // Skip if already processing or locked to prevent infinite loops
-        if (isProcessingAction || globalLock) {
-          console.log('Already processing tutorial action or locked, skipping welcome check');
+        // PERMANENT FIX: Multiple guards to prevent infinite loops
+        if (isProcessingAction || globalLock || welcomeCheckPerformed || tutorialCompleted || showWelcome || showTutorial) {
+          console.log('Skipping welcome check - already processed or in progress');
           return;
         }
         
-        // Circuit breaker: prevent too many rapid actions
-        const now = Date.now();
-        if (now - lastActionTime < 2000 && actionCount > 3) {
-          console.log('Circuit breaker: too many rapid actions, skipping welcome check');
-          return;
-        }
-        
-        console.log('Tutorial check:', { onboardingCompleted, isFirstLaunch, tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed });
-        
-        // Prevent infinite loops by checking if we've already performed this check
-        if (welcomeCheckPerformed) {
-          console.log('Welcome check already performed, skipping');
-          return;
-        }
-        
-        // Additional safety check - don't show welcome if tutorial is already completed
-        if (tutorialCompleted) {
-          console.log('Tutorial already completed, skipping welcome check');
-          set({ welcomeCheckPerformed: true });
-          return;
-        }
-        
-        // Update action tracking and mark check as performed immediately
-        const newActionCount = now - lastActionTime < 2000 ? actionCount + 1 : 1;
-        
+        // PERMANENT FIX: Mark as performed IMMEDIATELY to prevent re-entry
         set({ 
           welcomeCheckPerformed: true,
-          lastActionTime: now,
-          actionCount: newActionCount,
           isProcessingAction: true,
           globalLock: true
         });
         
-        // Use setTimeout to prevent immediate state updates that could cause loops
+        console.log('Tutorial check:', { onboardingCompleted, tutorialCompleted, showWelcome, showTutorial });
+        
+        // PERMANENT FIX: Use longer timeout and additional state checks
         setTimeout(() => {
           const currentState = get();
-          // Only show welcome after onboarding is completed, if tutorial hasn't been completed and not already showing
-          if (onboardingCompleted && !currentState.tutorialCompleted && !currentState.showWelcome && !currentState.showTutorial) {
+          // Only show welcome if ALL conditions are met and state hasn't changed
+          if (onboardingCompleted && 
+              !currentState.tutorialCompleted && 
+              !currentState.showWelcome && 
+              !currentState.showTutorial &&
+              currentState.welcomeCheckPerformed) {
             console.log('Setting showWelcome to true after onboarding');
             set({ showWelcome: true, isProcessingAction: false, globalLock: false });
           } else {
-            console.log('Not showing welcome');
+            console.log('Not showing welcome - conditions not met');
             set({ isProcessingAction: false, globalLock: false });
           }
-        }, 300);
+        }, 500); // Increased timeout for stability
       },
       
       forceHideTutorial: () => {

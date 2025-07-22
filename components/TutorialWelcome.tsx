@@ -96,34 +96,41 @@ export default function TutorialWelcome() {
   }
   
   const handleStartTutorial = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;
+    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial || !showWelcome) return;
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
     
     // Use a longer timeout to prevent rapid state changes and ensure stability
     setTimeout(() => {
       const currentState = useTutorialStore.getState();
-      if (!currentState.showTutorial && !currentState.isProcessingAction) {
+      if (!currentState.showTutorial && 
+          !currentState.isProcessingAction && 
+          !currentState.tutorialCompleted &&
+          currentState.showWelcome &&
+          isMounted) {
         startTutorial();
       }
       setIsHandlingAction(false);
-    }, 200);
-  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, startTutorial]);
+    }, 300); // Increased timeout
+  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, showWelcome, startTutorial]);
   
   const handleSkip = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;
+    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial || !showWelcome) return;
     setIsHandlingAction(true);
     console.log('Skipping tutorial from welcome screen');
     
     // Use a longer timeout to prevent rapid state changes and ensure stability
     setTimeout(() => {
       const currentState = useTutorialStore.getState();
-      if (!currentState.tutorialCompleted && !currentState.isProcessingAction) {
+      if (!currentState.tutorialCompleted && 
+          !currentState.isProcessingAction &&
+          currentState.showWelcome &&
+          isMounted) {
         skipTutorial();
       }
       setIsHandlingAction(false);
-    }, 200);
-  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, skipTutorial]);
+    }, 300); // Increased timeout
+  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, showWelcome, skipTutorial]);
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
   const shouldShow = showWelcome && !showTutorial && isMounted && !isProcessingAction;
