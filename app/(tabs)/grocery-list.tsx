@@ -191,7 +191,11 @@ export default function GroceryListScreen() {
   const renderCategory = ({ item }: { item: string }) => (
     <View style={styles.categoryContainer}>
       <Text style={styles.categoryTitle}>{item}</Text>
-      {groupedItems[item].map(groceryItem => renderItem({ item: groceryItem }))}
+      {groupedItems[item].map(groceryItem => (
+        <View key={groceryItem.id}>
+          {renderItem({ item: groceryItem })}
+        </View>
+      ))}
     </View>
   );
   
