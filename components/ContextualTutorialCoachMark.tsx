@@ -47,7 +47,7 @@ interface CoachMarkProps {
   elementPosition?: ElementPosition;
 }
 
-const CoachMark: React.FC<CoachMarkProps> = ({
+const CoachMark: React.FC<CoachMarkProps> = React.memo(({
   visible,
   step,
   onNext,
@@ -61,10 +61,12 @@ const CoachMark: React.FC<CoachMarkProps> = ({
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const hasAnimatedRef = useRef(false);
 
-  // Guard: Only animate when visibility changes
+  // Guard: Only animate when visibility changes and prevent repeated animations
   useEffect(() => {
-    if (visible) {
+    if (visible && !hasAnimatedRef.current) {
+      hasAnimatedRef.current = true;
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -78,11 +80,12 @@ const CoachMark: React.FC<CoachMarkProps> = ({
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
+    } else if (!visible && hasAnimatedRef.current) {
+      hasAnimatedRef.current = false;
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.8);
     }
-  }, [visible, fadeAnim, scaleAnim]);
+  }, [visible]);
 
   const getIcon = useCallback((iconType: string, size = 24, color = Colors.white) => {
     switch (iconType) {
@@ -101,14 +104,13 @@ const CoachMark: React.FC<CoachMarkProps> = ({
   const getCoachMarkPosition = useCallback(() => {
     const padding = 20;
     const coachMarkWidth = Math.min(screenWidth - 40, 320);
-    const coachMarkHeight = 200; // Approximate height
+    const coachMarkHeight = 200;
     
     if (elementPosition) {
       const { x, y, width, height } = elementPosition;
       const centerX = x + width / 2;
       const centerY = y + height / 2;
       
-      // Determine best position based on element location
       const spaceAbove = y;
       const spaceBelow = screenHeight - (y + height);
       const spaceLeft = x;
@@ -118,35 +120,30 @@ const CoachMark: React.FC<CoachMarkProps> = ({
       let pointerStyle = {};
       
       if (spaceBelow > coachMarkHeight + 20) {
-        // Position below element
         position = {
           top: y + height + 15,
           left: Math.max(padding, Math.min(centerX - coachMarkWidth / 2, screenWidth - coachMarkWidth - padding)),
         };
         pointerStyle = { top: -8, left: Math.max(20, centerX - position.left - 8) };
       } else if (spaceAbove > coachMarkHeight + 20) {
-        // Position above element
         position = {
           bottom: screenHeight - y + 15,
           left: Math.max(padding, Math.min(centerX - coachMarkWidth / 2, screenWidth - coachMarkWidth - padding)),
         };
         pointerStyle = { bottom: -8, left: Math.max(20, centerX - position.left - 8) };
       } else if (spaceRight > coachMarkWidth + 20) {
-        // Position to the right
         position = {
           top: Math.max(padding, Math.min(centerY - coachMarkHeight / 2, screenHeight - coachMarkHeight - padding)),
           left: x + width + 15,
         };
         pointerStyle = { left: -8, top: Math.max(20, centerY - position.top - 8) };
       } else if (spaceLeft > coachMarkWidth + 20) {
-        // Position to the left
         position = {
           top: Math.max(padding, Math.min(centerY - coachMarkHeight / 2, screenHeight - coachMarkHeight - padding)),
           right: screenWidth - x + 15,
         };
         pointerStyle = { right: -8, top: Math.max(20, centerY - position.top - 8) };
       } else {
-        // Fallback to center
         position = {
           top: (screenHeight - coachMarkHeight) / 2,
           left: padding,
@@ -287,31 +284,40 @@ const CoachMark: React.FC<CoachMarkProps> = ({
       </Animated.View>
     </>
   );
-};
+});
+
+CoachMark.displayName = 'CoachMark';
 
 export default function ContextualTutorialCoachMark() {
   const router = useRouter();
   
-  // Use stable selectors to prevent unnecessary rerenders
+  // Use stable selectors with shallow comparison to prevent unnecessary rerenders
   const isTutorialActive = useTutorialStore(selectIsTutorialActive);
   const currentStep = useTutorialStore(selectCurrentStep);
   const stepData = useTutorialStore(selectCurrentStepData);
-  const { 
-    nextStep, 
-    previousStep, 
-    completeTutorial, 
-    skipTutorial, 
-    shouldRedirectToOnboarding,
-    setShouldRedirectToOnboarding,
-    steps,
-    elementRefs,
-    highlightTargets
-  } = useTutorialStore();
   
-  // Stable state with refs to prevent infinite loops
+  // Get store actions and state - memoized to prevent recreating
+  const storeActions = useMemo(() => {
+    const store = useTutorialStore.getState();
+    return {
+      nextStep: store.nextStep,
+      previousStep: store.previousStep,
+      completeTutorial: store.completeTutorial,
+      skipTutorial: store.skipTutorial,
+      setShouldRedirectToOnboarding: store.setShouldRedirectToOnboarding,
+      steps: store.steps,
+      elementRefs: store.elementRefs,
+      shouldRedirectToOnboarding: store.shouldRedirectToOnboarding,
+    };
+  }, []);
+  
+  // Stable refs to prevent infinite loops - never reset during component lifecycle
   const hasNavigatedRef = useRef<Record<string, boolean>>({});
   const hasRedirectedRef = useRef(false);
   const hasMeasuredRef = useRef<Record<string, boolean>>({});
+  const lastStepRef = useRef<number>(-1);
+  
+  // Local state for element position
   const [elementPosition, setElementPosition] = useState<ElementPosition | undefined>();
   
   // Memoize current step data to prevent unnecessary recalculations
@@ -320,7 +326,7 @@ export default function ContextualTutorialCoachMark() {
     return stepData;
   }, [stepData]);
   
-  // Helper function for fallback positions - memoized to prevent recreating
+  // Helper function for fallback positions - memoized and stable
   const getFallbackPosition = useCallback((targetElement: string): ElementPosition | undefined => {
     switch (targetElement) {
       case 'search-input':
@@ -338,28 +344,41 @@ export default function ContextualTutorialCoachMark() {
     }
   }, []);
   
+  // Guard: Reset measurement cache and position when step changes
+  useEffect(() => {
+    if (lastStepRef.current !== currentStep) {
+      lastStepRef.current = currentStep;
+      // Clear position immediately when step changes
+      setElementPosition(undefined);
+      // Reset measurement cache for new step
+      hasMeasuredRef.current = {};
+    }
+  }, [currentStep]);
+  
   // Guard: Only measure element position when step changes and has target element
   useEffect(() => {
     if (!isTutorialActive || !currentStepInfo?.step?.targetElement) {
-      setElementPosition(undefined);
       return;
     }
     
     const { step } = currentStepInfo;
     const measureKey = `${currentStep}-${step.targetElement}`;
     
-    // Guard: prevent repeated measurements
+    // Guard: prevent repeated measurements for same step
     if (hasMeasuredRef.current[measureKey]) {
       return;
     }
     
-    const targetRef = elementRefs[step.targetElement];
+    const targetRef = storeActions.elementRefs[step.targetElement];
     
-    if (targetRef?.current) {
+    if (targetRef?.current?.measure) {
       // Use ref.current.measure() to get real position
-      targetRef.current.measure?.((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-        hasMeasuredRef.current[measureKey] = true;
-        setElementPosition({ x: pageX, y: pageY, width, height });
+      targetRef.current.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+        // Double-check we're still on the same step to prevent stale updates
+        if (useTutorialStore.getState().currentStep === currentStep) {
+          hasMeasuredRef.current[measureKey] = true;
+          setElementPosition({ x: pageX, y: pageY, width, height });
+        }
       });
     } else {
       // Fallback to predefined positions
@@ -367,7 +386,7 @@ export default function ContextualTutorialCoachMark() {
       hasMeasuredRef.current[measureKey] = true;
       setElementPosition(fallbackPosition);
     }
-  }, [currentStep, isTutorialActive, currentStepInfo?.step?.targetElement, elementRefs, getFallbackPosition]);
+  }, [currentStep, isTutorialActive, currentStepInfo?.step?.targetElement, storeActions.elementRefs, getFallbackPosition]);
   
   // Guard: Navigate only when needed and prevent duplicate navigation
   useEffect(() => {
@@ -376,13 +395,15 @@ export default function ContextualTutorialCoachMark() {
     const { step } = currentStepInfo;
     const navigationKey = `${currentStep}-${step.route}`;
     
-    // Guard: prevent duplicate navigation
+    // Guard: prevent duplicate navigation for same step/route
     if (step.route && !step.skipNavigation && !hasNavigatedRef.current[navigationKey]) {
       hasNavigatedRef.current[navigationKey] = true;
       
       // Navigate with a small delay to ensure state stability
       const timeoutId = setTimeout(() => {
-        if (useTutorialStore.getState().isTutorialActive) {
+        // Double-check tutorial is still active before navigating
+        const currentState = useTutorialStore.getState();
+        if (currentState.isTutorialActive && currentState.currentStep === currentStep) {
           router.replace(step.route as any);
         }
       }, 100);
@@ -393,40 +414,41 @@ export default function ContextualTutorialCoachMark() {
   
   // Guard: Handle redirect only once after tutorial completion
   useEffect(() => {
-    if (!shouldRedirectToOnboarding || isTutorialActive || hasRedirectedRef.current) return;
+    if (!storeActions.shouldRedirectToOnboarding || isTutorialActive || hasRedirectedRef.current) return;
     
     hasRedirectedRef.current = true;
-    setShouldRedirectToOnboarding(false);
+    storeActions.setShouldRedirectToOnboarding(false);
     
     const timeoutId = setTimeout(() => {
+      // Double-check tutorial is still inactive before redirecting
       if (!useTutorialStore.getState().isTutorialActive) {
         router.replace('/onboarding/personal-info');
       }
     }, 200);
     
     return () => clearTimeout(timeoutId);
-  }, [shouldRedirectToOnboarding, isTutorialActive, setShouldRedirectToOnboarding, router]);
+  }, [storeActions.shouldRedirectToOnboarding, isTutorialActive, router]);
   
   // Stable action handlers with guards - memoized to prevent recreating
   const handleNext = useCallback(() => {
     if (!isTutorialActive) return;
     
     if (currentStepInfo?.isLast) {
-      completeTutorial();
+      storeActions.completeTutorial();
     } else {
-      nextStep();
+      storeActions.nextStep();
     }
-  }, [isTutorialActive, currentStepInfo?.isLast, completeTutorial, nextStep]);
+  }, [isTutorialActive, currentStepInfo?.isLast, storeActions.completeTutorial, storeActions.nextStep]);
   
   const handlePrevious = useCallback(() => {
     if (!isTutorialActive || currentStepInfo?.isFirst) return;
-    previousStep();
-  }, [isTutorialActive, currentStepInfo?.isFirst, previousStep]);
+    storeActions.previousStep();
+  }, [isTutorialActive, currentStepInfo?.isFirst, storeActions.previousStep]);
   
   const handleSkip = useCallback(() => {
     if (!isTutorialActive) return;
-    skipTutorial();
-  }, [isTutorialActive, skipTutorial]);
+    storeActions.skipTutorial();
+  }, [isTutorialActive, storeActions.skipTutorial]);
   
   if (!isTutorialActive || !currentStepInfo) {
     return null;
@@ -450,7 +472,7 @@ export default function ContextualTutorialCoachMark() {
         isFirst={isFirst}
         isLast={isLast}
         currentStep={currentStep}
-        totalSteps={steps.length}
+        totalSteps={storeActions.steps.length}
         elementPosition={elementPosition}
       />
     </Modal>
@@ -533,7 +555,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 11,
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   closeButton: {
     position: 'absolute',
@@ -559,7 +581,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     color: Colors.text,
     marginBottom: 8,
   },
@@ -577,7 +599,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     textAlign: 'center',
   },
   navigationContainer: {
@@ -595,7 +617,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: Colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '500' as const,
     fontSize: 13,
     marginLeft: 4,
   },
@@ -611,7 +633,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     color: Colors.white,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     fontSize: 14,
     marginRight: 6,
   },

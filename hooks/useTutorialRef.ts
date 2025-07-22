@@ -2,21 +2,30 @@ import { useEffect, useRef } from 'react';
 import { useTutorialStore } from '@/store/tutorialStore';
 
 /**
- * Hook to register a ref for tutorial targeting
+ * Hook to safely register a ref with the tutorial system
+ * Prevents infinite loops by using stable refs and guards
  * Usage: const ref = useTutorialRef('search-input');
  */
 export function useTutorialRef(stepId: string) {
-  const ref = useRef(null);
+  const ref = useRef<any>(null);
+  const hasRegisteredRef = useRef(false);
   const { registerRef, unregisterRef } = useTutorialStore();
-  
-  // Guard: Register ref only once when component mounts
+
+  // Guard: Only register once per stepId to prevent infinite loops
   useEffect(() => {
-    registerRef(stepId, ref);
-    
+    if (!hasRegisteredRef.current && stepId) {
+      hasRegisteredRef.current = true;
+      registerRef(stepId, ref);
+    }
+
+    // Cleanup: unregister on unmount
     return () => {
-      unregisterRef(stepId);
+      if (hasRegisteredRef.current && stepId) {
+        unregisterRef(stepId);
+        hasRegisteredRef.current = false;
+      }
     };
   }, []); // Empty dependency array - only run once
-  
+
   return ref;
 }

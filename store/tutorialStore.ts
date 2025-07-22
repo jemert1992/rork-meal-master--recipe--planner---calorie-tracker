@@ -332,11 +332,26 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       },
     })));
 
-// Stable selectors to prevent unnecessary rerenders
+// Stable selectors to prevent unnecessary rerenders - memoized for performance
+const stepDataCache = new Map<string, any>();
+
 export const selectCurrentStep = (state: TutorialState) => state.currentStep;
 export const selectIsTutorialActive = (state: TutorialState) => state.isTutorialActive;
 export const selectHighlightTargets = (state: TutorialState) => state.highlightTargets;
 export const selectCurrentStepData = (state: TutorialState) => {
+  const cacheKey = `${state.currentStep}-${state.steps.length}`;
+  
+  if (stepDataCache.has(cacheKey)) {
+    return stepDataCache.get(cacheKey);
+  }
+  
   const step = state.steps[state.currentStep];
-  return step ? { step, isFirst: state.currentStep === 0, isLast: state.currentStep === state.steps.length - 1 } : null;
+  const result = step ? { 
+    step, 
+    isFirst: state.currentStep === 0, 
+    isLast: state.currentStep === state.steps.length - 1 
+  } : null;
+  
+  stepDataCache.set(cacheKey, result);
+  return result;
 };
