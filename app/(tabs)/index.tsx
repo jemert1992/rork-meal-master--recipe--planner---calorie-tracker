@@ -101,9 +101,11 @@ export default function RecipesScreen() {
     checkEdamamCredentials();
   }, []);
 
-  // Show tutorial for new users after onboarding
+  // Show tutorial for new users after onboarding - with proper guards to prevent loops
+  const hasAutoStartedTutorial = useRef(false);
   useEffect(() => {
-    if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted && !showTutorial) {
+    if (isLoggedIn && profile.onboardingCompleted && !tutorialCompleted && !showTutorial && !hasAutoStartedTutorial.current) {
+      hasAutoStartedTutorial.current = true;
       // Show tutorial after a brief delay to let the user see the main screen first
       const timer = setTimeout(() => {
         console.log('Auto-starting tutorial for new user');

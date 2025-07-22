@@ -362,7 +362,7 @@ export default function ContextualTutorialCoachMark() {
         setIsNavigating(false);
       };
     }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, router]);
 
   // Handle redirect to personal info after tutorial completion with proper guards
   useEffect(() => {
@@ -384,7 +384,7 @@ export default function ContextualTutorialCoachMark() {
     }, 500); // Increased timeout
     
     return () => clearTimeout(redirectTimeout);
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, router]);
 
   // Try to find and measure target elements
   useEffect(() => {
@@ -413,11 +413,11 @@ export default function ContextualTutorialCoachMark() {
     };
     
     setElementPosition(getElementPosition(step.targetElement));
-  }, [currentStep, showTutorial, step?.targetElement]);
+  }, [currentStep, showTutorial, step?.targetElement, screenWidth]);
 
   const [isHandlingAction, setIsHandlingAction] = useState(false);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
     
@@ -430,9 +430,9 @@ export default function ContextualTutorialCoachMark() {
       }
       setIsHandlingAction(false);
     }, 100);
-  };
+  }, [isHandlingAction, isProcessingAction, isMounted, isLast, completeTutorial, nextStep]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     if (isHandlingAction || isProcessingAction || isFirst || !isMounted) return;
     setIsHandlingAction(true);
     
@@ -440,9 +440,9 @@ export default function ContextualTutorialCoachMark() {
       previousStep();
       setIsHandlingAction(false);
     }, 100);
-  };
+  }, [isHandlingAction, isProcessingAction, isFirst, isMounted, previousStep]);
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     if (isHandlingAction || isProcessingAction || !isMounted) return;
     setIsHandlingAction(true);
     
@@ -450,7 +450,7 @@ export default function ContextualTutorialCoachMark() {
       skipTutorial();
       setIsHandlingAction(false);
     }, 100);
-  };
+  }, [isHandlingAction, isProcessingAction, isMounted, skipTutorial]);
 
   if (!showTutorial || !step || !isMounted || isProcessingAction) {
     return null;

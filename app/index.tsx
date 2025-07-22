@@ -46,7 +46,7 @@ export default function WelcomeScreen() {
         router.replace('/(tabs)');
       }, 100);
     }
-  }, [isUserSetup, hasRedirectedToTabs]);
+  }, [isUserSetup, hasRedirectedToTabs, router]);
   
   // Handle redirect after tutorial completion
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
         router.replace('/(tabs)');
       }, 200);
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, router, setShouldRedirectToOnboarding]);
 
   const handleStartTutorial = useCallback(() => {
     if (isProcessingAction) {

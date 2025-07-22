@@ -88,7 +88,7 @@ export default function TutorialWelcome() {
         }),
       ]).start();
     }
-  }, [showWelcome]);
+  }, [showWelcome, fadeAnim, slideAnim]);
   
   if (!showWelcome) {
     return null;
@@ -109,7 +109,7 @@ export default function TutorialWelcome() {
     }, 200);
   }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, startTutorial]);
   
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;
     setIsHandlingAction(true);
     console.log('Skipping tutorial from welcome screen');
@@ -122,7 +122,7 @@ export default function TutorialWelcome() {
       }
       setIsHandlingAction(false);
     }, 200);
-  };
+  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, skipTutorial]);
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
   const shouldShow = showWelcome && !showTutorial && isMounted && !isProcessingAction;
