@@ -1,36 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useTutorialRef } from '@/hooks/useTutorialRef';
 import Colors from '@/constants/colors';
 
 /**
- * Example component showing how to properly use the tutorial system
- * without causing infinite loops or TypeScript errors
+ * Example component showing how to properly use the enhanced tutorial system
+ * with interaction completion and accessibility features
  */
 export default function TutorialExample() {
-  // Safe ref registration - no infinite loops
-  const searchInputRef = useTutorialRef('search-input');
-  const quickActionsRef = useTutorialRef('quick-actions');
+  const [searchText, setSearchText] = useState('');
+  
+  // Enhanced ref registration with interaction completion
+  const { ref: searchInputRef, markInteractionComplete: markSearchComplete } = useTutorialRef('search-input');
+  const { ref: quickActionsRef, markInteractionComplete: markActionsComplete } = useTutorialRef('quick-actions');
 
   return (
     <View style={styles.container}>
-      {/* Search input with tutorial ref */}
+      {/* Search input with tutorial ref and interaction tracking */}
       <TextInput
         ref={searchInputRef}
         style={styles.searchInput}
         placeholder="Search recipes..."
         placeholderTextColor={Colors.textSecondary}
+        value={searchText}
+        onChangeText={(text) => {
+          setSearchText(text);
+          // Mark interaction complete when user starts typing
+          if (text.length > 0) {
+            markSearchComplete();
+          }
+        }}
+        accessible={true}
+        accessibilityLabel="Recipe search input"
+        accessibilityHint="Type to search for recipes by name or ingredients"
       />
 
-      {/* Quick actions with tutorial ref */}
+      {/* Quick actions with tutorial ref and interaction tracking */}
       <View ref={quickActionsRef} style={styles.quickActions}>
-        <Pressable style={styles.actionButton}>
+        <Pressable 
+          style={styles.actionButton}
+          onPress={() => markActionsComplete()}
+          accessible={true}
+          accessibilityLabel="Add meal"
+          accessibilityHint="Add a meal to your plan"
+        >
           <Text style={styles.actionText}>Add Meal</Text>
         </Pressable>
-        <Pressable style={styles.actionButton}>
+        <Pressable 
+          style={styles.actionButton}
+          onPress={() => markActionsComplete()}
+          accessible={true}
+          accessibilityLabel="Generate grocery list"
+          accessibilityHint="Generate a shopping list from your meal plan"
+        >
           <Text style={styles.actionText}>Generate List</Text>
         </Pressable>
-        <Pressable style={styles.actionButton}>
+        <Pressable 
+          style={styles.actionButton}
+          onPress={() => markActionsComplete()}
+          accessible={true}
+          accessibilityLabel="View favorites"
+          accessibilityHint="Browse your favorite recipes"
+        >
           <Text style={styles.actionText}>Favorites</Text>
         </Pressable>
       </View>

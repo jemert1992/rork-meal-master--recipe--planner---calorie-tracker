@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { RefObject } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface TutorialStep {
   id: string;
@@ -16,6 +17,9 @@ export interface TutorialStep {
   color?: string;
   highlightElement?: boolean;
   skipNavigation?: boolean;
+  waitForInteraction?: boolean;
+  pulseTarget?: boolean;
+  completionMessage?: string;
 }
 
 export interface ElementPosition {
@@ -25,11 +29,25 @@ export interface ElementPosition {
   height: number;
 }
 
+export interface TutorialProgress {
+  currentStep: number;
+  completedSteps: string[];
+  skipped: boolean;
+  lastActiveDate: string;
+}
+
 interface TutorialState {
   // Core stable state
   currentStep: number;
   isTutorialActive: boolean;
   highlightTargets: Record<string, ElementPosition>;
+  
+  // New advanced features
+  isPaused: boolean;
+  waitingForInteraction: boolean;
+  progress: TutorialProgress | null;
+  animationsEnabled: boolean;
+  currentRoute: string;
   
   // Legacy state for compatibility
   isFirstLaunch: boolean;
@@ -53,6 +71,14 @@ interface TutorialState {
   registerRef: (stepId: string, ref: RefObject<any>) => void;
   unregisterRef: (stepId: string) => void;
   updateElementPosition: (stepId: string, position: ElementPosition) => void;
+  
+  // New advanced actions
+  pauseTutorial: () => void;
+  resumeTutorial: () => void;
+  saveProgress: () => Promise<void>;
+  loadProgress: () => Promise<void>;
+  setCurrentRoute: (route: string) => void;
+  markInteractionComplete: () => void;
   
   // Legacy actions for compatibility
   setShowTutorial: (show: boolean) => void;
@@ -90,7 +116,9 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     actionText: 'Try searching for "chicken" or "vegetarian"',
     icon: 'search',
     color: '#4ECDC4',
-    highlightElement: true
+    highlightElement: true,
+    pulseTarget: true,
+    waitForInteraction: true
   },
   {
     id: 'quick-actions',
@@ -103,7 +131,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     actionText: 'Tap any action to try it out',
     icon: 'zap',
     color: '#FF6B6B',
-    highlightElement: true
+    highlightElement: true,
+    pulseTarget: true
   },
   {
     id: 'meal-planning',
@@ -115,7 +144,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'top',
     actionText: 'Explore detailed meal planning',
     icon: 'calendar',
-    color: '#45B7D1',
+    color: '#FF6B6B',
     highlightElement: false
   },
   {
@@ -128,7 +157,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'top',
     actionText: 'See your smart shopping list',
     icon: 'shopping-cart',
-    color: '#FECA57',
+    color: '#FFD166',
     highlightElement: false
   },
   {
@@ -141,8 +170,9 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'top',
     actionText: 'Set up your profile now',
     icon: 'user',
-    color: '#96CEB4',
-    highlightElement: false
+    color: '#4ECDC4',
+    highlightElement: false,
+    completionMessage: '🎉 You\'re all set! Let\'s plan your first meal.'
   }
 ];
 
@@ -151,6 +181,13 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       currentStep: 0,
       isTutorialActive: false,
       highlightTargets: {},
+      
+      // New advanced features
+      isPaused: false,
+      waitingForInteraction: false,
+      progress: null,
+      animationsEnabled: true,
+      currentRoute: '',
       
       // Legacy state for compatibility
       isFirstLaunch: true,
@@ -165,28 +202,51 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       elementRefs: {},
       
       startTutorial: () => {
-        const { isTutorialActive, tutorialCompleted } = get();
+        const { isTutorialActive, tutorialCompleted, progress } = get();
         if (isTutorialActive || tutorialCompleted) {
           return;
         }
         
+        // Resume from saved progress if available
+        const startStep = progress && !progress.skipped ? progress.currentStep : 0;
+        
         set({
-          currentStep: 0,
+          currentStep: startStep,
           isTutorialActive: true,
           showTutorial: true,
           showWelcome: false,
           tutorialCompleted: false,
           isFirstLaunch: false,
           highlightTargets: {},
+          isPaused: false,
+          waitingForInteraction: false,
         });
+        
+        // Save initial progress
+        get().saveProgress();
       },
       
       nextStep: () => {
-        const { currentStep, steps, isTutorialActive } = get();
-        if (!isTutorialActive) return;
+        const { currentStep, steps, isTutorialActive, isPaused, waitingForInteraction } = get();
+        if (!isTutorialActive || isPaused) return;
+        
+        // If waiting for interaction, don't advance automatically
+        if (waitingForInteraction) {
+          set({ waitingForInteraction: false });
+          return;
+        }
         
         if (currentStep < steps.length - 1) {
-          set({ currentStep: currentStep + 1 });
+          const nextStepIndex = currentStep + 1;
+          const nextStep = steps[nextStepIndex];
+          
+          set({ 
+            currentStep: nextStepIndex,
+            waitingForInteraction: nextStep?.waitForInteraction || false
+          });
+          
+          // Save progress
+          get().saveProgress();
         } else {
           get().completeTutorial();
         }
@@ -200,8 +260,16 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       },
       
       skipTutorial: () => {
-        const { isTutorialActive } = get();
+        const { isTutorialActive, currentStep } = get();
         if (!isTutorialActive) return;
+        
+        // Save skip progress for potential resume
+        const skipProgress: TutorialProgress = {
+          currentStep,
+          completedSteps: [],
+          skipped: true,
+          lastActiveDate: new Date().toISOString(),
+        };
         
         set({
           isTutorialActive: false,
@@ -212,12 +280,25 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
           highlightTargets: {},
+          progress: skipProgress,
+          isPaused: false,
+          waitingForInteraction: false,
         });
+        
+        // Save skip state to storage
+        AsyncStorage.setItem('tutorial_progress', JSON.stringify(skipProgress));
       },
       
       completeTutorial: () => {
-        const { isTutorialActive } = get();
+        const { isTutorialActive, steps } = get();
         if (!isTutorialActive) return;
+        
+        const completionProgress: TutorialProgress = {
+          currentStep: steps.length - 1,
+          completedSteps: steps.map(step => step.id),
+          skipped: false,
+          lastActiveDate: new Date().toISOString(),
+        };
         
         set({
           isTutorialActive: false,
@@ -229,7 +310,13 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
           highlightTargets: {},
+          progress: completionProgress,
+          isPaused: false,
+          waitingForInteraction: false,
         });
+        
+        // Save completion to storage
+        AsyncStorage.setItem('tutorial_progress', JSON.stringify(completionProgress));
       },
       
       resetTutorial: () => {
@@ -245,7 +332,15 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           highlightTargets: {},
           elementRefs: {},
           steps: TUTORIAL_STEPS,
+          isPaused: false,
+          waitingForInteraction: false,
+          progress: null,
+          animationsEnabled: true,
+          currentRoute: '',
         });
+        
+        // Clear stored progress
+        AsyncStorage.removeItem('tutorial_progress');
       },
       
       registerRef: (stepId: string, ref: RefObject<any>) => {
@@ -271,6 +366,66 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
             [stepId]: position,
           },
         }));
+      },
+      
+      // New advanced actions
+      pauseTutorial: () => {
+        const { isTutorialActive } = get();
+        if (!isTutorialActive) return;
+        
+        set({ isPaused: true });
+        get().saveProgress();
+      },
+      
+      resumeTutorial: () => {
+        const { isTutorialActive } = get();
+        if (!isTutorialActive) return;
+        
+        set({ isPaused: false });
+      },
+      
+      saveProgress: async () => {
+        const { currentStep, steps, tutorialCompleted } = get();
+        
+        const progress: TutorialProgress = {
+          currentStep,
+          completedSteps: steps.slice(0, currentStep + 1).map(step => step.id),
+          skipped: false,
+          lastActiveDate: new Date().toISOString(),
+        };
+        
+        set({ progress });
+        
+        try {
+          await AsyncStorage.setItem('tutorial_progress', JSON.stringify(progress));
+        } catch (error) {
+          console.warn('Failed to save tutorial progress:', error);
+        }
+      },
+      
+      loadProgress: async () => {
+        try {
+          const stored = await AsyncStorage.getItem('tutorial_progress');
+          if (stored) {
+            const progress: TutorialProgress = JSON.parse(stored);
+            set({ progress });
+            return progress;
+          }
+        } catch (error) {
+          console.warn('Failed to load tutorial progress:', error);
+        }
+        return null;
+      },
+      
+      setCurrentRoute: (route: string) => {
+        set({ currentRoute: route });
+      },
+      
+      markInteractionComplete: () => {
+        const { waitingForInteraction } = get();
+        if (waitingForInteraction) {
+          set({ waitingForInteraction: false });
+        }
       },
       
       setShowTutorial: (show: boolean) => {

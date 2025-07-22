@@ -8,8 +8,11 @@ import {
   Platform,
   Animated,
   Modal,
+  PanResponder,
+  AccessibilityInfo,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import { 
   ArrowRight, 
   ArrowLeft, 
@@ -21,7 +24,10 @@ import {
   Zap, 
   Search,
   User,
-  CheckCircle
+  CheckCircle,
+  Play,
+  Pause,
+  SkipForward
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { 
@@ -31,6 +37,13 @@ import {
   selectCurrentStepData,
   ElementPosition 
 } from '@/store/tutorialStore';
+import {
+  createTutorialAccessibilityProps,
+  announceTutorialStep,
+  announceTutorialCompletion,
+  announceTutorialPause,
+  getAccessibleAnimationDuration,
+} from '@/utils/tutorialAccessibility';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -40,11 +53,16 @@ interface CoachMarkProps {
   onNext: () => void;
   onPrevious: () => void;
   onSkip: () => void;
+  onPause: () => void;
+  onResume: () => void;
   isFirst: boolean;
   isLast: boolean;
   currentStep: number;
   totalSteps: number;
   elementPosition?: ElementPosition;
+  isPaused: boolean;
+  waitingForInteraction: boolean;
+  animationsEnabled: boolean;
 }
 
 const CoachMark: React.FC<CoachMarkProps> = React.memo(({
@@ -53,39 +71,113 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
   onNext,
   onPrevious,
   onSkip,
+  onPause,
+  onResume,
   isFirst,
   isLast,
   currentStep,
   totalSteps,
-  elementPosition
+  elementPosition,
+  isPaused,
+  waitingForInteraction,
+  animationsEnabled
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
   const hasAnimatedRef = useRef(false);
+  const pulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Swipe gesture handler for mobile navigation
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      return Math.abs(gestureState.dx) > 20 && Math.abs(gestureState.dy) < 100;
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx > 50 && !isLast) {
+        onNext();
+      } else if (gestureState.dx < -50 && !isFirst) {
+        onPrevious();
+      }
+    },
+  }), [isFirst, isLast, onNext, onPrevious]);
 
   // Guard: Only animate when visibility changes and prevent repeated animations
   useEffect(() => {
-    if (visible && !hasAnimatedRef.current) {
+    if (visible && !hasAnimatedRef.current && animationsEnabled) {
       hasAnimatedRef.current = true;
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      
+      // Get accessible animation duration
+      getAccessibleAnimationDuration(300).then((duration) => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+      
+      // Announce step to screen readers
+      announceTutorialStep(
+        currentStep + 1,
+        totalSteps,
+        step.title,
+        waitingForInteraction
+      );
     } else if (!visible && hasAnimatedRef.current) {
       hasAnimatedRef.current = false;
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.8);
     }
-  }, [visible]);
+  }, [visible, animationsEnabled, currentStep, totalSteps, step?.title, waitingForInteraction]);
+
+  // Pulse animation for target elements
+  useEffect(() => {
+    if (step?.pulseTarget && elementPosition && animationsEnabled) {
+      pulseAnimationRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimationRef.current.start();
+    }
+    
+    return () => {
+      if (pulseAnimationRef.current) {
+        pulseAnimationRef.current.stop();
+      }
+    };
+  }, [step?.pulseTarget, elementPosition, animationsEnabled]);
+
+  // Smooth progress bar animation
+  useEffect(() => {
+    if (animationsEnabled) {
+      Animated.timing(progressAnim, {
+        toValue: (currentStep + 1) / totalSteps,
+        duration: 500,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      progressAnim.setValue((currentStep + 1) / totalSteps);
+    }
+  }, [currentStep, totalSteps, animationsEnabled]);
 
   const getIcon = useCallback((iconType: string, size = 24, color = Colors.white) => {
     switch (iconType) {
@@ -185,23 +277,54 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
 
   return (
     <>
-      {/* Backdrop */}
-      <View style={styles.backdrop} pointerEvents="none" />
+      {/* Enhanced backdrop with blur */}
+      {Platform.OS === 'ios' ? (
+        <BlurView intensity={15} style={styles.backdrop} />
+      ) : (
+        <View style={[styles.backdrop, styles.androidBackdrop]} />
+      )}
       
-      {/* Highlight spotlight for target element */}
+      {/* Focused spotlight overlay */}
       {elementPosition && step.highlightElement && (
-        <View 
-          style={[
-            styles.spotlight,
-            {
-              left: elementPosition.x - 8,
-              top: elementPosition.y - 8,
-              width: elementPosition.width + 16,
-              height: elementPosition.height + 16,
-            }
-          ]} 
-          pointerEvents="none"
-        />
+        <>
+          {/* Dimmed overlay with cutout */}
+          <View style={styles.spotlightOverlay} pointerEvents="none">
+            <View style={styles.overlayTop} />
+            <View style={styles.overlayMiddle}>
+              <View style={styles.overlayLeft} />
+              <View 
+                style={[
+                  styles.spotlightCutout,
+                  {
+                    left: elementPosition.x - 12,
+                    top: elementPosition.y - 12,
+                    width: elementPosition.width + 24,
+                    height: elementPosition.height + 24,
+                  }
+                ]}
+              />
+              <View style={styles.overlayRight} />
+            </View>
+            <View style={styles.overlayBottom} />
+          </View>
+          
+          {/* Pulsing highlight ring */}
+          {step.pulseTarget && (
+            <Animated.View 
+              style={[
+                styles.pulseRing,
+                {
+                  left: elementPosition.x - 16,
+                  top: elementPosition.y - 16,
+                  width: elementPosition.width + 32,
+                  height: elementPosition.height + 32,
+                  transform: [{ scale: pulseAnim }],
+                }
+              ]} 
+              pointerEvents="none"
+            />
+          )}
+        </>
       )}
       
       {/* Coach Mark */}
@@ -214,15 +337,26 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
             transform: [{ scale: scaleAnim }],
           },
         ]}
+        {...panResponder.panHandlers}
+        {...createTutorialAccessibilityProps(
+          currentStep + 1,
+          totalSteps,
+          step.title,
+          step.description,
+          true
+        )}
       >
-        {/* Progress indicator */}
+        {/* Enhanced progress indicator */}
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
-            <View 
+            <Animated.View 
               style={[
                 styles.progressFill, 
                 { 
-                  width: `${((currentStep + 1) / totalSteps) * 100}%`,
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
                   backgroundColor: step.color || Colors.primary 
                 }
               ]} 
@@ -233,9 +367,30 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
           </Text>
         </View>
 
-        {/* Close button */}
-        <Pressable style={styles.closeButton} onPress={onSkip}>
-          <X size={16} color={Colors.textSecondary} />
+        {/* Skip Tutorial button */}
+        <Pressable 
+          style={styles.skipButton} 
+          onPress={onSkip}
+          accessible={true}
+          accessibilityLabel="Skip tutorial"
+          accessibilityHint="Skip the entire tutorial"
+        >
+          <SkipForward size={16} color={Colors.textSecondary} />
+          <Text style={styles.skipButtonText}>Skip</Text>
+        </Pressable>
+        
+        {/* Pause/Resume button */}
+        <Pressable 
+          style={styles.pauseButton} 
+          onPress={isPaused ? onResume : onPause}
+          accessible={true}
+          accessibilityLabel={isPaused ? 'Resume tutorial' : 'Pause tutorial'}
+        >
+          {isPaused ? (
+            <Play size={16} color={Colors.textSecondary} />
+          ) : (
+            <Pause size={16} color={Colors.textSecondary} />
+          )}
         </Pressable>
 
         {/* Icon */}
@@ -252,6 +407,11 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
             <Text style={[styles.actionText, { color: step.color || Colors.primary }]}>
               {step.actionText}
             </Text>
+            {waitingForInteraction && (
+              <View style={styles.waitingIndicator}>
+                <Text style={styles.waitingText}>Waiting for interaction...</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -267,13 +427,23 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
           <View style={styles.navigationSpacer} />
           
           <Pressable 
-            style={[styles.nextButton, { backgroundColor: step.color || Colors.primary }]} 
+            style={[
+              styles.nextButton, 
+              { backgroundColor: step.color || Colors.primary },
+              (isPaused || waitingForInteraction) && styles.disabledButton
+            ]} 
             onPress={onNext}
+            disabled={isPaused || waitingForInteraction}
+            accessible={true}
+            accessibilityLabel={isLast ? 'Finish tutorial' : 'Next step'}
           >
-            <Text style={styles.nextButtonText}>
+            <Text style={[
+              styles.nextButtonText,
+              (isPaused || waitingForInteraction) && styles.disabledButtonText
+            ]}>
               {isLast ? 'Finish' : 'Next'}
             </Text>
-            <ArrowRight size={14} color={Colors.white} />
+            <ArrowRight size={14} color={(isPaused || waitingForInteraction) ? Colors.textMuted : Colors.white} />
           </Pressable>
         </View>
 
@@ -287,6 +457,62 @@ const CoachMark: React.FC<CoachMarkProps> = React.memo(({
 });
 
 CoachMark.displayName = 'CoachMark';
+
+// Completion Modal Component
+const CompletionModal: React.FC<{
+  visible: boolean;
+  message: string;
+  onComplete: () => void;
+}> = ({ visible, message, onComplete }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.completionOverlay}>
+        <Animated.View
+          style={[
+            styles.completionModal,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <View style={styles.completionIcon}>
+            <CheckCircle size={48} color={Colors.success} />
+          </View>
+          <Text style={styles.completionTitle}>Tutorial Complete!</Text>
+          <Text style={styles.completionMessage}>{message}</Text>
+          <Pressable style={styles.completionButton} onPress={onComplete}>
+            <Text style={styles.completionButtonText}>Get Started</Text>
+            <ArrowRight size={16} color={Colors.white} />
+          </Pressable>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
 
 export default function ContextualTutorialCoachMark() {
   const router = useRouter();
@@ -304,10 +530,18 @@ export default function ContextualTutorialCoachMark() {
       previousStep: store.previousStep,
       completeTutorial: store.completeTutorial,
       skipTutorial: store.skipTutorial,
+      pauseTutorial: store.pauseTutorial,
+      resumeTutorial: store.resumeTutorial,
+      markInteractionComplete: store.markInteractionComplete,
       setShouldRedirectToOnboarding: store.setShouldRedirectToOnboarding,
+      setCurrentRoute: store.setCurrentRoute,
       steps: store.steps,
       elementRefs: store.elementRefs,
       shouldRedirectToOnboarding: store.shouldRedirectToOnboarding,
+      isPaused: store.isPaused,
+      waitingForInteraction: store.waitingForInteraction,
+      animationsEnabled: store.animationsEnabled,
+      currentRoute: store.currentRoute,
     };
   }, []);
   
@@ -317,8 +551,10 @@ export default function ContextualTutorialCoachMark() {
   const hasMeasuredRef = useRef<Record<string, boolean>>({});
   const lastStepRef = useRef<number>(-1);
   
-  // Local state for element position
+  // Local state for element position and completion
   const [elementPosition, setElementPosition] = useState<ElementPosition | undefined>();
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
   
   // Memoize current step data to prevent unnecessary recalculations
   const currentStepInfo = useMemo(() => {
@@ -429,26 +665,65 @@ export default function ContextualTutorialCoachMark() {
     return () => clearTimeout(timeoutId);
   }, [storeActions.shouldRedirectToOnboarding, isTutorialActive, router]);
   
+  // Track current route for tutorial step alignment
+  useEffect(() => {
+    const currentPath = router.pathname || '';
+    storeActions.setCurrentRoute(currentPath);
+  }, [router.pathname]);
+
   // Stable action handlers with guards - memoized to prevent recreating
   const handleNext = useCallback(() => {
-    if (!isTutorialActive) return;
+    if (!isTutorialActive || storeActions.isPaused) return;
     
     if (currentStepInfo?.isLast) {
-      storeActions.completeTutorial();
+      const message = currentStepInfo.step.completionMessage || '🎉 You\'re all set! Let\'s get started.';
+      setCompletionMessage(message);
+      setShowCompletion(true);
+      
+      // Delay completion to show the message
+      setTimeout(() => {
+        storeActions.completeTutorial();
+        setShowCompletion(false);
+      }, 3000);
     } else {
       storeActions.nextStep();
     }
-  }, [isTutorialActive, currentStepInfo?.isLast, storeActions.completeTutorial, storeActions.nextStep]);
+  }, [isTutorialActive, currentStepInfo?.isLast, currentStepInfo?.step.completionMessage, storeActions]);
   
   const handlePrevious = useCallback(() => {
-    if (!isTutorialActive || currentStepInfo?.isFirst) return;
+    if (!isTutorialActive || currentStepInfo?.isFirst || storeActions.isPaused) return;
     storeActions.previousStep();
-  }, [isTutorialActive, currentStepInfo?.isFirst, storeActions.previousStep]);
+  }, [isTutorialActive, currentStepInfo?.isFirst, storeActions]);
   
   const handleSkip = useCallback(() => {
     if (!isTutorialActive) return;
     storeActions.skipTutorial();
-  }, [isTutorialActive, storeActions.skipTutorial]);
+  }, [isTutorialActive, storeActions]);
+  
+  const handlePause = useCallback(() => {
+    if (!isTutorialActive) return;
+    storeActions.pauseTutorial();
+    announceTutorialPause(true);
+  }, [isTutorialActive, storeActions]);
+  
+  const handleResume = useCallback(() => {
+    if (!isTutorialActive) return;
+    storeActions.resumeTutorial();
+    announceTutorialPause(false);
+  }, [isTutorialActive, storeActions]);
+  
+  const handleCompletionFinish = useCallback(() => {
+    setShowCompletion(false);
+    storeActions.completeTutorial();
+    
+    // Announce completion
+    announceTutorialCompletion(completionMessage);
+    
+    // Navigate to meal plan tab with spotlight effect
+    setTimeout(() => {
+      router.replace('/(tabs)/meal-plan');
+    }, 500);
+  }, [storeActions, router, completionMessage]);
   
   if (!isTutorialActive || !currentStepInfo) {
     return null;
@@ -457,25 +732,38 @@ export default function ContextualTutorialCoachMark() {
   const { step, isFirst, isLast } = currentStepInfo;
   
   return (
-    <Modal
-      visible={isTutorialActive}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-    >
-      <CoachMark
+    <>
+      <Modal
         visible={isTutorialActive}
-        step={step}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onSkip={handleSkip}
-        isFirst={isFirst}
-        isLast={isLast}
-        currentStep={currentStep}
-        totalSteps={storeActions.steps.length}
-        elementPosition={elementPosition}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <CoachMark
+          visible={isTutorialActive}
+          step={step}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
+          onSkip={handleSkip}
+          onPause={handlePause}
+          onResume={handleResume}
+          isFirst={isFirst}
+          isLast={isLast}
+          currentStep={currentStep}
+          totalSteps={storeActions.steps.length}
+          elementPosition={elementPosition}
+          isPaused={storeActions.isPaused}
+          waitingForInteraction={storeActions.waitingForInteraction}
+          animationsEnabled={storeActions.animationsEnabled}
+        />
+      </Modal>
+      
+      <CompletionModal
+        visible={showCompletion}
+        message={completionMessage}
+        onComplete={handleCompletionFinish}
       />
-    </Modal>
+    </>
   );
 }
 
@@ -486,24 +774,67 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     zIndex: 9998,
   },
-  spotlight: {
+  androidBackdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  spotlightOverlay: {
     position: 'absolute',
-    backgroundColor: 'rgba(76, 205, 196, 0.1)',
-    borderRadius: 12,
-    borderWidth: 2,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+  },
+  overlayTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    zIndex: 9999,
+  },
+  overlayMiddle: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    zIndex: 9999,
+  },
+  overlayLeft: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  overlayRight: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  overlayBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    zIndex: 9999,
+  },
+  spotlightCutout: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+  },
+  pulseRing: {
+    position: 'absolute',
+    borderRadius: 20,
+    borderWidth: 3,
     borderColor: Colors.primary,
+    backgroundColor: 'transparent',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
     elevation: 8,
-    zIndex: 9999,
+    zIndex: 10000,
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 0 20px rgba(76, 205, 196, 0.4)',
-      position: 'fixed' as any,
+      boxShadow: '0 0 24px rgba(76, 205, 196, 0.6)',
     }),
   },
   coachMark: {
@@ -557,18 +888,41 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: '600' as const,
   },
-  closeButton: {
+  skipButton: {
     position: 'absolute',
     top: 16,
     right: 16,
-    padding: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
     zIndex: 10,
     backgroundColor: Colors.backgroundLight,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  skipButtonText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500' as const,
+    marginLeft: 4,
+  },
+  pauseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 80,
+    padding: 8,
+    zIndex: 10,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
     width: 48,
@@ -601,6 +955,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600' as const,
     textAlign: 'center',
+  },
+  waitingIndicator: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: Colors.accent,
+    borderRadius: 6,
+  },
+  waitingText: {
+    fontSize: 11,
+    color: Colors.text,
+    textAlign: 'center',
+    fontWeight: '500' as const,
   },
   navigationContainer: {
     flexDirection: 'row',
@@ -636,5 +1002,72 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     fontSize: 14,
     marginRight: 6,
+  },
+  disabledButton: {
+    backgroundColor: Colors.borderDark,
+  },
+  disabledButtonText: {
+    color: Colors.textMuted,
+  },
+  
+  // Completion Modal Styles
+  completionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  completionModal: {
+    backgroundColor: Colors.surface,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    maxWidth: 320,
+    width: '100%',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  completionIcon: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: Colors.successLight,
+    borderRadius: 32,
+  },
+  completionTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: Colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  completionMessage: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  completionButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  completionButtonText: {
+    color: Colors.white,
+    fontWeight: '600' as const,
+    fontSize: 16,
+    marginRight: 8,
   },
 });
