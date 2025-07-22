@@ -45,7 +45,7 @@ export default function TabLayout() {
         clearTimeout(checkTimeoutRef.current);
       }
     };
-  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction, checkShouldShowWelcome]);
+  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction]);
   
   return (
     <>

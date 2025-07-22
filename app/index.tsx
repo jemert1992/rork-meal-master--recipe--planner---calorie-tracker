@@ -46,7 +46,7 @@ export default function WelcomeScreen() {
         router.replace('/(tabs)');
       }, 100);
     }
-  }, [isUserSetup, hasRedirectedToTabs, router]);
+  }, [isUserSetup, hasRedirectedToTabs]);
   
   // Handle redirect after tutorial completion - GUARD: prevent multiple redirects
   useEffect(() => {
