@@ -299,6 +299,13 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
           return;
         }
         
+        // Additional safety check - don't show welcome if tutorial is already completed
+        if (tutorialCompleted) {
+          console.log('Tutorial already completed, skipping welcome check');
+          set({ welcomeCheckPerformed: true });
+          return;
+        }
+        
         // Update action tracking and mark check as performed immediately
         const newActionCount = now - lastActionTime < 2000 ? actionCount + 1 : 1;
         

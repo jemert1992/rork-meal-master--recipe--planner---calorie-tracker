@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -94,7 +94,7 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  const handleStartTutorial = () => {
+  const handleStartTutorial = useCallback(() => {
     if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
@@ -107,7 +107,7 @@ export default function TutorialWelcome() {
       }
       setIsHandlingAction(false);
     }, 200);
-  };
+  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, startTutorial]);
   
   const handleSkip = () => {
     if (isHandlingAction || isProcessingAction || !isMounted || showTutorial) return;

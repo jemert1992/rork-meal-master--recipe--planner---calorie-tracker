@@ -224,8 +224,8 @@ export const useUserStore = create<UserState>()(
           
           // Set calculating flag
           set({ isCalculatingGoals: true });
-        
-        // Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor Equation
+          
+          // Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor Equation
         let bmr = 0;
         if (profile.gender === 'male') {
           bmr = 10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5;
