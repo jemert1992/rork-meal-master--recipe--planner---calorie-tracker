@@ -362,7 +362,7 @@ export default function ContextualTutorialCoachMark() {
         setIsNavigating(false);
       };
     }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, router]);
+  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction]);
 
   // Handle redirect to personal info after tutorial completion with proper guards
   useEffect(() => {
@@ -384,7 +384,7 @@ export default function ContextualTutorialCoachMark() {
     }, 500); // Increased timeout
     
     return () => clearTimeout(redirectTimeout);
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, router]);
+  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction]);
 
   // Try to find and measure target elements
   useEffect(() => {

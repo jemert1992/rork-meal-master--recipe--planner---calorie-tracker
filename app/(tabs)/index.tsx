@@ -138,7 +138,7 @@ export default function RecipesScreen() {
   // Load recipes from API on first render
   useEffect(() => {
     loadRecipesFromApi();
-  }, []);
+  }, [loadRecipesFromApi]);
 
   // Update displayed recipes when filters or search results change
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function RecipesScreen() {
     };
     
     updateDisplayedRecipes();
-  }, [searchResults, filters, filterRecipes]);
+  }, [searchResults, filters]);
 
   // Memoize the search function to prevent recreating it on every render
   const performSearch = useCallback(async (query: string) => {
