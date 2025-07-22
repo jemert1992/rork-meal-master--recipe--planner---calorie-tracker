@@ -14,6 +14,7 @@ import SnacksBanner from '@/components/SnacksBanner';
 
 import { useTutorialStore } from '@/store/tutorialStore';
 import { useUserStore } from '@/store/userStore';
+import { useTutorialRef } from '@/hooks/useTutorialRef';
 import { Recipe, RecipeFilters, RecipeCategory } from '@/types';
 import * as edamamService from '@/services/edamamService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -63,6 +64,10 @@ export default function RecipesScreen() {
   const flatListRef = useRef<FlatList>(null);
   const { showTutorial, tutorialCompleted, startTutorial, skipTutorial, forceHideTutorial, resetTutorial } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
+  
+  // Register tutorial refs
+  const searchInputRef = useTutorialRef('search-input');
+  const quickActionsRef = useTutorialRef('quick-actions');
   
   const { 
     recipes, 
@@ -412,7 +417,7 @@ export default function RecipesScreen() {
       </View>
 
       {/* Quick Actions */}
-      <View style={styles.quickActions} testID="quick-actions">
+      <View ref={quickActionsRef} style={styles.quickActions} testID="quick-actions">
         <Pressable style={styles.quickActionButton} onPress={() => router.push('/add-meal/today')}>
           <Text style={styles.quickActionEmoji}>🍽️</Text>
           <Text style={styles.quickActionText}>Add Meal</Text>
@@ -428,7 +433,7 @@ export default function RecipesScreen() {
       </View>
       
       <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer} testID="search-input">
+        <View ref={searchInputRef} style={styles.searchInputContainer} testID="search-input">
           <Search size={20} color={Colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}

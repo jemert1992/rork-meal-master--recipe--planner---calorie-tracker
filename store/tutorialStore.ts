@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { RefObject } from 'react';
 
 export interface TutorialStep {
   id: string;
@@ -16,20 +18,30 @@ export interface TutorialStep {
   skipNavigation?: boolean;
 }
 
+export interface ElementPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface TutorialState {
-  isFirstLaunch: boolean;
+  // Core stable state
   currentStep: number;
+  isTutorialActive: boolean;
+  highlightTargets: Record<string, ElementPosition>;
+  
+  // Legacy state for compatibility
+  isFirstLaunch: boolean;
   tutorialCompleted: boolean;
   showTutorial: boolean;
   showWelcome: boolean;
   steps: TutorialStep[];
   shouldRedirectToOnboarding: boolean;
-  tutorialActive: boolean;
   welcomeCheckPerformed: boolean;
-  isProcessingAction: boolean;
-  lastActionTime: number;
-  actionCount: number;
-  globalLock: boolean;
+  
+  // Ref registry
+  elementRefs: Record<string, RefObject<any>>;
   
   // Actions
   startTutorial: () => void;
@@ -38,6 +50,11 @@ interface TutorialState {
   skipTutorial: () => void;
   completeTutorial: () => void;
   resetTutorial: () => void;
+  registerRef: (stepId: string, ref: RefObject<any>) => void;
+  unregisterRef: (stepId: string) => void;
+  updateElementPosition: (stepId: string, position: ElementPosition) => void;
+  
+  // Legacy actions for compatibility
   setShowTutorial: (show: boolean) => void;
   markStepCompleted: (stepId: string) => void;
   checkShouldShowWelcome: (onboardingCompleted: boolean) => void;
@@ -129,141 +146,135 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   }
 ];
 
-export const useTutorialStore = create<TutorialState>()((set, get) => ({
-      isFirstLaunch: true,
+export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((set, get) => ({
+      // Core stable state
       currentStep: 0,
+      isTutorialActive: false,
+      highlightTargets: {},
+      
+      // Legacy state for compatibility
+      isFirstLaunch: true,
       tutorialCompleted: false,
       showTutorial: false,
       showWelcome: false,
       steps: TUTORIAL_STEPS,
       shouldRedirectToOnboarding: false,
-      tutorialActive: false,
       welcomeCheckPerformed: false,
-      isProcessingAction: false,
-      lastActionTime: 0,
-      actionCount: 0,
-      globalLock: false,
+      
+      // Ref registry
+      elementRefs: {},
       
       startTutorial: () => {
-        const { isProcessingAction, showTutorial, tutorialCompleted, globalLock } = get();
-        if (isProcessingAction || showTutorial || tutorialCompleted || globalLock) {
-          console.log('Cannot start tutorial - already processing, showing, completed, or locked');
+        const { isTutorialActive, tutorialCompleted } = get();
+        if (isTutorialActive || tutorialCompleted) {
           return;
         }
         
-        console.log('[TutorialStore] START TUTORIAL');
         set({
-          globalLock: true,
+          currentStep: 0,
+          isTutorialActive: true,
           showTutorial: true,
           showWelcome: false,
-          currentStep: 0,
           tutorialCompleted: false,
           isFirstLaunch: false,
-          tutorialActive: true,
-          isProcessingAction: true,
+          highlightTargets: {},
         });
-        
-        // Reset processing flag after a delay
-        setTimeout(() => {
-          const currentState = get();
-          if (currentState.showTutorial) {
-            set({ isProcessingAction: false, globalLock: false });
-          }
-        }, 500);
       },
       
       nextStep: () => {
-        const { currentStep, steps } = get();
-        console.log('nextStep called, current:', currentStep, 'total steps:', steps.length);
+        const { currentStep, steps, isTutorialActive } = get();
+        if (!isTutorialActive) return;
+        
         if (currentStep < steps.length - 1) {
           set({ currentStep: currentStep + 1 });
-          console.log('Advanced to step:', currentStep + 1);
         } else {
-          console.log('Last step reached, completing tutorial');
           get().completeTutorial();
         }
       },
       
       previousStep: () => {
-        const { currentStep } = get();
-        console.log('previousStep called, current:', currentStep);
-        if (currentStep > 0) {
-          set({ currentStep: currentStep - 1 });
-          console.log('Went back to step:', currentStep - 1);
-        }
+        const { currentStep, isTutorialActive } = get();
+        if (!isTutorialActive || currentStep <= 0) return;
+        
+        set({ currentStep: currentStep - 1 });
       },
       
       skipTutorial: () => {
-        const { isProcessingAction, tutorialCompleted, globalLock } = get();
-        if (isProcessingAction || tutorialCompleted || globalLock) {
-          console.log('Cannot skip tutorial - already processing, completed, or locked');
-          return;
-        }
+        const { isTutorialActive } = get();
+        if (!isTutorialActive) return;
         
-        console.log('Skipping tutorial');
         set({
-          globalLock: true,
+          isTutorialActive: false,
           showTutorial: false,
           showWelcome: false,
           tutorialCompleted: true,
           isFirstLaunch: false,
-          tutorialActive: false,
           shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
-          isProcessingAction: true,
+          highlightTargets: {},
         });
-        
-        // Reset processing flag after a delay
-        setTimeout(() => {
-          set({ isProcessingAction: false, globalLock: false });
-        }, 500);
       },
       
       completeTutorial: () => {
-        const { isProcessingAction, tutorialCompleted, globalLock } = get();
-        if (isProcessingAction || tutorialCompleted || globalLock) {
-          console.log('Cannot complete tutorial - already processing, completed, or locked');
-          return;
-        }
+        const { isTutorialActive } = get();
+        if (!isTutorialActive) return;
         
-        console.log('Completing tutorial');
         set({
-          globalLock: true,
+          isTutorialActive: false,
           showTutorial: false,
           showWelcome: false,
           tutorialCompleted: true,
           currentStep: 0,
           isFirstLaunch: false,
-          tutorialActive: false,
           shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
-          isProcessingAction: true,
+          highlightTargets: {},
         });
-        
-        // Reset processing flag after a delay
-        setTimeout(() => {
-          set({ isProcessingAction: false, globalLock: false });
-        }, 500);
       },
       
       resetTutorial: () => {
-        console.log('Resetting tutorial');
         set({
           currentStep: 0,
+          isTutorialActive: false,
           tutorialCompleted: false,
           showTutorial: false,
           showWelcome: false,
           isFirstLaunch: true,
-          tutorialActive: false,
           shouldRedirectToOnboarding: false,
           welcomeCheckPerformed: false,
-          steps: TUTORIAL_STEPS.map(step => ({ ...step, completed: false })),
+          highlightTargets: {},
+          elementRefs: {},
+          steps: TUTORIAL_STEPS,
         });
       },
       
+      registerRef: (stepId: string, ref: RefObject<any>) => {
+        set((state) => ({
+          elementRefs: {
+            ...state.elementRefs,
+            [stepId]: ref,
+          },
+        }));
+      },
+      
+      unregisterRef: (stepId: string) => {
+        set((state) => {
+          const { [stepId]: removed, ...rest } = state.elementRefs;
+          return { elementRefs: rest };
+        });
+      },
+      
+      updateElementPosition: (stepId: string, position: ElementPosition) => {
+        set((state) => ({
+          highlightTargets: {
+            ...state.highlightTargets,
+            [stepId]: position,
+          },
+        }));
+      },
+      
       setShowTutorial: (show: boolean) => {
-        console.log('Setting showTutorial to:', show);
-        set({ showTutorial: show });
+        set({ showTutorial: show, isTutorialActive: show });
       },
       
       markStepCompleted: (stepId: string) => {
@@ -275,49 +286,29 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       checkShouldShowWelcome: (onboardingCompleted: boolean) => {
-        const state = get();
-        const { tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed, isProcessingAction, globalLock } = state;
+        const { tutorialCompleted, showWelcome, showTutorial, welcomeCheckPerformed } = get();
         
-        // PERMANENT FIX: Multiple guards to prevent infinite loops
-        if (isProcessingAction || globalLock || welcomeCheckPerformed || tutorialCompleted || showWelcome || showTutorial) {
-          console.log('Skipping welcome check - already processed or in progress');
+        // Guard: prevent infinite loops
+        if (welcomeCheckPerformed || tutorialCompleted || showWelcome || showTutorial) {
           return;
         }
         
-        // PERMANENT FIX: Mark as performed IMMEDIATELY to prevent re-entry
-        set({ 
-          welcomeCheckPerformed: true,
-          isProcessingAction: true,
-          globalLock: true
-        });
+        // Mark as performed immediately
+        set({ welcomeCheckPerformed: true });
         
-        console.log('Tutorial check:', { onboardingCompleted, tutorialCompleted, showWelcome, showTutorial });
-        
-        // PERMANENT FIX: Use longer timeout and additional state checks
-        setTimeout(() => {
-          const currentState = get();
-          // Only show welcome if ALL conditions are met and state hasn't changed
-          if (onboardingCompleted && 
-              !currentState.tutorialCompleted && 
-              !currentState.showWelcome && 
-              !currentState.showTutorial &&
-              currentState.welcomeCheckPerformed) {
-            console.log('Setting showWelcome to true after onboarding');
-            set({ showWelcome: true, isProcessingAction: false, globalLock: false });
-          } else {
-            console.log('Not showing welcome - conditions not met');
-            set({ isProcessingAction: false, globalLock: false });
-          }
-        }, 500); // Increased timeout for stability
+        // Only show welcome if onboarding is completed and tutorial hasn't been shown
+        if (onboardingCompleted && !tutorialCompleted) {
+          set({ showWelcome: true });
+        }
       },
       
       forceHideTutorial: () => {
-        console.log('Force hiding tutorial');
         set({
+          isTutorialActive: false,
           showTutorial: false,
           showWelcome: false,
-          tutorialActive: false,
           welcomeCheckPerformed: true,
+          highlightTargets: {},
         });
       },
       
@@ -333,10 +324,19 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
       },
       
       setTutorialActive: (active: boolean) => {
-        set({ tutorialActive: active });
+        set({ isTutorialActive: active, showTutorial: active });
       },
       
       resetWelcomeCheck: () => {
         set({ welcomeCheckPerformed: false });
       },
-    }));
+    })));
+
+// Stable selectors to prevent unnecessary rerenders
+export const selectCurrentStep = (state: TutorialState) => state.currentStep;
+export const selectIsTutorialActive = (state: TutorialState) => state.isTutorialActive;
+export const selectHighlightTargets = (state: TutorialState) => state.highlightTargets;
+export const selectCurrentStepData = (state: TutorialState) => {
+  const step = state.steps[state.currentStep];
+  return step ? { step, isFirst: state.currentStep === 0, isLast: state.currentStep === state.steps.length - 1 } : null;
+};

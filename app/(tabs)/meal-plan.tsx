@@ -13,9 +13,13 @@ import Colors from '@/constants/colors';
 import { DailyMeals, Recipe, RecipeFilters } from '@/types';
 import * as firebaseService from '@/services/firebaseService';
 import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorialRef } from '@/hooks/useTutorialRef';
 
 export default function MealPlanScreen() {
   const router = useRouter();
+  
+  // Register tutorial ref
+  const mealPlanContentRef = useTutorialRef('meal-plan-content');
   const { 
     mealPlan, 
     addMeal, 
@@ -613,6 +617,7 @@ export default function MealPlanScreen() {
       )}
 
       <ScrollView 
+        ref={mealPlanContentRef}
         style={styles.content} 
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}

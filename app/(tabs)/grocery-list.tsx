@@ -11,9 +11,13 @@ import { generateGroceryList } from '@/utils/generateGroceryList';
 import Colors from '@/constants/colors';
 import { GroceryItem as GroceryItemType } from '@/types';
 import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorialRef } from '@/hooks/useTutorialRef';
 
 export default function GroceryListScreen() {
   const router = useRouter();
+  
+  // Register tutorial ref
+  const groceryContentRef = useTutorialRef('grocery-content');
   const { groceryItems, setGroceryItems, toggleChecked, removeItem, addItem, clearGroceryList } = useGroceryStore();
   const { mealPlan } = useMealPlanStore();
   const { recipes } = useRecipeStore();
@@ -260,6 +264,7 @@ export default function GroceryListScreen() {
           </View>
           
           <FlatList
+            ref={groceryContentRef}
             data={sortedCategories}
             renderItem={renderCategory}
             keyExtractor={(item) => item}

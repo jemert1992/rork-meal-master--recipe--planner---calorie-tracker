@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,8 +7,7 @@ import {
   Dimensions,
   Platform,
   Animated,
-  findNodeHandle,
-  UIManager,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
@@ -25,16 +24,15 @@ import {
   CheckCircle
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useTutorialStore } from '@/store/tutorialStore';
+import { 
+  useTutorialStore, 
+  selectCurrentStep, 
+  selectIsTutorialActive, 
+  selectCurrentStepData,
+  ElementPosition 
+} from '@/store/tutorialStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-interface ElementPosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 interface CoachMarkProps {
   visible: boolean;
@@ -292,199 +290,159 @@ const CoachMark: React.FC<CoachMarkProps> = ({
 
 export default function ContextualTutorialCoachMark() {
   const router = useRouter();
-  const {
-    showTutorial,
-    currentStep,
-    steps,
-    nextStep,
-    previousStep,
-    completeTutorial,
-    skipTutorial,
+  
+  // Use stable selectors to prevent unnecessary rerenders
+  const isTutorialActive = useTutorialStore(selectIsTutorialActive);
+  const currentStep = useTutorialStore(selectCurrentStep);
+  const stepData = useTutorialStore(selectCurrentStepData);
+  const { 
+    nextStep, 
+    previousStep, 
+    completeTutorial, 
+    skipTutorial, 
     shouldRedirectToOnboarding,
-    isProcessingAction
+    setShouldRedirectToOnboarding,
+    steps,
+    elementRefs,
+    highlightTargets
   } = useTutorialStore();
-
-  const [currentRoute, setCurrentRoute] = useState('/(tabs)');
+  
+  // Stable state with refs to prevent infinite loops
+  const hasNavigatedRef = useRef<Record<string, boolean>>({});
+  const hasRedirectedRef = useRef(false);
   const [elementPosition, setElementPosition] = useState<ElementPosition | undefined>();
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [hasRedirected, setHasRedirected] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   
-  // GUARD: Set mounted state only once
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
+  // Memoize current step data to prevent unnecessary recalculations
+  const currentStepInfo = useMemo(() => {
+    if (!stepData) return null;
+    return stepData;
+  }, [stepData]);
   
-  // GUARD: Safety timeout - auto-complete tutorial after 5 minutes if stuck
+  // Guard: Only measure element position when step changes and has target element
   useEffect(() => {
-    if (showTutorial) {
-      const timeout = setTimeout(() => {
-        console.log('Tutorial timeout - auto completing after 5 minutes');
-        completeTutorial();
-      }, 5 * 60 * 1000); // 5 minutes
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [showTutorial, completeTutorial]);
-  
-  const step = steps[currentStep];
-  const isFirst = currentStep === 0;
-  const isLast = currentStep === steps.length - 1;
-
-  // PERMANENT FIX: Navigate to correct screen only when step changes and navigation is needed
-  useEffect(() => {
-    if (!showTutorial || !step || isNavigating || isProcessingAction || !isMounted) return;
-    
-    // Only navigate if we're on a different route and navigation is needed
-    if (step.route && step.route !== currentRoute && !step.skipNavigation) {
-      console.log('Navigating to:', step.route, 'from:', currentRoute);
-      setIsNavigating(true);
-      
-      // Use a longer timeout to prevent rapid navigation calls and ensure state stability
-      const navigationTimeout = setTimeout(() => {
-        try {
-          // Check if we're still in the same state before navigating
-          const currentState = useTutorialStore.getState();
-          if (currentState.showTutorial && 
-              !currentState.isProcessingAction && 
-              currentState.currentStep === currentStep &&
-              isMounted) {
-            router.replace(step.route as any);
-            setCurrentRoute(step.route);
-          }
-        } catch (error) {
-          console.warn('Navigation failed:', error);
-        } finally {
-          setIsNavigating(false);
-        }
-      }, 500); // Increased timeout for stability
-      
-      return () => {
-        clearTimeout(navigationTimeout);
-        setIsNavigating(false);
-      };
-    }
-  }, [currentStep, showTutorial, step?.route, currentRoute, isNavigating, isProcessingAction, isMounted, router]);
-
-  // PERMANENT FIX: Handle redirect to personal info only once after tutorial completion
-  useEffect(() => {
-    if (!shouldRedirectToOnboarding || showTutorial || hasRedirected || isProcessingAction || !isMounted) return;
-    
-    console.log('Redirecting to personal info after tutorial completion');
-    setHasRedirected(true);
-    
-    // Clear the redirect flag immediately to prevent loops
-    const { setShouldRedirectToOnboarding } = useTutorialStore.getState();
-    setShouldRedirectToOnboarding(false);
-    
-    // Use a longer timeout to ensure state is fully updated and prevent loops
-    const redirectTimeout = setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (!currentState.showTutorial && 
-          !currentState.isProcessingAction && 
-          currentState.tutorialCompleted &&
-          isMounted) {
-        router.replace('/onboarding/personal-info');
-      }
-    }, 800); // Increased timeout for maximum stability
-    
-    return () => clearTimeout(redirectTimeout);
-  }, [shouldRedirectToOnboarding, showTutorial, hasRedirected, isProcessingAction, isMounted, router]);
-
-  // PERMANENT FIX: Update element position only when step or tutorial state changes
-  useEffect(() => {
-    if (!showTutorial || !step || !step.targetElement || !isMounted) {
+    if (!isTutorialActive || !currentStepInfo?.step?.targetElement) {
       setElementPosition(undefined);
       return;
     }
     
-    // For now, use predefined positions for common elements
-    // In a real implementation, you'd use refs and measure() to get actual positions
-    const getElementPosition = (targetElement: string): ElementPosition | undefined => {
-      switch (targetElement) {
-        case 'search-input':
-          return { x: 20, y: 180, width: screenWidth - 100, height: 48 };
-        case 'quick-actions':
-          return { x: 20, y: 280, width: screenWidth - 40, height: 80 };
-        case 'meal-plan-content':
-          return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-        case 'grocery-content':
-          return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-        case 'profile-content':
-          return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
-        default:
-          return undefined;
-      }
-    };
+    const { step } = currentStepInfo;
+    const targetRef = elementRefs[step.targetElement];
     
-    setElementPosition(getElementPosition(step.targetElement));
-  }, [currentStep, showTutorial, step?.targetElement, screenWidth, isMounted]);
-
-  const [isHandlingAction, setIsHandlingAction] = useState(false);
-
-  const handleNext = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted || !showTutorial) return;
-    setIsHandlingAction(true);
+    if (targetRef?.current) {
+      // Use ref.current.measure() to get real position
+      targetRef.current.measure?.((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+        setElementPosition({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      // Fallback to predefined positions
+      const fallbackPosition = getFallbackPosition(step.targetElement);
+      setElementPosition(fallbackPosition);
+    }
+  }, [currentStep, isTutorialActive, currentStepInfo?.step?.targetElement, elementRefs]);
+  
+  // Guard: Navigate only when needed and prevent duplicate navigation
+  useEffect(() => {
+    if (!isTutorialActive || !currentStepInfo?.step) return;
     
-    // Use setTimeout to prevent rapid state changes
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (currentState.showTutorial && !currentState.isProcessingAction && isMounted) {
-        if (isLast) {
-          completeTutorial();
-        } else {
-          nextStep();
+    const { step } = currentStepInfo;
+    const navigationKey = `${currentStep}-${step.route}`;
+    
+    if (step.route && !step.skipNavigation && !hasNavigatedRef.current[navigationKey]) {
+      hasNavigatedRef.current[navigationKey] = true;
+      
+      // Navigate with a small delay to ensure state stability
+      const timeoutId = setTimeout(() => {
+        if (useTutorialStore.getState().isTutorialActive) {
+          router.replace(step.route as any);
         }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentStep, isTutorialActive, currentStepInfo?.step, router]);
+  
+  // Guard: Handle redirect only once after tutorial completion
+  useEffect(() => {
+    if (!shouldRedirectToOnboarding || isTutorialActive || hasRedirectedRef.current) return;
+    
+    hasRedirectedRef.current = true;
+    setShouldRedirectToOnboarding(false);
+    
+    const timeoutId = setTimeout(() => {
+      if (!useTutorialStore.getState().isTutorialActive) {
+        router.replace('/onboarding/personal-info');
       }
-      setIsHandlingAction(false);
-    }, 150); // Increased timeout
-  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, isLast, completeTutorial, nextStep]);
-
+    }, 200);
+    
+    return () => clearTimeout(timeoutId);
+  }, [shouldRedirectToOnboarding, isTutorialActive, setShouldRedirectToOnboarding, router]);
+  
+  // Stable action handlers with guards
+  const handleNext = useCallback(() => {
+    if (!isTutorialActive) return;
+    
+    if (currentStepInfo?.isLast) {
+      completeTutorial();
+    } else {
+      nextStep();
+    }
+  }, [isTutorialActive, currentStepInfo?.isLast, completeTutorial, nextStep]);
+  
   const handlePrevious = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || isFirst || !isMounted || !showTutorial) return;
-    setIsHandlingAction(true);
-    
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (currentState.showTutorial && !currentState.isProcessingAction && isMounted) {
-        previousStep();
-      }
-      setIsHandlingAction(false);
-    }, 150); // Increased timeout
-  }, [isHandlingAction, isProcessingAction, isFirst, isMounted, showTutorial, previousStep]);
-
+    if (!isTutorialActive || currentStepInfo?.isFirst) return;
+    previousStep();
+  }, [isTutorialActive, currentStepInfo?.isFirst, previousStep]);
+  
   const handleSkip = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted || !showTutorial) return;
-    setIsHandlingAction(true);
-    
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (currentState.showTutorial && !currentState.isProcessingAction && isMounted) {
-        skipTutorial();
-      }
-      setIsHandlingAction(false);
-    }, 150); // Increased timeout
-  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, skipTutorial]);
-
-  if (!showTutorial || !step || !isMounted || isProcessingAction) {
+    if (!isTutorialActive) return;
+    skipTutorial();
+  }, [isTutorialActive, skipTutorial]);
+  
+  if (!isTutorialActive || !currentStepInfo) {
     return null;
   }
-
+  
+  const { step, isFirst, isLast } = currentStepInfo;
+  
   return (
-    <CoachMark
-      visible={showTutorial}
-      step={step}
-      onNext={handleNext}
-      onPrevious={handlePrevious}
-      onSkip={handleSkip}
-      isFirst={isFirst}
-      isLast={isLast}
-      currentStep={currentStep}
-      totalSteps={steps.length}
-      elementPosition={elementPosition}
-    />
+    <Modal
+      visible={isTutorialActive}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+    >
+      <CoachMark
+        visible={isTutorialActive}
+        step={step}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        onSkip={handleSkip}
+        isFirst={isFirst}
+        isLast={isLast}
+        currentStep={currentStep}
+        totalSteps={steps.length}
+        elementPosition={elementPosition}
+      />
+    </Modal>
   );
+}
+
+// Helper function for fallback positions
+function getFallbackPosition(targetElement: string): ElementPosition | undefined {
+  switch (targetElement) {
+    case 'search-input':
+      return { x: 20, y: 180, width: screenWidth - 100, height: 48 };
+    case 'quick-actions':
+      return { x: 20, y: 280, width: screenWidth - 40, height: 80 };
+    case 'meal-plan-content':
+      return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+    case 'grocery-content':
+      return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+    case 'profile-content':
+      return { x: 20, y: 200, width: screenWidth - 40, height: 200 };
+    default:
+      return undefined;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -496,9 +454,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     zIndex: 9998,
-    ...(Platform.OS === 'web' && {
-      position: 'fixed' as any,
-    }),
   },
   spotlight: {
     position: 'absolute',
