@@ -27,7 +27,7 @@ export default function NutritionGoalsScreen() {
       calculateNutritionGoals();
       hasCalculatedRef.current = true;
     }
-  }, []); // Empty dependency array, only run once
+  }, [calculateNutritionGoals]); // Include calculateNutritionGoals in dependencies
   
   // Update local state when profile is updated with calculated values
   // Only run when profile values or useCalculated changes

@@ -200,7 +200,7 @@ export default function MealPlanScreen() {
     return () => {
       isMounted = false;
     };
-  }, [useFirestore, showSuggestions, selectedDate, profile.dietType, profile.fitnessGoals]);
+  }, [useFirestore, showSuggestions, selectedDate, profile.dietType, profile.fitnessGoals, updateWeeklyUsedRecipeIds]);
 
   // Check if alternatives are available for each meal type
   useEffect(() => {
@@ -340,7 +340,7 @@ export default function MealPlanScreen() {
     // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
-  }, [dayPlan, recipes, firestoreRecipes, profile.dietType, profile.allergies, profile.excludedIngredients, profile.dietaryPreferences, useFirestore]);
+  }, [dayPlan, recipes, firestoreRecipes, profile.dietType, profile.allergies, profile.excludedIngredients, profile.dietaryPreferences, useFirestore, isRecipeUsedInMealPlan, isRecipeSuitable]);
 
   // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {

@@ -136,7 +136,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
         }, 10);
       }
     }
-  }, [shouldShow, showTutorial, isCurrentScreen, tutorialCompleted, currentStep]);
+  }, [shouldShow, showTutorial, isCurrentScreen, tutorialCompleted, currentStep, fadeAnim, scaleAnim]);
   
   console.log('TutorialOverlay render:', { 
     showTutorial, 

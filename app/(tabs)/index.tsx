@@ -113,7 +113,7 @@ export default function RecipesScreen() {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial]);
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted, showTutorial, startTutorial]);
 
   // GUARD: Update category counts only when recipes change
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function RecipesScreen() {
       hasLoadedRecipes.current = true;
       loadRecipesFromApi();
     }
-  }, []);
+  }, [loadRecipesFromApi]);
 
   // GUARD: Update displayed recipes only when search results or filters change
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function RecipesScreen() {
     };
     
     updateDisplayedRecipes();
-  }, [searchResults, filters, searchQuery]);
+  }, [searchResults, filters, searchQuery, filterRecipes]);
 
   // Memoize the search function to prevent recreating it on every render
   const performSearch = useCallback(async (query: string) => {
@@ -177,7 +177,7 @@ export default function RecipesScreen() {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, performSearch]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
