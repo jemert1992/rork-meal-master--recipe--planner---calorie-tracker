@@ -3,22 +3,28 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { poundsToKg, feetInchesToCm } from '@/utils/unitConversions';
 import { DietType, UserProfile } from '@/types';
+import { trpcClient } from '@/lib/trpc';
 
 interface UserState {
   isLoggedIn: boolean;
   profile: UserProfile;
   isCalculatingGoals: boolean;
+  isLoading: boolean;
+  error: string | null;
   login: (profile: Partial<UserProfile>) => void;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   updateHeightImperial: (feet: number, inches: number) => void;
   updateWeightImperial: (pounds: number) => void;
   calculateNutritionGoals: () => void;
+  createProfile: (profileData: Omit<UserProfile, 'id' | 'completedOnboarding'>) => Promise<void>;
+  syncProfile: () => Promise<void>;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
   name: '',
   onboardingCompleted: false,
+  completedOnboarding: false,
   dietaryPreferences: [],
   allergies: [],
   dietType: 'any',
@@ -32,6 +38,8 @@ export const useUserStore = create<UserState>()(
       isLoggedIn: false,
       profile: DEFAULT_PROFILE,
       isCalculatingGoals: false,
+      isLoading: false,
+      error: null,
       
       login: (profile) => {
         set({
@@ -290,6 +298,83 @@ export const useUserStore = create<UserState>()(
         } catch (error) {
           console.error('Error calculating nutrition goals:', error);
           set({ isCalculatingGoals: false });
+        }
+      },
+      
+      createProfile: async (profileData) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          const response = await trpcClient.user.createProfile.mutate({
+            ...profileData,
+            weight: profileData.weight || 0,
+            height: profileData.height || 0,
+            age: profileData.age || 0,
+            gender: profileData.gender || 'other',
+            activityLevel: profileData.activityLevel || 'sedentary',
+            dietType: profileData.dietType || 'any',
+            allergies: profileData.allergies || [],
+            fitnessGoals: profileData.fitnessGoals || [],
+            autoGenerateMeals: profileData.autoGenerateMeals ?? true,
+          });
+          
+          if (response.success) {
+            set({
+              isLoggedIn: true,
+              profile: {
+                ...response.profile,
+                completedOnboarding: true,
+                onboardingCompleted: true,
+              },
+              isLoading: false,
+              error: null,
+            });
+            console.log('Profile created successfully:', response.profile);
+          } else {
+            throw new Error('Failed to create profile');
+          }
+        } catch (error) {
+          console.error('Error creating profile:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'Failed to create profile' 
+          });
+          throw error;
+        }
+      },
+      
+      syncProfile: async () => {
+        try {
+          const { profile } = get();
+          if (!profile.id) {
+            console.log('No profile ID, skipping sync');
+            return;
+          }
+          
+          set({ isLoading: true, error: null });
+          
+          const response = await trpcClient.user.updateProfile.mutate({
+            id: profile.id,
+            ...profile,
+          });
+          
+          if (response.success) {
+            set({
+              profile: {
+                ...get().profile,
+                ...response.profile,
+              },
+              isLoading: false,
+              error: null,
+            });
+            console.log('Profile synced successfully');
+          }
+        } catch (error) {
+          console.error('Error syncing profile:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'Failed to sync profile' 
+          });
         }
       },
     }),

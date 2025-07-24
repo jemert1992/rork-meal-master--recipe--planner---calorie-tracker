@@ -162,6 +162,7 @@ export type GroceryList = {
 };
 
 export type UserProfile = {
+  id?: string;
   name: string;
   age?: number;
   gender?: 'male' | 'female' | 'other';
@@ -187,6 +188,8 @@ export type UserProfile = {
   theme?: 'light' | 'dark' | 'system';
   onboardingCompleted?: boolean;
   completedOnboarding?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type RecipeCollection = {

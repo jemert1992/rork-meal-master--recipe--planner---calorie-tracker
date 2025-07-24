@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, ChevronRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
+import { useOnboardingStore } from '@/store/onboardingStore';
 import Colors from '@/constants/colors';
 import { DIET_TYPES } from '@/constants/dietTypes';
 import { COMMON_ALLERGIES } from '@/constants/allergies';
@@ -12,9 +13,10 @@ import { DietType } from '@/types';
 export default function DietaryPreferencesScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useUserStore();
+  const { data, updateDietaryPreferences } = useOnboardingStore();
   
-  const [selectedDietType, setSelectedDietType] = useState<DietType>(profile.dietType || 'any');
-  const [selectedAllergies, setSelectedAllergies] = useState<string[]>(profile.allergies || []);
+  const [selectedDietType, setSelectedDietType] = useState<DietType>(data.dietType || 'any');
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>(data.allergies || []);
   
   const handleDietTypeSelect = (dietType: DietType) => {
     setSelectedDietType(dietType);
@@ -29,6 +31,13 @@ export default function DietaryPreferencesScreen() {
   };
   
   const handleNext = () => {
+    // Save to onboarding store
+    updateDietaryPreferences({
+      dietType: selectedDietType,
+      allergies: selectedAllergies,
+    });
+    
+    // Also update user store for backward compatibility
     updateProfile({
       dietType: selectedDietType,
       allergies: selectedAllergies,

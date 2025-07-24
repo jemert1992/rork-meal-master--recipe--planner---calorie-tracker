@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TextInput, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Check } from 'lucide-react-native';
+import { Check, Loader2 } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
+import { useOnboardingStore } from '@/store/onboardingStore';
 import Colors from '@/constants/colors';
 
 export default function NutritionGoalsScreen() {
   const router = useRouter();
-  const { profile, updateProfile, calculateNutritionGoals, login } = useUserStore();
+  const { profile, updateProfile, calculateNutritionGoals, createProfile, isLoading, error } = useUserStore();
   const { startTutorial } = useTutorialStore();
+  const { data, updateNutritionGoals, getCompleteProfile, reset } = useOnboardingStore();
   
   const [calorieGoal, setCalorieGoal] = useState(profile.calorieGoal?.toString() || '');
   const [proteinGoal, setProteinGoal] = useState(profile.proteinGoal?.toString() || '');
@@ -44,24 +46,58 @@ export default function NutritionGoalsScreen() {
     setUseCalculated(!useCalculated);
   };
   
-  const handleComplete = () => {
-    // Update profile with final nutrition goals
-    updateProfile({
-      calorieGoal: parseInt(calorieGoal) || profile.calorieGoal,
-      proteinGoal: parseInt(proteinGoal) || profile.proteinGoal,
-      carbsGoal: parseInt(carbsGoal) || profile.carbsGoal,
-      fatGoal: parseInt(fatGoal) || profile.fatGoal,
-      completedOnboarding: true,
-    });
-    
-    // Complete login process
-    login({
-      ...profile,
-      completedOnboarding: true,
-    });
-    
-    // Navigate to main app
-    router.replace('/(tabs)');
+  const handleComplete = async () => {
+    try {
+      // Update nutrition goals in onboarding store
+      updateNutritionGoals({
+        calorieGoal: parseInt(calorieGoal) || profile.calorieGoal,
+        proteinGoal: parseInt(proteinGoal) || profile.proteinGoal,
+        carbsGoal: parseInt(carbsGoal) || profile.carbsGoal,
+        fatGoal: parseInt(fatGoal) || profile.fatGoal,
+        useCalculatedGoals: useCalculated,
+      });
+      
+      // Get the complete profile from onboarding store
+      const completeProfileData = getCompleteProfile();
+      
+      console.log('Complete profile data:', completeProfileData);
+      
+      // Create profile on the backend
+      await createProfile(completeProfileData);
+      
+      // Reset onboarding store
+      reset();
+      
+      // Navigate to main app
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      Alert.alert(
+        'Error',
+        'There was an issue saving your profile. Please try again.',
+        [
+          {
+            text: 'Try Again',
+            onPress: handleComplete,
+          },
+          {
+            text: 'Skip for Now',
+            onPress: () => {
+              // Fallback to local storage only
+              updateProfile({
+                calorieGoal: parseInt(calorieGoal) || profile.calorieGoal,
+                proteinGoal: parseInt(proteinGoal) || profile.proteinGoal,
+                carbsGoal: parseInt(carbsGoal) || profile.carbsGoal,
+                fatGoal: parseInt(fatGoal) || profile.fatGoal,
+                completedOnboarding: true,
+              });
+              reset();
+              router.replace('/(tabs)');
+            },
+          },
+        ]
+      );
+    }
   };
   
   return (
@@ -188,10 +224,23 @@ export default function NutritionGoalsScreen() {
       </ScrollView>
       
       <View style={styles.footer}>
-        <Pressable style={styles.completeButton} onPress={handleComplete}>
-          <Check size={20} color={Colors.white} />
-          <Text style={styles.completeButtonText}>Start Using Zestora</Text>
+        <Pressable 
+          style={[styles.completeButton, isLoading && styles.completeButtonDisabled]} 
+          onPress={handleComplete}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 size={20} color={Colors.white} style={styles.spinner} />
+          ) : (
+            <Check size={20} color={Colors.white} />
+          )}
+          <Text style={styles.completeButtonText}>
+            {isLoading ? 'Setting up your profile...' : 'Start Using Zestora'}
+          </Text>
         </Pressable>
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
       </View>
     </View>
   );
@@ -365,5 +414,18 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: Colors.primary,
     borderRadius: 2,
+  },
+  completeButtonDisabled: {
+    backgroundColor: Colors.primaryLight,
+    opacity: 0.7,
+  },
+  spinner: {
+    marginRight: 8,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

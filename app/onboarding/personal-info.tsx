@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
+import { useOnboardingStore } from '@/store/onboardingStore';
+import { poundsToKg, feetInchesToCm } from '@/utils/unitConversions';
 import Colors from '@/constants/colors';
 
 // Validation constants
@@ -56,14 +58,31 @@ const validateHeight = (feet: string, inches: string): { isValid: boolean; error
 export default function PersonalInfoScreen() {
   const router = useRouter();
   const { updateHeightImperial, updateWeightImperial, updateProfile } = useUserStore();
+  const { data, updatePersonalInfo } = useOnboardingStore();
   
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [name, setName] = useState(data.name || '');
+  const [age, setAge] = useState(data.age?.toString() || '');
   const [weightPounds, setWeightPounds] = useState('');
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
-  const [activityLevel, setActivityLevel] = useState<'sedentary' | 'light' | 'moderate' | 'active' | 'very-active' | ''>('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>(data.gender || '');
+  const [activityLevel, setActivityLevel] = useState<'sedentary' | 'light' | 'moderate' | 'active' | 'very-active' | ''>(data.activityLevel || '');
+  
+  // Initialize weight and height from stored data
+  React.useEffect(() => {
+    if (data.weight) {
+      // Convert kg to pounds for display
+      setWeightPounds(Math.round(data.weight * 2.20462).toString());
+    }
+    if (data.height) {
+      // Convert cm to feet/inches for display
+      const totalInches = data.height / 2.54;
+      const feet = Math.floor(totalInches / 12);
+      const inches = Math.round(totalInches % 12);
+      setHeightFeet(feet.toString());
+      setHeightInches(inches.toString());
+    }
+  }, [data.weight, data.height]);
   
   // Validation state
   const ageValidation = validateAge(age);
@@ -111,15 +130,26 @@ export default function PersonalInfoScreen() {
       return;
     }
     
-    // Update profile with name, age, gender, and activity level
+    // Convert imperial to metric and save to onboarding store
+    const weightInKg = poundsToKg(parseInt(weightPounds));
+    const heightInCm = feetInchesToCm(parseInt(heightFeet), parseInt(heightInches));
+    
+    updatePersonalInfo({
+      name: name.trim(),
+      age: parseInt(age),
+      gender: gender as 'male' | 'female' | 'other',
+      activityLevel: activityLevel as 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active',
+      weight: weightInKg,
+      height: heightInCm,
+    });
+    
+    // Also update the user store for immediate use (backward compatibility)
     updateProfile({
       name: name.trim(),
       age: parseInt(age),
       gender: gender as 'male' | 'female' | 'other',
       activityLevel: activityLevel as 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active',
     });
-    
-    // Update height and weight with imperial values
     updateHeightImperial(parseInt(heightFeet), parseInt(heightInches));
     updateWeightImperial(parseInt(weightPounds));
     
