@@ -5,7 +5,7 @@ import { useTutorialStore } from '@/store/tutorialStore';
  * Enhanced hook to safely register a ref with the tutorial system
  * Prevents infinite loops by using stable refs and guards
  * Supports interaction completion marking for advanced tutorial flow
- * Usage: const { ref, markInteractionComplete } = useTutorialRef('search-input');
+ * Usage: const tutorialRef = useTutorialRef('search-input');
  */
 export function useTutorialRef(stepId: string) {
   const ref = useRef<any>(null);
@@ -33,17 +33,51 @@ export function useTutorialRef(stepId: string) {
     markInteractionComplete();
   }, [markInteractionComplete]);
 
-  return {
-    ref,
-    markInteractionComplete: handleInteractionComplete,
-  };
+  // Return a ref callback function that can be used directly with components
+  const refCallback = useCallback((node: any) => {
+    ref.current = node;
+  }, []);
+
+  return refCallback;
 }
 
 /**
- * Backward compatibility - returns just the ref
- * @deprecated Use the new object return format for enhanced features
+ * Enhanced hook that returns both ref callback and interaction completion handler
+ * Usage: const { ref, markInteractionComplete } = useTutorialRefWithActions('search-input');
  */
-export function useTutorialRefLegacy(stepId: string) {
-  const { ref } = useTutorialRef(stepId);
-  return ref;
+export function useTutorialRefWithActions(stepId: string) {
+  const ref = useRef<any>(null);
+  const hasRegisteredRef = useRef(false);
+  const { registerRef, unregisterRef, markInteractionComplete } = useTutorialStore();
+
+  // Guard: Only register once per stepId to prevent infinite loops
+  useEffect(() => {
+    if (!hasRegisteredRef.current && stepId) {
+      hasRegisteredRef.current = true;
+      registerRef(stepId, ref);
+    }
+
+    // Cleanup: unregister on unmount
+    return () => {
+      if (hasRegisteredRef.current && stepId) {
+        unregisterRef(stepId);
+        hasRegisteredRef.current = false;
+      }
+    };
+  }, []); // Empty dependency array - only run once
+
+  // Callback to mark interaction as complete for this step
+  const handleInteractionComplete = useCallback(() => {
+    markInteractionComplete();
+  }, [markInteractionComplete]);
+
+  // Return a ref callback function that can be used directly with components
+  const refCallback = useCallback((node: any) => {
+    ref.current = node;
+  }, []);
+
+  return {
+    ref: refCallback,
+    markInteractionComplete: handleInteractionComplete,
+  };
 }

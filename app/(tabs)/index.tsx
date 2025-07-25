@@ -67,8 +67,8 @@ export default function RecipesScreen() {
   const { isLoggedIn, profile } = useUserStore();
   
   // Register tutorial refs
-  const { ref: searchInputRef } = useTutorialRef('search-input');
-  const { ref: quickActionsRef } = useTutorialRef('quick-actions');
+  const searchInputRef = useTutorialRef('search-input');
+  const quickActionsRef = useTutorialRef('quick-actions');
   
   const { 
     recipes, 
