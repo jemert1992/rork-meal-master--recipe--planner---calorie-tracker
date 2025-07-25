@@ -10,7 +10,7 @@ import { useTutorialStore } from '@/store/tutorialStore';
 export function useTutorialRef(stepId: string) {
   const ref = useRef<any>(null);
   const hasRegisteredRef = useRef(false);
-  const { registerRef, unregisterRef, markInteractionComplete } = useTutorialStore();
+  const { registerRef, unregisterRef } = useTutorialStore();
 
   // Guard: Only register once per stepId to prevent infinite loops
   useEffect(() => {
@@ -28,17 +28,8 @@ export function useTutorialRef(stepId: string) {
     };
   }, []); // Empty dependency array - only run once
 
-  // Callback to mark interaction as complete for this step
-  const handleInteractionComplete = useCallback(() => {
-    markInteractionComplete();
-  }, [markInteractionComplete]);
-
-  // Return a ref callback function that can be used directly with components
-  const refCallback = useCallback((node: any) => {
-    ref.current = node;
-  }, []);
-
-  return refCallback;
+  // Return the ref object directly - this works with both FlatList and other components
+  return ref;
 }
 
 /**
@@ -74,7 +65,11 @@ export function useTutorialRefWithActions(stepId: string) {
   // Return a ref callback function that can be used directly with components
   const refCallback = useCallback((node: any) => {
     ref.current = node;
-  }, []);
+    // Re-register the ref when the node changes to ensure tutorial system has the latest reference
+    if (node && stepId && hasRegisteredRef.current) {
+      registerRef(stepId, ref);
+    }
+  }, [stepId, registerRef]);
 
   return {
     ref: refCallback,
