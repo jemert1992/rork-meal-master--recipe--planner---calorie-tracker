@@ -20,10 +20,14 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenHeight < 700;
 
 export default function TutorialWelcome() {
-  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial, isProcessingAction } = useTutorialStore();
+  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
   const [isHandlingAction, setIsHandlingAction] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // All hooks must be called unconditionally at the top level
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
   
   // GUARD: Set mounted state only once
   useEffect(() => {
@@ -31,10 +35,76 @@ export default function TutorialWelcome() {
     return () => setIsMounted(false);
   }, []);
   
+  // GUARD: Safety timeout - auto-hide after 30 seconds if stuck
+  useEffect(() => {
+    if (showWelcome && isMounted) {
+      const timeout = setTimeout(() => {
+        console.log('Tutorial welcome timeout - force hiding');
+        forceHideTutorial();
+      }, 30000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [showWelcome, forceHideTutorial, isMounted]);
+  
+  // GUARD: Animate only when showWelcome changes
+  useEffect(() => {
+    if (showWelcome && isMounted) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showWelcome, fadeAnim, slideAnim, isMounted]);
+  
+  // ALL useCallback hooks must be called unconditionally at the top level
+  const handleStartTutorial = useCallback(() => {
+    if (isHandlingAction || !isMounted || showTutorial || !showWelcome) return;
+    setIsHandlingAction(true);
+    console.log('Starting tutorial from welcome screen');
+    
+    // Use a longer timeout to prevent rapid state changes and ensure stability
+    setTimeout(() => {
+      const currentState = useTutorialStore.getState();
+      if (!currentState.showTutorial && 
+          !currentState.tutorialCompleted &&
+          currentState.showWelcome &&
+          isMounted) {
+        startTutorial();
+      }
+      setIsHandlingAction(false);
+    }, 300); // Increased timeout
+  }, [isHandlingAction, isMounted, showTutorial, showWelcome, startTutorial]);
+  
+  const handleSkip = useCallback(() => {
+    if (isHandlingAction || !isMounted || showTutorial || !showWelcome) return;
+    setIsHandlingAction(true);
+    console.log('Skipping tutorial from welcome screen');
+    
+    // Use a longer timeout to prevent rapid state changes and ensure stability
+    setTimeout(() => {
+      const currentState = useTutorialStore.getState();
+      if (!currentState.tutorialCompleted && 
+          currentState.showWelcome &&
+          isMounted) {
+        skipTutorial();
+      }
+      setIsHandlingAction(false);
+    }, 300); // Increased timeout
+  }, [isHandlingAction, isMounted, showTutorial, showWelcome, skipTutorial]);
+  
   console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
   
-  // Early returns to prevent rendering conflicts
-  if (!isMounted || isProcessingAction) {
+  // Early returns to prevent rendering conflicts - but all hooks are already called above
+  if (!isMounted) {
     return null;
   }
   
@@ -58,82 +128,8 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  // GUARD: Safety timeout - auto-hide after 30 seconds if stuck
-  useEffect(() => {
-    if (showWelcome) {
-      const timeout = setTimeout(() => {
-        console.log('Tutorial welcome timeout - force hiding');
-        forceHideTutorial();
-      }, 30000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [showWelcome, forceHideTutorial]);
-  
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  
-  // GUARD: Animate only when showWelcome changes
-  useEffect(() => {
-    if (showWelcome) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [showWelcome, fadeAnim, slideAnim]);
-  
-  if (!showWelcome) {
-    return null;
-  }
-  
-  const handleStartTutorial = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial || !showWelcome) return;
-    setIsHandlingAction(true);
-    console.log('Starting tutorial from welcome screen');
-    
-    // Use a longer timeout to prevent rapid state changes and ensure stability
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (!currentState.showTutorial && 
-          !currentState.isProcessingAction && 
-          !currentState.tutorialCompleted &&
-          currentState.showWelcome &&
-          isMounted) {
-        startTutorial();
-      }
-      setIsHandlingAction(false);
-    }, 300); // Increased timeout
-  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, showWelcome, startTutorial]);
-  
-  const handleSkip = useCallback(() => {
-    if (isHandlingAction || isProcessingAction || !isMounted || showTutorial || !showWelcome) return;
-    setIsHandlingAction(true);
-    console.log('Skipping tutorial from welcome screen');
-    
-    // Use a longer timeout to prevent rapid state changes and ensure stability
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (!currentState.tutorialCompleted && 
-          !currentState.isProcessingAction &&
-          currentState.showWelcome &&
-          isMounted) {
-        skipTutorial();
-      }
-      setIsHandlingAction(false);
-    }, 300); // Increased timeout
-  }, [isHandlingAction, isProcessingAction, isMounted, showTutorial, showWelcome, skipTutorial]);
-  
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
-  const shouldShow = showWelcome && !showTutorial && isMounted && !isProcessingAction;
+  const shouldShow = showWelcome && !showTutorial && isMounted;
   
   if (!shouldShow) {
     return null;
