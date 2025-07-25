@@ -164,8 +164,8 @@ export default function PersonalInfoScreen() {
       // Clear the redirect flag
       setShouldRedirectToOnboarding(false);
       
-      // Navigate to main meal plan instead of continuing onboarding
-      router.replace('/(tabs)/meal-plan');
+      // Navigate to dietary preferences (next step in onboarding)
+      router.push('/onboarding/dietary-preferences');
     } catch (error) {
       console.error('Error saving personal info:', error);
       Alert.alert('Error', 'Failed to save your information. Please try again.');
