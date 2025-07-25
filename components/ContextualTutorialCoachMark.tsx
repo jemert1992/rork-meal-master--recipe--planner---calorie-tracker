@@ -716,9 +716,9 @@ export default function ContextualTutorialCoachMark() {
     // Announce completion
     announceTutorialCompletion(completionMessage);
     
-    // Navigate to meal plan tab with spotlight effect
+    // Navigate to personal info screen to complete onboarding
     setTimeout(() => {
-      router.replace('/(tabs)/meal-plan');
+      router.replace('/onboarding/personal-info');
     }, 500);
   }, [storeActions, router, completionMessage]);
   

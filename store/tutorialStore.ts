@@ -169,11 +169,10 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     route: '/(tabs)/profile',
     targetElement: 'profile-content',
     position: 'top',
-    actionText: 'Set up your profile now',
     icon: 'user',
     color: '#4ECDC4',
     highlightElement: false,
-    completionMessage: '🎉 You\'re all set! Let\'s plan your first meal.'
+    completionMessage: '🎉 You\'re all set! Let\'s set up your profile.'
   }
 ];
 
@@ -311,6 +310,7 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           isFirstLaunch: false,
           shouldRedirectToOnboarding: true,
           welcomeCheckPerformed: true,
+          onboardingStep: 'personal-info',
           highlightTargets: {},
           progress: completionProgress,
           isPaused: false,

@@ -59,9 +59,9 @@ export default function WelcomeScreen() {
       setTimeout(() => {
         router.replace('/onboarding/personal-info');
       }, 300);
-    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup) {
-      // Tutorial is completed without redirect flag, go to main app
-      console.log('Tutorial completed, redirecting to main app');
+    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup && userInfoSubmitted) {
+      // Tutorial is completed and user info is submitted, go to main app
+      console.log('Tutorial completed and user info submitted, redirecting to main app');
       setHasRedirectedToTabs(true);
       setTimeout(() => {
         router.replace('/(tabs)');
