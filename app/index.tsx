@@ -15,7 +15,7 @@ const isSmallScreen = screenHeight < 700;
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { isLoggedIn, profile } = useUserStore();
+  const { isLoggedIn, profile, userInfoSubmitted } = useUserStore();
   const { 
     tutorialCompleted, 
     showTutorial, 
@@ -24,7 +24,7 @@ export default function WelcomeScreen() {
     shouldRedirectToOnboarding,
     setShouldRedirectToOnboarding,
     currentStep,
-    isProcessingAction
+    onboardingStep
   } = useTutorialStore();
   
   const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
@@ -39,71 +39,46 @@ export default function WelcomeScreen() {
   
   // PERMANENT FIX: Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
-    if (isUserSetup && !hasRedirectedToTabs && !isProcessingAction) {
+    if (isUserSetup && !hasRedirectedToTabs) {
       console.log('User is fully set up, redirecting to tabs');
       setHasRedirectedToTabs(true);
       // Use setTimeout to prevent immediate navigation that could cause loops
       setTimeout(() => {
-        // Double-check state before navigation
-        const currentUserState = useUserStore.getState();
-        const currentTutorialState = useTutorialStore.getState();
-        if (currentUserState.isLoggedIn && 
-            currentUserState.profile.onboardingCompleted && 
-            currentTutorialState.tutorialCompleted &&
-            !currentTutorialState.isProcessingAction) {
-          router.replace('/(tabs)');
-        }
-      }, 300); // Increased timeout
+        router.replace('/(tabs)');
+      }, 300);
     }
-  }, [isUserSetup, hasRedirectedToTabs, isProcessingAction, router]);
+  }, [isUserSetup, hasRedirectedToTabs, router]);
   
   // PERMANENT FIX: Handle redirect after tutorial completion - GUARD: prevent multiple redirects
   useEffect(() => {
-    // Skip if already processing to prevent loops
-    if (isProcessingAction) return;
-    
-    if (shouldRedirectToOnboarding && tutorialCompleted && !showTutorial && !hasRedirectedToOnboarding) {
+    if (shouldRedirectToOnboarding && onboardingStep === 'personal-info' && !userInfoSubmitted && !hasRedirectedToOnboarding) {
       // Tutorial is completed, redirect to personal info
       console.log('Redirecting to personal info from welcome screen');
       setHasRedirectedToOnboarding(true);
-      setShouldRedirectToOnboarding(false);
       // Use setTimeout to prevent immediate navigation that could cause loops
       setTimeout(() => {
-        // Double-check state before navigation
-        const currentState = useTutorialStore.getState();
-        if (currentState.tutorialCompleted && !currentState.showTutorial && !currentState.isProcessingAction) {
-          router.replace('/onboarding/personal-info');
-        }
-      }, 500); // Increased timeout
-    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup && !isProcessingAction) {
+        router.replace('/onboarding/personal-info');
+      }, 300);
+    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup) {
       // Tutorial is completed without redirect flag, go to main app
       console.log('Tutorial completed, redirecting to main app');
       setHasRedirectedToTabs(true);
       setTimeout(() => {
-        const currentState = useTutorialStore.getState();
-        if (currentState.tutorialCompleted && !currentState.isProcessingAction) {
-          router.replace('/(tabs)');
-        }
-      }, 500); // Increased timeout
+        router.replace('/(tabs)');
+      }, 300);
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, isProcessingAction, setShouldRedirectToOnboarding, router]);
+  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, onboardingStep, userInfoSubmitted, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, router]);
 
   const handleStartTutorial = useCallback(() => {
-    if (isProcessingAction || showTutorial || tutorialCompleted) {
-      console.log('Already processing tutorial action or tutorial active, skipping start');
+    if (showTutorial || tutorialCompleted) {
+      console.log('Tutorial already active or completed, skipping start');
       return;
     }
     console.log('handleStartTutorial called');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     
-    // Use setTimeout to prevent rapid state changes
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (!currentState.isProcessingAction && !currentState.showTutorial && !currentState.tutorialCompleted) {
-        startTutorial();
-      }
-    }, 100); // Increased timeout
-  }, [isProcessingAction, showTutorial, tutorialCompleted, startTutorial, currentStep]);
+    startTutorial();
+  }, [showTutorial, tutorialCompleted, startTutorial, currentStep]);
   
   const handleTutorialComplete = () => {
     // Tutorial completion is handled by the tutorial store
@@ -111,19 +86,13 @@ export default function WelcomeScreen() {
   };
   
   const handleTutorialSkip = useCallback(() => {
-    if (isProcessingAction || tutorialCompleted) {
-      console.log('Already processing tutorial action or tutorial completed, skipping skip');
+    if (tutorialCompleted) {
+      console.log('Tutorial already completed, skipping skip');
       return;
     }
     
-    // Use setTimeout to prevent rapid state changes
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (!currentState.isProcessingAction && !currentState.tutorialCompleted) {
-        skipTutorial();
-      }
-    }, 100); // Increased timeout
-  }, [isProcessingAction, tutorialCompleted, skipTutorial]);
+    skipTutorial();
+  }, [tutorialCompleted, skipTutorial]);
 
   return (
     <SafeAreaView style={styles.container}>

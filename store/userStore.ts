@@ -11,6 +11,7 @@ interface UserState {
   isCalculatingGoals: boolean;
   isLoading: boolean;
   error: string | null;
+  userInfoSubmitted: boolean;
   login: (profile: Partial<UserProfile>) => void;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
@@ -19,6 +20,7 @@ interface UserState {
   calculateNutritionGoals: () => void;
   createProfile: (profileData: Omit<UserProfile, 'id' | 'completedOnboarding'>) => Promise<void>;
   syncProfile: () => Promise<void>;
+  setUserInfoSubmitted: (submitted: boolean) => void;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -40,6 +42,7 @@ export const useUserStore = create<UserState>()(
       isCalculatingGoals: false,
       isLoading: false,
       error: null,
+      userInfoSubmitted: false,
       
       login: (profile) => {
         set({
@@ -55,6 +58,7 @@ export const useUserStore = create<UserState>()(
         set({
           isLoggedIn: false,
           profile: DEFAULT_PROFILE,
+          userInfoSubmitted: false,
         });
       },
       
@@ -343,6 +347,10 @@ export const useUserStore = create<UserState>()(
         }
       },
       
+      setUserInfoSubmitted: (submitted: boolean) => {
+        set({ userInfoSubmitted: submitted });
+      },
+      
       syncProfile: async () => {
         try {
           const { profile } = get();
@@ -383,6 +391,10 @@ export const useUserStore = create<UserState>()(
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
         console.log('User store rehydrated:', state);
+        // Ensure userInfoSubmitted is properly loaded
+        if (state && state.userInfoSubmitted === undefined) {
+          state.userInfoSubmitted = false;
+        }
       },
     }
   )

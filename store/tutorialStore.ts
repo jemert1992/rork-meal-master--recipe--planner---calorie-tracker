@@ -57,6 +57,7 @@ interface TutorialState {
   steps: TutorialStep[];
   shouldRedirectToOnboarding: boolean;
   welcomeCheckPerformed: boolean;
+  onboardingStep: string;
   
   // Ref registry
   elementRefs: Record<string, RefObject<any>>;
@@ -197,6 +198,7 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       steps: TUTORIAL_STEPS,
       shouldRedirectToOnboarding: false,
       welcomeCheckPerformed: false,
+      onboardingStep: 'personal-info',
       
       // Ref registry
       elementRefs: {},
@@ -329,6 +331,7 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           isFirstLaunch: true,
           shouldRedirectToOnboarding: false,
           welcomeCheckPerformed: false,
+          onboardingStep: 'personal-info',
           highlightTargets: {},
           elementRefs: {},
           steps: TUTORIAL_STEPS,

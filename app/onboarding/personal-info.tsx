@@ -5,8 +5,10 @@ import { StatusBar } from 'expo-status-bar';
 import { ArrowRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
+import { useTutorialStore } from '@/store/tutorialStore';
 import { poundsToKg, feetInchesToCm } from '@/utils/unitConversions';
 import Colors from '@/constants/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Validation constants
 const VALIDATION_RANGES = {
@@ -57,8 +59,9 @@ const validateHeight = (feet: string, inches: string): { isValid: boolean; error
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
-  const { updateHeightImperial, updateWeightImperial, updateProfile } = useUserStore();
+  const { updateHeightImperial, updateWeightImperial, updateProfile, setUserInfoSubmitted } = useUserStore();
   const { data, updatePersonalInfo } = useOnboardingStore();
+  const { setShouldRedirectToOnboarding } = useTutorialStore();
   
   const [name, setName] = useState(data.name || '');
   const [age, setAge] = useState(data.age?.toString() || '');
@@ -100,7 +103,7 @@ export default function PersonalInfoScreen() {
                       weightValidation.isValid &&
                       heightValidation.isValid;
   
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!isFormValid) {
       // Show specific validation errors with helpful messages
       if (!ageValidation.isValid) {
@@ -130,30 +133,43 @@ export default function PersonalInfoScreen() {
       return;
     }
     
-    // Convert imperial to metric and save to onboarding store
-    const weightInKg = poundsToKg(parseInt(weightPounds));
-    const heightInCm = feetInchesToCm(parseInt(heightFeet), parseInt(heightInches));
-    
-    updatePersonalInfo({
-      name: name.trim(),
-      age: parseInt(age),
-      gender: gender as 'male' | 'female' | 'other',
-      activityLevel: activityLevel as 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active',
-      weight: weightInKg,
-      height: heightInCm,
-    });
-    
-    // Also update the user store for immediate use (backward compatibility)
-    updateProfile({
-      name: name.trim(),
-      age: parseInt(age),
-      gender: gender as 'male' | 'female' | 'other',
-      activityLevel: activityLevel as 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active',
-    });
-    updateHeightImperial(parseInt(heightFeet), parseInt(heightInches));
-    updateWeightImperial(parseInt(weightPounds));
-    
-    router.push('/onboarding/dietary-preferences');
+    try {
+      // Convert imperial to metric and save to onboarding store
+      const weightInKg = poundsToKg(parseInt(weightPounds));
+      const heightInCm = feetInchesToCm(parseInt(heightFeet), parseInt(heightInches));
+      
+      const personalData = {
+        name: name.trim(),
+        age: parseInt(age),
+        gender: gender as 'male' | 'female' | 'other',
+        activityLevel: activityLevel as 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active',
+        weight: weightInKg,
+        height: heightInCm,
+      };
+      
+      // Save to onboarding store
+      updatePersonalInfo(personalData);
+      
+      // Save to user store for immediate use
+      updateProfile(personalData);
+      updateHeightImperial(parseInt(heightFeet), parseInt(heightInches));
+      updateWeightImperial(parseInt(weightPounds));
+      
+      // Persist the data to AsyncStorage
+      await AsyncStorage.setItem('user_personal_info', JSON.stringify(personalData));
+      
+      // Mark user info as submitted
+      setUserInfoSubmitted(true);
+      
+      // Clear the redirect flag
+      setShouldRedirectToOnboarding(false);
+      
+      // Navigate to main meal plan instead of continuing onboarding
+      router.replace('/(tabs)/meal-plan');
+    } catch (error) {
+      console.error('Error saving personal info:', error);
+      Alert.alert('Error', 'Failed to save your information. Please try again.');
+    }
   };
   
   return (
@@ -167,13 +183,7 @@ export default function PersonalInfoScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.title}>Let's get to know you</Text>
-          <Text style={styles.subtitle}>Help us create your personalized nutrition plan in just a few steps</Text>
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Step 1 of 3</Text>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '33%' }]} />
-            </View>
-          </View>
+          <Text style={styles.subtitle}>Tell us about yourself to get personalized meal recommendations</Text>
         </View>
         
         <View style={styles.form}>
