@@ -62,8 +62,26 @@ export default function NutritionGoalsScreen() {
       
       console.log('Complete profile data:', completeProfileData);
       
+      // Ensure all required fields are present
+      const profileToCreate = {
+        name: completeProfileData.name || '',
+        age: completeProfileData.age || 25,
+        gender: completeProfileData.gender || 'other',
+        weight: completeProfileData.weight || 70,
+        height: completeProfileData.height || 170,
+        activityLevel: completeProfileData.activityLevel || 'moderate',
+        dietType: completeProfileData.dietType || 'any',
+        allergies: completeProfileData.allergies || [],
+        calorieGoal: completeProfileData.calorieGoal,
+        proteinGoal: completeProfileData.proteinGoal,
+        carbsGoal: completeProfileData.carbsGoal,
+        fatGoal: completeProfileData.fatGoal,
+        fitnessGoals: completeProfileData.fitnessGoals || [],
+        autoGenerateMeals: completeProfileData.autoGenerateMeals ?? true,
+      };
+      
       // Create profile on the backend
-      await createProfile(completeProfileData);
+      await createProfile(profileToCreate);
       
       // Reset onboarding store
       reset();

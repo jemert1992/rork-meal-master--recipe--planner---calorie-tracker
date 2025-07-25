@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { publicProcedure } from '../../create-context';
+import { publicProcedure } from '../../../create-context';
 
 const getProfileSchema = z.object({
   id: z.string(),
