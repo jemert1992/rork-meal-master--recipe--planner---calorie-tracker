@@ -8,6 +8,7 @@ import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
 import TutorialWelcome from '@/components/TutorialWelcome';
+import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -38,7 +39,7 @@ export default function WelcomeScreen() {
       console.log('Initializing user for tutorial');
       // Set user as logged in with basic onboarding completed so tutorial can show
       const { login } = useUserStore.getState();
-      const { checkShouldShowWelcome } = useTutorialStore.getState();
+      const { startTutorial } = useTutorialStore.getState();
       
       login({ 
         name: 'New User',
@@ -46,10 +47,10 @@ export default function WelcomeScreen() {
         completedOnboarding: false // This indicates full onboarding is not done
       });
       
-      // Trigger tutorial welcome check after user is initialized
+      // Start tutorial directly
       setTimeout(() => {
-        checkShouldShowWelcome(true); // onboardingCompleted is true
-      }, 500);
+        startTutorial();
+      }, 1000);
     }
   }, [isLoggedIn]);
   
@@ -211,6 +212,23 @@ export default function WelcomeScreen() {
       </View>
       
       {/* Tutorial System */}
+      {showTutorial && (
+        <ModernTutorialOverlay
+          visible={showTutorial}
+          onComplete={() => {
+            console.log('Tutorial completed from index');
+            const { completeTutorial } = useTutorialStore.getState();
+            completeTutorial();
+            router.replace('/onboarding/personal-info');
+          }}
+          onSkip={() => {
+            console.log('Tutorial skipped from index');
+            const { skipTutorial } = useTutorialStore.getState();
+            skipTutorial();
+            router.replace('/onboarding/personal-info');
+          }}
+        />
+      )}
       <TutorialWelcome />
     </SafeAreaView>
   );

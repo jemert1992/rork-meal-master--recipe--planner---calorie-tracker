@@ -436,7 +436,12 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       },
       
       setShowTutorial: (show: boolean) => {
-        set({ showTutorial: show, isTutorialActive: show });
+        console.log('setShowTutorial called with:', show);
+        set({ 
+          showTutorial: show, 
+          isTutorialActive: show,
+          showWelcome: false // Hide welcome when tutorial starts
+        });
       },
       
       markStepCompleted: (stepId: string) => {

@@ -142,6 +142,7 @@ export default function ModernTutorialOverlay({
       case 'check-circle': return <CheckCircle size={size} color={color} />;
       case 'plus': return <Plus size={size} color={color} />;
       case 'heart': return <Heart size={size} color={color} />;
+      case 'zap': return <Zap size={size} color={color} />;
       default: return <ChefHat size={size} color={color} />;
     }
   };
