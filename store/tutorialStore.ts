@@ -96,12 +96,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to Zestora! 🎉',
-    description: 'Your healthy eating sidekick. Let\'s show you around!',
+    description: 'Your healthy eating sidekick is here!',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'search-input',
     position: 'center',
-    actionText: 'Let\'s explore what you can do',
+    actionText: 'Ready to explore?',
     icon: 'chef-hat',
     color: '#4ECDC4',
     highlightElement: false
@@ -109,12 +109,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'search',
     title: 'Find Perfect Recipes 🔍',
-    description: 'Try searching for "chicken" or "vegetarian"',
+    description: 'Search "chicken" or "vegetarian" to try it out',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'search-input',
     position: 'bottom',
-    actionText: 'Try searching for "chicken" or "vegetarian"',
+    actionText: 'Go ahead, search for something tasty!',
     icon: 'search',
     color: '#4ECDC4',
     highlightElement: true,
@@ -124,12 +124,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'quick-actions',
     title: 'One-Tap Magic 💥',
-    description: 'Tap any quick action like Add Meal or Grocery List',
+    description: 'Quick actions make meal planning effortless',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'quick-actions',
     position: 'bottom',
-    actionText: 'Tap any quick action like Add Meal or Grocery List',
+    actionText: 'Tap any button to see the magic',
     icon: 'zap',
     color: '#FF6B6B',
     highlightElement: true,
@@ -139,12 +139,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'meal-planner',
     title: 'Drag. Drop. Done. 🍽️',
-    description: 'Plan your week fast with Smart Meal Planning',
+    description: 'Plan your entire week in minutes',
     screen: 'meal-plan',
     route: '/(tabs)/meal-plan',
     targetElement: 'meal-plan-content',
     position: 'top',
-    actionText: 'Plan your week fast with Smart Meal Planning',
+    actionText: 'Smart meal planning made simple',
     icon: 'calendar',
     color: '#FF6B6B',
     highlightElement: false
@@ -152,29 +152,29 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'auto-shopping',
     title: 'Smart Shopping 🛒',
-    description: 'Groceries update automatically from your plan',
+    description: 'Your grocery list updates automatically',
     screen: 'grocery-list',
     route: '/(tabs)/grocery-list',
     targetElement: 'grocery-content',
     position: 'top',
-    actionText: 'Groceries update automatically from your plan',
+    actionText: 'Never forget ingredients again',
     icon: 'shopping-cart',
     color: '#FFD166',
     highlightElement: false
   },
   {
     id: 'profile',
-    title: 'Personalize Your Experience',
-    description: 'Get better suggestions by adding your info',
+    title: 'Make It Personal ✨',
+    description: 'Add your details for better recommendations',
     screen: 'profile',
     route: '/(tabs)/profile',
     targetElement: 'profile-content',
     position: 'top',
-    actionText: 'Get Started',
+    actionText: 'Ready to personalize your experience?',
     icon: 'user',
     color: '#4ECDC4',
     highlightElement: false,
-    completionMessage: '🎉 You\'re all set! Let\'s set up your profile.'
+    completionMessage: '🎉 Perfect! Let\'s set up your profile now.'
   }
 ];
 

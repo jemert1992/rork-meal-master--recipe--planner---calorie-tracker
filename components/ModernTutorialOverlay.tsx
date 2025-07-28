@@ -238,12 +238,20 @@ export default function ModernTutorialOverlay({
 
       {/* Navigation */}
       <View style={styles.navigationContainer}>
-        {!isFirstStep && (
-          <Pressable style={styles.backButton} onPress={handlePrevious}>
-            <ArrowLeft size={16} color={Colors.textSecondary} />
-            <Text style={styles.backButtonText}>Back</Text>
+        <View style={styles.leftNavigation}>
+          {/* Skip Button - Bottom Left */}
+          <Pressable style={styles.skipButton} onPress={onSkip}>
+            <Text style={styles.skipButtonText}>Skip</Text>
           </Pressable>
-        )}
+          
+          {/* Back Button */}
+          {!isFirstStep && (
+            <Pressable style={styles.backButton} onPress={handlePrevious}>
+              <ArrowLeft size={16} color={Colors.textSecondary} />
+              <Text style={styles.backButtonText}>Back</Text>
+            </Pressable>
+          )}
+        </View>
         
         <View style={styles.navigationSpacer} />
         
@@ -252,7 +260,7 @@ export default function ModernTutorialOverlay({
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>
-            {isLastStep ? 'Get Started!' : 'Continue'}
+            {isLastStep ? 'Get Started!' : 'Next'}
           </Text>
           {isLastStep ? (
             <Play size={16} color={Colors.white} />
@@ -261,11 +269,6 @@ export default function ModernTutorialOverlay({
           )}
         </Pressable>
       </View>
-
-      {/* Skip Option */}
-      <Pressable style={styles.skipButton} onPress={onSkip}>
-        <Text style={styles.skipButtonText}>Skip tutorial</Text>
-      </Pressable>
     </Animated.View>
   );
 
@@ -514,5 +517,10 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: 13,
     fontWeight: '500',
+  },
+  leftNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 });

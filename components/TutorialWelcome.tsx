@@ -10,20 +10,77 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { ArrowRight, Sparkles, Target, Calendar, ShoppingCart } from 'lucide-react-native';
+import { ArrowRight, Sparkles, Target, Calendar, ShoppingCart, Earth } from 'lucide-react-native';
 import { useTutorialStore } from '@/store/tutorialStore';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+import ModernTutorialOverlay from './ModernTutorialOverlay';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenHeight < 700;
 
+interface TutorialCompletionModalProps {
+  visible: boolean;
+  onAddDetails: () => void;
+  onSkipForNow: () => void;
+}
+
+function TutorialCompletionModal({ visible, onAddDetails, onSkipForNow }: TutorialCompletionModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.celebrationIcon}>
+              <Earth size={48} color={Colors.primary} />
+            </View>
+            
+            <Text style={styles.modalTitle}>🎉 You're in!</Text>
+            <Text style={styles.modalSubtitle}>Let's customize your experience</Text>
+            
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.primaryModalButton} onPress={onAddDetails}>
+                <Text style={styles.primaryModalButtonText}>Add my details</Text>
+                <ArrowRight size={16} color={Colors.white} />
+              </Pressable>
+              
+              <Pressable style={styles.secondaryModalButton} onPress={onSkipForNow}>
+                <Text style={styles.secondaryModalButtonText}>Skip for now</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function TutorialWelcome() {
-  const { showWelcome, startTutorial, skipTutorial, isFirstLaunch, tutorialCompleted, forceHideTutorial, showTutorial } = useTutorialStore();
-  const { isLoggedIn, profile } = useUserStore();
+  const router = useRouter();
+  const { 
+    showWelcome, 
+    startTutorial, 
+    skipTutorial, 
+    completeTutorial,
+    isFirstLaunch, 
+    tutorialCompleted, 
+    forceHideTutorial, 
+    showTutorial,
+    isTutorialActive,
+    shouldRedirectToOnboarding,
+    setShouldRedirectToOnboarding
+  } = useTutorialStore();
+  const { isLoggedIn, profile, userInfoSubmitted } = useUserStore();
   const [isHandlingAction, setIsHandlingAction] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   
   // All hooks must be called unconditionally at the top level
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -65,6 +122,40 @@ export default function TutorialWelcome() {
     }
   }, [showWelcome, fadeAnim, slideAnim, isMounted]);
   
+  // Handle tutorial completion
+  const handleTutorialComplete = useCallback(() => {
+    console.log('Tutorial completed, showing completion modal');
+    completeTutorial();
+    setShowCompletionModal(true);
+  }, [completeTutorial]);
+  
+  // Handle tutorial skip
+  const handleTutorialSkip = useCallback(() => {
+    console.log('Tutorial skipped, showing completion modal');
+    skipTutorial();
+    setShowCompletionModal(true);
+  }, [skipTutorial]);
+  
+  // Handle completion modal actions
+  const handleAddDetails = useCallback(() => {
+    setShowCompletionModal(false);
+    router.replace('/onboarding/personal-info');
+  }, [router]);
+  
+  const handleSkipForNow = useCallback(() => {
+    setShowCompletionModal(false);
+    router.replace('/(tabs)');
+  }, [router]);
+  
+  // Handle redirect after tutorial completion
+  useEffect(() => {
+    if (shouldRedirectToOnboarding && !userInfoSubmitted) {
+      console.log('Redirecting to personal info after tutorial');
+      setShouldRedirectToOnboarding(false);
+      router.replace('/onboarding/personal-info');
+    }
+  }, [shouldRedirectToOnboarding, userInfoSubmitted, router, setShouldRedirectToOnboarding]);
+  
   // ALL useCallback hooks must be called unconditionally at the top level
   const handleStartTutorial = useCallback(() => {
     if (isHandlingAction || !isMounted || showTutorial || !showWelcome) return;
@@ -95,11 +186,11 @@ export default function TutorialWelcome() {
       if (!currentState.tutorialCompleted && 
           currentState.showWelcome &&
           isMounted) {
-        skipTutorial();
+        handleTutorialSkip();
       }
       setIsHandlingAction(false);
     }, 300); // Increased timeout
-  }, [isHandlingAction, isMounted, showTutorial, showWelcome, skipTutorial]);
+  }, [isHandlingAction, isMounted, showTutorial, showWelcome, handleTutorialSkip]);
   
   console.log('TutorialWelcome render:', { showWelcome, isFirstLaunch, tutorialCompleted, showTutorial, isLoggedIn, onboardingCompleted: profile.onboardingCompleted });
   
@@ -126,6 +217,35 @@ export default function TutorialWelcome() {
   // Don't render if welcome is not explicitly shown
   if (!showWelcome) {
     return null;
+  }
+  
+  // Show tutorial overlay
+  if (showTutorial || isTutorialActive) {
+    return (
+      <>
+        <ModernTutorialOverlay
+          visible={true}
+          onComplete={handleTutorialComplete}
+          onSkip={handleTutorialSkip}
+        />
+        <TutorialCompletionModal
+          visible={showCompletionModal}
+          onAddDetails={handleAddDetails}
+          onSkipForNow={handleSkipForNow}
+        />
+      </>
+    );
+  }
+  
+  // Show completion modal if needed
+  if (showCompletionModal) {
+    return (
+      <TutorialCompletionModal
+        visible={showCompletionModal}
+        onAddDetails={handleAddDetails}
+        onSkipForNow={handleSkipForNow}
+      />
+    );
   }
   
   // Only show the welcome modal if showWelcome is explicitly true and tutorial overlay is not showing
@@ -390,5 +510,78 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 16,
     textDecorationLine: 'underline',
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    width: Math.min(screenWidth - 40, 350),
+    backgroundColor: Colors.surface,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 20,
+  },
+  celebrationIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  primaryModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  primaryModalButtonText: {
+    color: Colors.white,
+    fontWeight: '700',
+    fontSize: 16,
+    marginRight: 8,
+  },
+  secondaryModalButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  secondaryModalButtonText: {
+    color: Colors.textLight,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

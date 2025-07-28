@@ -7,7 +7,7 @@ import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-import ContextualTutorialCoachMark from '@/components/ContextualTutorialCoachMark';
+import TutorialWelcome from '@/components/TutorialWelcome';
 import Colors from '@/constants/colors';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -189,8 +189,8 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Tutorial Overlay */}
-      <ContextualTutorialCoachMark />
+      {/* Tutorial System */}
+      <TutorialWelcome />
     </SafeAreaView>
   );
 }
