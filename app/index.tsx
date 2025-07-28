@@ -51,6 +51,16 @@ export default function WelcomeScreen() {
   
   // PERMANENT FIX: Handle redirect after tutorial completion - GUARD: prevent multiple redirects
   useEffect(() => {
+    console.log('Redirect effect triggered:', {
+      shouldRedirectToOnboarding,
+      onboardingStep,
+      userInfoSubmitted,
+      hasRedirectedToOnboarding,
+      tutorialCompleted,
+      showTutorial,
+      isUserSetup
+    });
+    
     if (shouldRedirectToOnboarding && onboardingStep === 'personal-info' && !userInfoSubmitted && !hasRedirectedToOnboarding) {
       // Tutorial is completed, redirect to personal info
       console.log('Redirecting to personal info from welcome screen');
@@ -58,14 +68,14 @@ export default function WelcomeScreen() {
       // Use setTimeout to prevent immediate navigation that could cause loops
       setTimeout(() => {
         router.replace('/onboarding/personal-info');
-      }, 300);
+      }, 100);
     } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup && userInfoSubmitted) {
       // Tutorial is completed and user info is submitted, go to main app
       console.log('Tutorial completed and user info submitted, redirecting to main app');
       setHasRedirectedToTabs(true);
       setTimeout(() => {
         router.replace('/(tabs)');
-      }, 300);
+      }, 100);
     }
   }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, onboardingStep, userInfoSubmitted, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, router]);
 

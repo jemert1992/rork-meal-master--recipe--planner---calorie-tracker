@@ -321,6 +321,8 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
         
         // Save completion to storage
         AsyncStorage.setItem('tutorial_progress', JSON.stringify(completionProgress));
+        
+        console.log('Tutorial completed, setting shouldRedirectToOnboarding to true');
       },
       
       resetTutorial: () => {
