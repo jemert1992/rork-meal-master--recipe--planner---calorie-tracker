@@ -218,25 +218,13 @@ export default function ModernTutorialOverlay({
         {/* Description */}
         <Text style={styles.stepDescription}>{currentStepData.description}</Text>
 
-        {/* Features List */}
-        {currentStepData.features && currentStepData.features.length > 0 && (
-          <View style={styles.featuresContainer}>
-            {currentStepData.features.map((feature, index) => (
-              <View key={index} style={styles.featureItem}>
-                <View style={[styles.featureBullet, { backgroundColor: currentStepData.color || Colors.primary }]} />
-                <Text style={styles.featureText}>{feature}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Tip */}
-        {currentStepData.tip && (
+        {/* Completion Message */}
+        {currentStepData.completionMessage && (
           <View style={styles.tipContainer}>
             <View style={styles.tipIcon}>
               <Zap size={16} color={Colors.accent} />
             </View>
-            <Text style={styles.tipText}>{currentStepData.tip}</Text>
+            <Text style={styles.tipText}>{currentStepData.completionMessage}</Text>
           </View>
         )}
 
