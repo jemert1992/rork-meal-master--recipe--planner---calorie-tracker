@@ -28,8 +28,16 @@ export function useTutorialRef(stepId: string) {
     };
   }, []); // Empty dependency array - only run once
 
-  // Return the ref object directly - this works with both FlatList and other components
-  return ref;
+  // Return a ref callback function that works with all React Native components
+  const refCallback = useCallback((node: any) => {
+    ref.current = node;
+    // Re-register the ref when the node changes to ensure tutorial system has the latest reference
+    if (node && stepId && hasRegisteredRef.current) {
+      registerRef(stepId, ref);
+    }
+  }, [stepId, registerRef]);
+
+  return refCallback;
 }
 
 /**

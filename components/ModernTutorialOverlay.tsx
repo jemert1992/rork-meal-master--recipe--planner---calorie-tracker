@@ -71,35 +71,7 @@ export default function ModernTutorialOverlay({
   const isLastStep = currentStep === steps.length - 1;
   const progress = ((currentStep + 1) / steps.length) * 100;
   
-  // Safety check - if no step data, show error state
-  if (!currentStepData) {
-    console.warn('[Overlay] No step data found for step', currentStep, 'steps:', steps);
-    return (
-      <Modal
-        visible={visible}
-        transparent={true}
-        animationType="fade"
-        statusBarTranslucent={true}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.container}>
-            <View style={[styles.tutorialCard, { backgroundColor: 'red', justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Step data missing!</Text>
-              <Text style={{ color: 'white', marginTop: 10 }}>Current step: {currentStep}</Text>
-              <Text style={{ color: 'white', marginTop: 5 }}>Steps length: {steps.length}</Text>
-              <Pressable 
-                style={{ marginTop: 20, padding: 10, backgroundColor: 'white', borderRadius: 8 }}
-                onPress={onSkip}
-              >
-                <Text style={{ color: 'red' }}>Close</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  }
-  
+  // All useEffect hooks must be called unconditionally
   useEffect(() => {
     if (visible) {
       // Animate in
@@ -126,9 +98,9 @@ export default function ModernTutorialOverlay({
       scaleAnim.setValue(0.9);
       slideAnim.setValue(50);
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim, slideAnim]);
 
-  // Animate step changes
+  // Animate step changes - always call this hook
   useEffect(() => {
     if (visible) {
       Animated.sequence([
@@ -144,7 +116,7 @@ export default function ModernTutorialOverlay({
         }),
       ]).start();
     }
-  }, [currentStep]);
+  }, [currentStep, visible, slideAnim]);
   
   const handleNext = () => {
     if (isLastStep) {

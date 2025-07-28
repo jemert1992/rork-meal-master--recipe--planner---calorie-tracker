@@ -318,9 +318,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
               
               {isLastStep ? (
                 <Pressable style={styles.primaryButton} onPress={completeTutorial}>
-                  <Text style={styles.primaryButtonText}>
-                    {currentScreen === 'welcome' ? 'Set Up Profile' : 'Get Started'}
-                  </Text>
+                  <Text style={styles.primaryButtonText}>Finish</Text>
                   <ArrowRight size={16} color={Colors.white} />
                 </Pressable>
               ) : (
@@ -436,9 +434,7 @@ export default function TutorialOverlay({ currentScreen }: TutorialOverlayProps)
               
               {isLastStep ? (
                 <Pressable style={styles.primaryButton} onPress={completeTutorial}>
-                  <Text style={styles.primaryButtonText}>
-                    {currentScreen === 'welcome' ? 'Set Up Profile' : 'Get Started'}
-                  </Text>
+                  <Text style={styles.primaryButtonText}>Finish</Text>
                   <ArrowRight size={16} color={Colors.white} />
                 </Pressable>
               ) : (
