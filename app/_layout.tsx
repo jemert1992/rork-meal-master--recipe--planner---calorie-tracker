@@ -3,6 +3,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo } from "react";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Colors from "@/constants/colors";
 import { useUserStore } from "@/store/userStore";
@@ -56,8 +57,15 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const { isLoggedIn, profile } = useUserStore();
+  const { isLoggedIn, profile, userInfoSubmitted } = useUserStore();
   const { tutorialCompleted } = useTutorialStore();
+  
+  // Navigation guard logic
+  useEffect(() => {
+    if (tutorialCompleted && !userInfoSubmitted) {
+      router.replace('/onboarding/personal-info');
+    }
+  }, [tutorialCompleted, userInfoSubmitted]);
   
   // Memoize the showOnboarding calculation to prevent infinite re-renders
   const showOnboarding = useMemo(() => {
