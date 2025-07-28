@@ -124,10 +124,11 @@ export default function TutorialWelcome() {
   
   // Handle tutorial completion
   const handleTutorialComplete = useCallback(() => {
-    console.log('Tutorial completed, showing completion modal');
+    console.log('Tutorial completed, navigating to personal info');
     completeTutorial();
-    setShowCompletionModal(true);
-  }, [completeTutorial]);
+    // Navigate directly to personal info instead of showing modal
+    router.replace('/onboarding/personal-info');
+  }, [completeTutorial, router]);
   
   // Handle tutorial skip
   const handleTutorialSkip = useCallback(() => {

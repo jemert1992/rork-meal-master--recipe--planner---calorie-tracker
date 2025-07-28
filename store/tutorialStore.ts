@@ -109,7 +109,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'search',
     title: 'Find Perfect Recipes 🔍',
-    description: 'Search "chicken" or "vegetarian" to try it out',
+    description: 'Try "chicken" or "vegetarian"',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'search-input',
@@ -124,7 +124,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'quick-actions',
     title: 'One-Tap Magic 💥',
-    description: 'Quick actions make meal planning effortless',
+    description: 'Quick actions make planning effortless',
     screen: 'recipes',
     route: '/(tabs)',
     targetElement: 'quick-actions',
@@ -139,7 +139,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'meal-planner',
     title: 'Drag. Drop. Done. 🍽️',
-    description: 'Plan your entire week in minutes',
+    description: 'Plan your week in minutes',
     screen: 'meal-plan',
     route: '/(tabs)/meal-plan',
     targetElement: 'meal-plan-content',
@@ -152,7 +152,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'auto-shopping',
     title: 'Smart Shopping 🛒',
-    description: 'Your grocery list updates automatically',
+    description: 'Groceries update automatically',
     screen: 'grocery-list',
     route: '/(tabs)/grocery-list',
     targetElement: 'grocery-content',
@@ -165,13 +165,13 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'profile',
     title: 'Make It Personal ✨',
-    description: 'Add your details for better recommendations',
+    description: 'Get better suggestions with your info',
     screen: 'profile',
     route: '/(tabs)/profile',
     targetElement: 'profile-content',
     position: 'top',
     actionText: 'Ready to personalize your experience?',
-    icon: 'user',
+    icon: 'target',
     color: '#4ECDC4',
     highlightElement: false,
     completionMessage: '🎉 Perfect! Let\'s set up your profile now.'

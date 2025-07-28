@@ -32,10 +32,31 @@ export default function WelcomeScreen() {
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
 
+  // Initialize user as logged in if not already, so tutorial can show
+  useEffect(() => {
+    if (!isLoggedIn) {
+      console.log('Initializing user for tutorial');
+      // Set user as logged in with basic onboarding completed so tutorial can show
+      const { login } = useUserStore.getState();
+      const { checkShouldShowWelcome } = useTutorialStore.getState();
+      
+      login({ 
+        name: 'New User',
+        onboardingCompleted: true, // This allows tutorial to show
+        completedOnboarding: false // This indicates full onboarding is not done
+      });
+      
+      // Trigger tutorial welcome check after user is initialized
+      setTimeout(() => {
+        checkShouldShowWelcome(true); // onboardingCompleted is true
+      }, 500);
+    }
+  }, [isLoggedIn]);
+  
   // Memoize user setup status to prevent unnecessary re-renders
   const isUserSetup = useMemo(() => {
-    return isLoggedIn && profile.onboardingCompleted && tutorialCompleted;
-  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted]);
+    return isLoggedIn && profile.completedOnboarding && tutorialCompleted;
+  }, [isLoggedIn, profile.completedOnboarding, tutorialCompleted]);
   
   // PERMANENT FIX: Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
