@@ -219,7 +219,7 @@ export default function ModernTutorialOverlay({
         <Text style={styles.stepDescription}>{currentStepData.description}</Text>
 
         {/* Completion Message */}
-        {currentStepData.completionMessage && (
+        {currentStepData?.completionMessage && (
           <View style={styles.tipContainer}>
             <View style={styles.tipIcon}>
               <Zap size={16} color={Colors.accent} />
@@ -229,7 +229,7 @@ export default function ModernTutorialOverlay({
         )}
 
         {/* Action Text */}
-        {currentStepData.actionText && (
+        {currentStepData?.actionText && (
           <View style={styles.actionContainer}>
             <Text style={styles.actionText}>{currentStepData.actionText}</Text>
           </View>
