@@ -163,9 +163,19 @@ export default function TutorialWelcome() {
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
     
-    // Directly start tutorial without complex conditions
+    // Directly start tutorial and ensure overlay shows
     startTutorial();
-    setIsHandlingAction(false);
+    
+    // Force tutorial to show immediately
+    setTimeout(() => {
+      const currentState = useTutorialStore.getState();
+      console.log('Tutorial state after start:', currentState);
+      if (!currentState.showTutorial) {
+        console.log('Force setting showTutorial to true');
+        currentState.setShowTutorial(true);
+      }
+      setIsHandlingAction(false);
+    }, 100);
   }, [isHandlingAction, isMounted, startTutorial]);
   
   const handleSkip = useCallback(() => {
@@ -198,7 +208,7 @@ export default function TutorialWelcome() {
   }
   
   // Don't render if tutorial overlay is showing
-  if (showTutorial) {
+  if (showTutorial || isTutorialActive) {
     return null;
   }
   
@@ -212,10 +222,8 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  // Don't render welcome if tutorial is active - let the overlay handle it
-  if (showTutorial || isTutorialActive) {
-    return null;
-  }
+  // This check is now redundant since we have it above
+  // Removed to prevent duplicate checks
   
   // Show completion modal if needed
   if (showCompletionModal) {

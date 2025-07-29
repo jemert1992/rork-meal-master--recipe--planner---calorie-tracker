@@ -110,6 +110,16 @@ export default function WelcomeScreen() {
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     
     startTutorial();
+    
+    // Force tutorial to show immediately
+    setTimeout(() => {
+      const currentState = useTutorialStore.getState();
+      console.log('Tutorial state after start from index:', currentState);
+      if (!currentState.showTutorial) {
+        console.log('Force setting showTutorial to true from index');
+        currentState.setShowTutorial(true);
+      }
+    }, 50);
   }, [showTutorial, tutorialCompleted, startTutorial, currentStep]);
   
   const handleTutorialComplete = () => {
@@ -214,23 +224,25 @@ export default function WelcomeScreen() {
       {/* Tutorial System - Always render TutorialWelcome first, then overlay */}
       <TutorialWelcome />
       
-      {/* Tutorial Overlay - Renders on top when showTutorial is true */}
+      {/* Tutorial Overlay - Always render when showTutorial is true */}
       {showTutorial && (
-        <ModernTutorialOverlay
-          visible={showTutorial}
-          onComplete={() => {
-            console.log('Tutorial completed from index');
-            const { completeTutorial } = useTutorialStore.getState();
-            completeTutorial();
-            router.replace('/onboarding/personal-info');
-          }}
-          onSkip={() => {
-            console.log('Tutorial skipped from index');
-            const { skipTutorial } = useTutorialStore.getState();
-            skipTutorial();
-            router.replace('/onboarding/personal-info');
-          }}
-        />
+        <View style={StyleSheet.absoluteFill}>
+          <ModernTutorialOverlay
+            visible={showTutorial}
+            onComplete={() => {
+              console.log('Tutorial completed from index');
+              const { completeTutorial } = useTutorialStore.getState();
+              completeTutorial();
+              router.replace('/onboarding/personal-info');
+            }}
+            onSkip={() => {
+              console.log('Tutorial skipped from index');
+              const { skipTutorial } = useTutorialStore.getState();
+              skipTutorial();
+              router.replace('/onboarding/personal-info');
+            }}
+          />
+        </View>
       )}
     </SafeAreaView>
   );

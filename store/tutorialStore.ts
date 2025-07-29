@@ -229,7 +229,9 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           waitingForInteraction: false,
         });
         
-        console.log('[TutorialStore] Tutorial state updated:', get());
+        console.log('[TutorialStore] Tutorial state updated - showTutorial:', get().showTutorial);
+        console.log('[TutorialStore] Tutorial state updated - isTutorialActive:', get().isTutorialActive);
+        console.log('[TutorialStore] Tutorial state updated - currentStep:', get().currentStep);
         
         // Save initial progress
         get().saveProgress();
