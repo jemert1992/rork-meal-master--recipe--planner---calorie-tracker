@@ -156,9 +156,15 @@ export default function ModernTutorialOverlay({
     timestamp: new Date().toISOString()
   });
 
-  // Early return only if not visible
+  // Early returns after all hooks are called
   if (!visible) {
     console.log('ModernTutorialOverlay not visible, returning null');
+    return null;
+  }
+  
+  // Early return if no step data
+  if (!currentStepData) {
+    console.log('[Overlay] No current step data, returning null');
     return null;
   }
   

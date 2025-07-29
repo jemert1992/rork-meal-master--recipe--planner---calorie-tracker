@@ -211,7 +211,10 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Tutorial System */}
+      {/* Tutorial System - Always render TutorialWelcome first, then overlay */}
+      <TutorialWelcome />
+      
+      {/* Tutorial Overlay - Renders on top when showTutorial is true */}
       {showTutorial && (
         <ModernTutorialOverlay
           visible={showTutorial}
@@ -229,7 +232,6 @@ export default function WelcomeScreen() {
           }}
         />
       )}
-      <TutorialWelcome />
     </SafeAreaView>
   );
 }

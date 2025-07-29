@@ -206,12 +206,16 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       
       startTutorial: () => {
         const { isTutorialActive, tutorialCompleted, progress } = get();
+        console.log('[TutorialStore] startTutorial called:', { isTutorialActive, tutorialCompleted, progress });
+        
         if (isTutorialActive || tutorialCompleted) {
+          console.log('[TutorialStore] Tutorial already active or completed, skipping');
           return;
         }
         
         // Resume from saved progress if available
         const startStep = progress && !progress.skipped ? progress.currentStep : 0;
+        console.log('[TutorialStore] Starting tutorial at step:', startStep);
         
         set({
           currentStep: startStep,
@@ -224,6 +228,8 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           isPaused: false,
           waitingForInteraction: false,
         });
+        
+        console.log('[TutorialStore] Tutorial state updated:', get());
         
         // Save initial progress
         get().saveProgress();

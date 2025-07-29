@@ -159,22 +159,14 @@ export default function TutorialWelcome() {
   
   // ALL useCallback hooks must be called unconditionally at the top level
   const handleStartTutorial = useCallback(() => {
-    if (isHandlingAction || !isMounted || showTutorial || !showWelcome) return;
+    if (isHandlingAction || !isMounted) return;
     setIsHandlingAction(true);
     console.log('Starting tutorial from welcome screen');
     
-    // Use a longer timeout to prevent rapid state changes and ensure stability
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      if (!currentState.showTutorial && 
-          !currentState.tutorialCompleted &&
-          currentState.showWelcome &&
-          isMounted) {
-        startTutorial();
-      }
-      setIsHandlingAction(false);
-    }, 300); // Increased timeout
-  }, [isHandlingAction, isMounted, showTutorial, showWelcome, startTutorial]);
+    // Directly start tutorial without complex conditions
+    startTutorial();
+    setIsHandlingAction(false);
+  }, [isHandlingAction, isMounted, startTutorial]);
   
   const handleSkip = useCallback(() => {
     if (isHandlingAction || !isMounted || showTutorial || !showWelcome) return;
@@ -220,22 +212,9 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  // Show tutorial overlay
+  // Don't render welcome if tutorial is active - let the overlay handle it
   if (showTutorial || isTutorialActive) {
-    return (
-      <>
-        <ModernTutorialOverlay
-          visible={true}
-          onComplete={handleTutorialComplete}
-          onSkip={handleTutorialSkip}
-        />
-        <TutorialCompletionModal
-          visible={showCompletionModal}
-          onAddDetails={handleAddDetails}
-          onSkipForNow={handleSkipForNow}
-        />
-      </>
-    );
+    return null;
   }
   
   // Show completion modal if needed
