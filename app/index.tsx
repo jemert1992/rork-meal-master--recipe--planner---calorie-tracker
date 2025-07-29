@@ -43,18 +43,12 @@ export default function WelcomeScreen() {
       console.log('Initializing user for tutorial');
       // Set user as logged in with basic onboarding completed so tutorial can show
       const { login } = useUserStore.getState();
-      const { startTutorial } = useTutorialStore.getState();
       
       login({ 
         name: 'New User',
         onboardingCompleted: true, // This allows tutorial to show
         completedOnboarding: false // This indicates full onboarding is not done
       });
-      
-      // Start tutorial directly
-      setTimeout(() => {
-        startTutorial();
-      }, 1000);
     }
   }, [isLoggedIn]);
   
@@ -106,23 +100,22 @@ export default function WelcomeScreen() {
   }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, onboardingStep, userInfoSubmitted, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, router]);
 
   const handleStartTutorial = useCallback(() => {
-    if (showTutorial || tutorialCompleted) {
-      console.log('Tutorial already active or completed, skipping start');
-      return;
-    }
     console.log('handleStartTutorial called from index.tsx');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     
+    // Force start tutorial regardless of current state
     startTutorial();
     
     // Log the state immediately after calling startTutorial
-    const currentState = useTutorialStore.getState();
-    console.log('Tutorial state immediately after start from index:', {
-      showTutorial: currentState.showTutorial,
-      isTutorialActive: currentState.isTutorialActive,
-      currentStep: currentState.currentStep
-    });
-  }, [showTutorial, tutorialCompleted, startTutorial, currentStep]);
+    setTimeout(() => {
+      const currentState = useTutorialStore.getState();
+      console.log('Tutorial state after start from index:', {
+        showTutorial: currentState.showTutorial,
+        isTutorialActive: currentState.isTutorialActive,
+        currentStep: currentState.currentStep
+      });
+    }, 100);
+  }, [startTutorial, showTutorial, tutorialCompleted, currentStep]);
   
   const handleTutorialComplete = () => {
     // Tutorial completion is handled by the tutorial store

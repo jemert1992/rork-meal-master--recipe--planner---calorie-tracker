@@ -208,13 +208,11 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
         const { isTutorialActive, tutorialCompleted, progress } = get();
         console.log('[TutorialStore] startTutorial called:', { isTutorialActive, tutorialCompleted, progress });
         
-        if (isTutorialActive || tutorialCompleted) {
-          console.log('[TutorialStore] Tutorial already active or completed, skipping');
-          return;
-        }
+        // Remove guards to force tutorial start
+        console.log('[TutorialStore] Force starting tutorial, ignoring current state');
         
-        // Resume from saved progress if available
-        const startStep = progress && !progress.skipped ? progress.currentStep : 0;
+        // Always start from step 0 for debugging
+        const startStep = 0;
         console.log('[TutorialStore] Starting tutorial at step:', startStep);
         
         const newState = {
