@@ -19,7 +19,7 @@ import { useTutorialStore } from '@/store/tutorialStore';
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
-  const { resetTutorial } = useTutorialStore();
+  const { resetTutorial, startTutorial } = useTutorialStore();
   const { foodLog, removeFoodEntry } = useFoodLogStore();
   const { apiSources, setApiSource, loadRecipesFromApi } = useRecipeStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -236,8 +236,15 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Help & Tutorial</Text>
           
+          <Pressable style={styles.tutorialButton} onPress={() => {
+            console.log('Start Tutorial button pressed');
+            startTutorial();
+          }}>
+            <Text style={styles.tutorialButtonText}>Start Tutorial</Text>
+          </Pressable>
+          
           <Pressable style={styles.tutorialButton} onPress={resetTutorial}>
-            <Text style={styles.tutorialButtonText}>Restart Tutorial</Text>
+            <Text style={styles.tutorialButtonText}>Reset Tutorial</Text>
           </Pressable>
           
           <Pressable style={styles.helpButton} onPress={() => router.push('/help')}>

@@ -10,6 +10,8 @@ import { useUserStore } from "@/store/userStore";
 import { useTutorialStore } from "@/store/tutorialStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import TutorialManager from "@/components/TutorialManager";
+import TutorialWelcome from "@/components/TutorialWelcome";
 
 
 
@@ -75,6 +77,8 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="dark" />
+      <TutorialManager />
+      <TutorialWelcome />
       <Stack
         screenOptions={{
           headerShown: false, // Hide all headers at the Stack level

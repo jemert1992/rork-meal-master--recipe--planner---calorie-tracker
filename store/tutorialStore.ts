@@ -205,18 +205,11 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
       elementRefs: {},
       
       startTutorial: () => {
-        const { isTutorialActive, tutorialCompleted, progress } = get();
-        console.log('[TutorialStore] startTutorial called:', { isTutorialActive, tutorialCompleted, progress });
+        console.log('[TutorialStore] startTutorial called');
         
-        // Remove guards to force tutorial start
-        console.log('[TutorialStore] Force starting tutorial, ignoring current state');
-        
-        // Always start from step 0 for debugging
-        const startStep = 0;
-        console.log('[TutorialStore] Starting tutorial at step:', startStep);
-        
+        // Force start tutorial regardless of current state
         const newState = {
-          currentStep: startStep,
+          currentStep: 0,
           isTutorialActive: true,
           showTutorial: true,
           showWelcome: false,
@@ -225,19 +218,22 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           highlightTargets: {},
           isPaused: false,
           waitingForInteraction: false,
+          progress: null,
         };
         
-        console.log('[TutorialStore] Setting new state:', newState);
+        console.log('[TutorialStore] Setting tutorial state:', newState);
         set(newState);
         
         // Verify state was set correctly
-        const updatedState = get();
-        console.log('[TutorialStore] Tutorial state after update:', {
-          showTutorial: updatedState.showTutorial,
-          isTutorialActive: updatedState.isTutorialActive,
-          currentStep: updatedState.currentStep,
-          showWelcome: updatedState.showWelcome
-        });
+        setTimeout(() => {
+          const updatedState = get();
+          console.log('[TutorialStore] Tutorial state after update:', {
+            showTutorial: updatedState.showTutorial,
+            isTutorialActive: updatedState.isTutorialActive,
+            currentStep: updatedState.currentStep,
+            showWelcome: updatedState.showWelcome
+          });
+        }, 100);
         
         // Save initial progress
         get().saveProgress();
