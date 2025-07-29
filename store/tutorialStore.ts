@@ -217,7 +217,7 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
         const startStep = progress && !progress.skipped ? progress.currentStep : 0;
         console.log('[TutorialStore] Starting tutorial at step:', startStep);
         
-        set({
+        const newState = {
           currentStep: startStep,
           isTutorialActive: true,
           showTutorial: true,
@@ -227,11 +227,19 @@ export const useTutorialStore = create<TutorialState>()(subscribeWithSelector((s
           highlightTargets: {},
           isPaused: false,
           waitingForInteraction: false,
-        });
+        };
         
-        console.log('[TutorialStore] Tutorial state updated - showTutorial:', get().showTutorial);
-        console.log('[TutorialStore] Tutorial state updated - isTutorialActive:', get().isTutorialActive);
-        console.log('[TutorialStore] Tutorial state updated - currentStep:', get().currentStep);
+        console.log('[TutorialStore] Setting new state:', newState);
+        set(newState);
+        
+        // Verify state was set correctly
+        const updatedState = get();
+        console.log('[TutorialStore] Tutorial state after update:', {
+          showTutorial: updatedState.showTutorial,
+          isTutorialActive: updatedState.isTutorialActive,
+          currentStep: updatedState.currentStep,
+          showWelcome: updatedState.showWelcome
+        });
         
         // Save initial progress
         get().saveProgress();

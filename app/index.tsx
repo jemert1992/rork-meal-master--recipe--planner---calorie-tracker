@@ -32,6 +32,10 @@ export default function WelcomeScreen() {
   const [hasRedirectedToOnboarding, setHasRedirectedToOnboarding] = useState(false);
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
+  console.log('WelcomeScreen render - tutorialCompleted:', tutorialCompleted);
+  console.log('WelcomeScreen render - currentStep:', currentStep);
+  console.log('WelcomeScreen render - isLoggedIn:', isLoggedIn);
+  console.log('WelcomeScreen render - profile.onboardingCompleted:', profile.onboardingCompleted);
 
   // Initialize user as logged in if not already, so tutorial can show
   useEffect(() => {
@@ -106,20 +110,18 @@ export default function WelcomeScreen() {
       console.log('Tutorial already active or completed, skipping start');
       return;
     }
-    console.log('handleStartTutorial called');
+    console.log('handleStartTutorial called from index.tsx');
     console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
     
     startTutorial();
     
-    // Force tutorial to show immediately
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      console.log('Tutorial state after start from index:', currentState);
-      if (!currentState.showTutorial) {
-        console.log('Force setting showTutorial to true from index');
-        currentState.setShowTutorial(true);
-      }
-    }, 50);
+    // Log the state immediately after calling startTutorial
+    const currentState = useTutorialStore.getState();
+    console.log('Tutorial state immediately after start from index:', {
+      showTutorial: currentState.showTutorial,
+      isTutorialActive: currentState.isTutorialActive,
+      currentStep: currentState.currentStep
+    });
   }, [showTutorial, tutorialCompleted, startTutorial, currentStep]);
   
   const handleTutorialComplete = () => {
@@ -218,31 +220,31 @@ export default function WelcomeScreen() {
               <ArrowRight size={20} color={Colors.white} />
             </LinearGradient>
           </Pressable>
+          
+
         </View>
       </View>
       
-      {/* Tutorial System - Always render TutorialWelcome first, then overlay */}
-      <TutorialWelcome />
+      {/* Tutorial System - Temporarily disabled TutorialWelcome for debugging */}
+      {/* <TutorialWelcome /> */}
       
       {/* Tutorial Overlay - Always render when showTutorial is true */}
       {showTutorial && (
-        <View style={StyleSheet.absoluteFill}>
-          <ModernTutorialOverlay
-            visible={showTutorial}
-            onComplete={() => {
-              console.log('Tutorial completed from index');
-              const { completeTutorial } = useTutorialStore.getState();
-              completeTutorial();
-              router.replace('/onboarding/personal-info');
-            }}
-            onSkip={() => {
-              console.log('Tutorial skipped from index');
-              const { skipTutorial } = useTutorialStore.getState();
-              skipTutorial();
-              router.replace('/onboarding/personal-info');
-            }}
-          />
-        </View>
+        <ModernTutorialOverlay
+          visible={showTutorial}
+          onComplete={() => {
+            console.log('Tutorial completed from index');
+            const { completeTutorial } = useTutorialStore.getState();
+            completeTutorial();
+            router.replace('/onboarding/personal-info');
+          }}
+          onSkip={() => {
+            console.log('Tutorial skipped from index');
+            const { skipTutorial } = useTutorialStore.getState();
+            skipTutorial();
+            router.replace('/onboarding/personal-info');
+          }}
+        />
       )}
     </SafeAreaView>
   );

@@ -166,16 +166,15 @@ export default function TutorialWelcome() {
     // Directly start tutorial and ensure overlay shows
     startTutorial();
     
-    // Force tutorial to show immediately
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      console.log('Tutorial state after start:', currentState);
-      if (!currentState.showTutorial) {
-        console.log('Force setting showTutorial to true');
-        currentState.setShowTutorial(true);
-      }
-      setIsHandlingAction(false);
-    }, 100);
+    // Log the state immediately after calling startTutorial
+    const currentState = useTutorialStore.getState();
+    console.log('Tutorial state immediately after start:', {
+      showTutorial: currentState.showTutorial,
+      isTutorialActive: currentState.isTutorialActive,
+      currentStep: currentState.currentStep
+    });
+    
+    setIsHandlingAction(false);
   }, [isHandlingAction, isMounted, startTutorial]);
   
   const handleSkip = useCallback(() => {
@@ -207,8 +206,8 @@ export default function TutorialWelcome() {
     return null;
   }
   
-  // Don't render if tutorial overlay is showing
-  if (showTutorial || isTutorialActive) {
+  // Don't render if tutorial overlay is showing - but allow initial render to trigger tutorial
+  if ((showTutorial || isTutorialActive) && !showWelcome) {
     return null;
   }
   
