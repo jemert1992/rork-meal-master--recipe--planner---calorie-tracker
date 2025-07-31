@@ -249,14 +249,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 data={alternatives}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                  <Pressable 
-                    style={styles.alternativeItem}
-                    onPress={() => handleSwapRecipe(item.id)}
-                    disabled={swappingRecipe}
-                    accessibilityLabel={`Swap with ${item.name}`}
-                    accessibilityHint={`${item.calories} calories. Tap to swap.`}
-                    accessibilityRole="button"
-                  >
+                  <View style={styles.alternativeItem}>
                     {item.image ? (
                       <Image 
                         source={{ uri: item.image }} 
@@ -304,7 +297,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                         <Check size={18} color={Colors.white} />
                       )}
                     </Pressable>
-                  </Pressable>
+                  </View>
                 )}
                 contentContainerStyle={styles.alternativesList}
                 showsVerticalScrollIndicator={false}
