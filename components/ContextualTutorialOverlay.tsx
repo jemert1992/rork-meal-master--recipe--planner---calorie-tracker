@@ -25,15 +25,7 @@ import {
 import Colors from '@/constants/colors';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-// Helper function for safe base64 encoding
-function utf8ToBase64(str: string): string {
-  try {
-    return btoa(unescape(encodeURIComponent(str)));
-  } catch (error) {
-    console.warn('Base64 encoding failed:', error);
-    return '';
-  }
-}
+
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -99,48 +91,15 @@ const Tooltip: React.FC<TooltipProps> = ({
   };
 
   const getTooltipPosition = () => {
-    // Position tooltip based on step position and screen size
+    // Simplified positioning - always center the tooltip for consistency
     const padding = 20;
-    const tooltipHeight = 200; // Approximate tooltip height
+    const tooltipHeight = 220;
     
-    switch (step.position) {
-      case 'top':
-        return {
-          top: 120,
-          left: padding,
-          right: padding,
-        };
-      case 'bottom':
-        return {
-          bottom: 140,
-          left: padding,
-          right: padding,
-        };
-      case 'center':
-        return {
-          top: (screenHeight - tooltipHeight) / 2,
-          left: padding,
-          right: padding,
-        };
-      case 'left':
-        return {
-          top: screenHeight * 0.4,
-          left: padding,
-          width: screenWidth * 0.7,
-        };
-      case 'right':
-        return {
-          top: screenHeight * 0.4,
-          right: padding,
-          width: screenWidth * 0.7,
-        };
-      default:
-        return {
-          bottom: 140,
-          left: padding,
-          right: padding,
-        };
-    }
+    return {
+      top: (screenHeight - tooltipHeight) / 2,
+      left: padding,
+      right: padding,
+    };
   };
 
   if (!visible) return null;
@@ -218,13 +177,7 @@ const Tooltip: React.FC<TooltipProps> = ({
         </Pressable>
       </View>
 
-      {/* Pointer/Arrow */}
-      {step.position === 'bottom' && (
-        <View style={[styles.pointer, styles.pointerUp]} />
-      )}
-      {step.position === 'top' && (
-        <View style={[styles.pointer, styles.pointerDown]} />
-      )}
+
     </Animated.View>
   );
 };
@@ -295,37 +248,6 @@ export default function ContextualTutorialOverlay() {
       {/* Semi-transparent backdrop */}
       <View style={styles.backdrop} pointerEvents="none" />
       
-      {/* Highlight overlay for target elements */}
-      {step.highlightElement && step.targetElement && (
-        <View style={styles.highlightOverlay} pointerEvents="none">
-          {/* Highlight specific elements based on targetElement */}
-          {step.targetElement === 'search-input' && (
-            <View style={[styles.highlightSpotlight, {
-              top: 180,
-              left: 20,
-              right: 80,
-              height: 48,
-            }]} />
-          )}
-          {step.targetElement === 'quick-actions' && (
-            <View style={[styles.highlightSpotlight, {
-              top: 280,
-              left: 20,
-              right: 20,
-              height: 80,
-            }]} />
-          )}
-          {step.targetElement === 'weekly-planner' && (
-            <View style={[styles.highlightSpotlight, {
-              top: 380,
-              left: 20,
-              right: 20,
-              height: 120,
-            }]} />
-          )}
-        </View>
-      )}
-
       {/* Tooltip */}
       <Tooltip
         visible={showTutorial}
@@ -355,29 +277,7 @@ const styles = StyleSheet.create({
       position: 'fixed' as any,
     }),
   },
-  highlightOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,
-  },
-  highlightSpotlight: {
-    position: 'absolute',
-    backgroundColor: 'rgba(76, 205, 196, 0.1)',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 8,
-    ...((Platform.OS as string) === 'web' && {
-      boxShadow: '0 0 20px rgba(76, 205, 196, 0.4)',
-    }),
-  },
+
   tooltip: {
     position: 'absolute',
     backgroundColor: Colors.surface,
@@ -395,33 +295,7 @@ const styles = StyleSheet.create({
       position: 'fixed' as any,
     }),
   },
-  pointer: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    left: '50%',
-    marginLeft: -8,
-  },
-  pointerUp: {
-    bottom: -8,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: Colors.surface,
-  },
-  pointerDown: {
-    top: -8,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: Colors.surface,
-  },
+
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
