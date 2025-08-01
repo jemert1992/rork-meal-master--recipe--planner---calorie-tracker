@@ -18,22 +18,17 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const { isLoggedIn, profile, userInfoSubmitted } = useUserStore();
   const { 
-    tutorialCompleted, 
     showTutorial, 
     startTutorial,
     skipTutorial,
-    shouldRedirectToOnboarding,
-    setShouldRedirectToOnboarding,
-    currentStep,
-    onboardingStep
+    stepIndex
   } = useTutorialStore();
   
   const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
   const [hasRedirectedToOnboarding, setHasRedirectedToOnboarding] = useState(false);
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
-  console.log('WelcomeScreen render - tutorialCompleted:', tutorialCompleted);
-  console.log('WelcomeScreen render - currentStep:', currentStep);
+  console.log('WelcomeScreen render - stepIndex:', stepIndex);
   console.log('WelcomeScreen render - isLoggedIn:', isLoggedIn);
   console.log('WelcomeScreen render - profile.onboardingCompleted:', profile.onboardingCompleted);
 
@@ -54,8 +49,8 @@ export default function WelcomeScreen() {
   
   // Memoize user setup status to prevent unnecessary re-renders
   const isUserSetup = useMemo(() => {
-    return isLoggedIn && profile.completedOnboarding && tutorialCompleted;
-  }, [isLoggedIn, profile.completedOnboarding, tutorialCompleted]);
+    return isLoggedIn && profile.completedOnboarding && !showTutorial;
+  }, [isLoggedIn, profile.completedOnboarding, showTutorial]);
   
   // PERMANENT FIX: Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
@@ -69,39 +64,18 @@ export default function WelcomeScreen() {
     }
   }, [isUserSetup, hasRedirectedToTabs, router]);
   
-  // PERMANENT FIX: Handle redirect after tutorial completion - GUARD: prevent multiple redirects
+  // Redirect to tabs after tutorial completion
   useEffect(() => {
-    console.log('Redirect effect triggered:', {
-      shouldRedirectToOnboarding,
-      onboardingStep,
-      userInfoSubmitted,
-      hasRedirectedToOnboarding,
-      tutorialCompleted,
-      showTutorial,
-      isUserSetup
-    });
-    
-    if (shouldRedirectToOnboarding && onboardingStep === 'personal-info' && !userInfoSubmitted && !hasRedirectedToOnboarding) {
-      // Tutorial is completed, redirect to personal info
-      console.log('Redirecting to personal info from welcome screen');
-      setHasRedirectedToOnboarding(true);
-      // Use setTimeout to prevent immediate navigation that could cause loops
-      setTimeout(() => {
-        router.replace('/onboarding/personal-info');
-      }, 100);
-    } else if (tutorialCompleted && !showTutorial && !shouldRedirectToOnboarding && !hasRedirectedToTabs && !isUserSetup && userInfoSubmitted) {
-      // Tutorial is completed and user info is submitted, go to main app
-      console.log('Tutorial completed and user info submitted, redirecting to main app');
+    if (!showTutorial && !hasRedirectedToTabs && isLoggedIn) {
+      console.log('Redirecting to tabs after tutorial completion');
       setHasRedirectedToTabs(true);
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 100);
+      router.replace('/(tabs)');
     }
-  }, [tutorialCompleted, showTutorial, shouldRedirectToOnboarding, onboardingStep, userInfoSubmitted, hasRedirectedToOnboarding, hasRedirectedToTabs, isUserSetup, router]);
+  }, [showTutorial, hasRedirectedToTabs, isLoggedIn, router]);
 
   const handleStartTutorial = useCallback(() => {
     console.log('handleStartTutorial called from index.tsx');
-    console.log('Current tutorial state before start:', { showTutorial, tutorialCompleted, currentStep });
+    console.log('Current tutorial state before start:', { showTutorial, stepIndex });
     
     // Force start tutorial regardless of current state
     startTutorial();
@@ -111,11 +85,10 @@ export default function WelcomeScreen() {
       const currentState = useTutorialStore.getState();
       console.log('Tutorial state after start from index:', {
         showTutorial: currentState.showTutorial,
-        isTutorialActive: currentState.isTutorialActive,
-        currentStep: currentState.currentStep
+        stepIndex: currentState.stepIndex
       });
     }, 100);
-  }, [startTutorial, showTutorial, tutorialCompleted, currentStep]);
+  }, [startTutorial, showTutorial, stepIndex]);
   
   const handleTutorialComplete = () => {
     // Tutorial completion is handled by the tutorial store
@@ -123,13 +96,13 @@ export default function WelcomeScreen() {
   };
   
   const handleTutorialSkip = useCallback(() => {
-    if (tutorialCompleted) {
-      console.log('Tutorial already completed, skipping skip');
+    if (!showTutorial) {
+      console.log('Tutorial not active, skipping skip');
       return;
     }
     
     skipTutorial();
-  }, [tutorialCompleted, skipTutorial]);
+  }, [showTutorial, skipTutorial]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -221,24 +194,7 @@ export default function WelcomeScreen() {
       {/* Tutorial System - Temporarily disabled TutorialWelcome for debugging */}
       {/* <TutorialWelcome /> */}
       
-      {/* Tutorial Overlay - Always render when showTutorial is true */}
-      {showTutorial && (
-        <ModernTutorialOverlay
-          visible={showTutorial}
-          onComplete={() => {
-            console.log('Tutorial completed from index');
-            const { completeTutorial } = useTutorialStore.getState();
-            completeTutorial();
-            router.replace('/onboarding/personal-info');
-          }}
-          onSkip={() => {
-            console.log('Tutorial skipped from index');
-            const { skipTutorial } = useTutorialStore.getState();
-            skipTutorial();
-            router.replace('/onboarding/personal-info');
-          }}
-        />
-      )}
+
     </SafeAreaView>
   );
 }

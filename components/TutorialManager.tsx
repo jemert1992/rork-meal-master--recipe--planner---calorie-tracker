@@ -1,9 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import React from 'react';
 import { useTutorialStore } from '@/store/tutorialStore';
-import { createWebLiveRegion } from '@/utils/tutorialAccessibility';
-import TutorialInitializer from './TutorialInitializer';
-import ContextualTutorialCoachMark from './ContextualTutorialCoachMark';
+import ModernTutorialOverlay from './ModernTutorialOverlay';
 
 /**
  * Tutorial Manager
@@ -11,24 +8,12 @@ import ContextualTutorialCoachMark from './ContextualTutorialCoachMark';
  * Should be placed in the root layout (_layout.tsx)
  */
 export default function TutorialManager() {
-  const hasInitializedWebRef = useRef(false);
-  const { isTutorialActive } = useTutorialStore();
-
-  // Initialize web accessibility features
-  useEffect(() => {
-    if (Platform.OS === 'web' && !hasInitializedWebRef.current) {
-      hasInitializedWebRef.current = true;
-      createWebLiveRegion();
-    }
-  }, []);
+  const { showTutorial } = useTutorialStore();
 
   return (
     <>
-      {/* Initialize tutorial system */}
-      <TutorialInitializer />
-      
       {/* Render tutorial overlay when active */}
-      {isTutorialActive && <ContextualTutorialCoachMark />}
+      {showTutorial && <ModernTutorialOverlay />}
     </>
   );
 }
