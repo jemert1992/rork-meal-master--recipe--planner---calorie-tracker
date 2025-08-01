@@ -673,7 +673,7 @@ export default function ContextualTutorialCoachMark() {
     if (!isTutorialActive || storeActions.isPaused) return;
     
     if (currentStepInfo?.isLast) {
-      const message = currentStepInfo.step.completionMessage || '🎉 You\'re all set! Let\'s get started.';
+      const message = currentStepInfo?.step?.completionMessage || '🎉 You\'re all set! Let\'s get started.';
       setCompletionMessage(message);
       setShowCompletion(true);
       
@@ -685,7 +685,7 @@ export default function ContextualTutorialCoachMark() {
     } else {
       storeActions.nextStep();
     }
-  }, [isTutorialActive, currentStepInfo?.isLast, currentStepInfo?.step.completionMessage, storeActions]);
+  }, [isTutorialActive, currentStepInfo?.isLast, currentStepInfo?.step?.completionMessage, storeActions]);
   
   const handlePrevious = useCallback(() => {
     if (!isTutorialActive || currentStepInfo?.isFirst || storeActions.isPaused) return;
