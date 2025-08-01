@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { RefObject } from 'react';
 
 export interface TutorialStep {
   id: string;
@@ -12,6 +13,8 @@ interface TutorialState {
   showTutorial: boolean;
   stepIndex: number;
   steps: TutorialStep[];
+  tutorialCompleted: boolean;
+  elementRefs: Record<string, RefObject<any>>;
   
   // Actions
   startTutorial: () => void;
@@ -20,6 +23,12 @@ interface TutorialState {
   skipTutorial: () => void;
   completeTutorial: () => void;
   resetTutorial: () => void;
+  forceHideTutorial: () => void;
+  
+  // Ref management
+  registerRef: (stepId: string, ref: RefObject<any>) => void;
+  unregisterRef: (stepId: string) => void;
+  markInteractionComplete: () => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -71,6 +80,8 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
   showTutorial: false,
   stepIndex: 0,
   steps: TUTORIAL_STEPS,
+  tutorialCompleted: false,
+  elementRefs: {},
   
   startTutorial: () => {
     set({ showTutorial: true, stepIndex: 0 });
@@ -93,15 +104,41 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
   },
   
   skipTutorial: () => {
-    set({ showTutorial: false, stepIndex: 0 });
+    set({ showTutorial: false, stepIndex: 0, tutorialCompleted: true });
   },
   
   completeTutorial: () => {
-    set({ showTutorial: false, stepIndex: 0 });
+    set({ showTutorial: false, stepIndex: 0, tutorialCompleted: true });
   },
   
   resetTutorial: () => {
-    set({ showTutorial: false, stepIndex: 0 });
+    set({ showTutorial: false, stepIndex: 0, tutorialCompleted: false });
+  },
+  
+  forceHideTutorial: () => {
+    set({ showTutorial: false });
+  },
+  
+  registerRef: (stepId: string, ref: RefObject<any>) => {
+    set((state) => ({
+      elementRefs: {
+        ...state.elementRefs,
+        [stepId]: ref
+      }
+    }));
+  },
+  
+  unregisterRef: (stepId: string) => {
+    set((state) => {
+      const newRefs = { ...state.elementRefs };
+      delete newRefs[stepId];
+      return { elementRefs: newRefs };
+    });
+  },
+  
+  markInteractionComplete: () => {
+    // For now, just advance to next step
+    get().nextStep();
   },
 }));
 
