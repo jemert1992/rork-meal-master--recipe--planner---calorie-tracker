@@ -37,6 +37,9 @@ export default function ModernTutorialOverlay() {
     completeTutorial,
   } = useTutorialStore();
   
+  console.log('ModernTutorialOverlay render - showTutorial:', showTutorial);
+  console.log('ModernTutorialOverlay render - stepIndex:', stepIndex);
+  
   const currentStepData = steps[stepIndex];
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === steps.length - 1;

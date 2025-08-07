@@ -1,66 +1,15 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useUserStore } from '@/store/userStore';
-import { useTutorialStore } from '@/store/tutorialStore';
-import TutorialWelcome from '@/components/TutorialWelcome';
+
 import ContextualTutorialCoachMark from '@/components/ContextualTutorialCoachMark';
 
 export default function TabLayout() {
-  const { profile } = useUserStore();
-  const { checkShouldShowWelcome, welcomeCheckPerformed, isProcessingAction } = useTutorialStore();
-  const hasCheckedWelcome = useRef(false);
-  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Memoize the onboarding completion status to prevent unnecessary re-renders
-  const isOnboardingCompleted = useMemo(() => {
-    return profile.onboardingCompleted;
-  }, [profile.onboardingCompleted]);
-  
-  // PERMANENT FIX: Only check welcome tutorial once when onboarding completes
-  useEffect(() => {
-    // Clear any existing timeout
-    if (checkTimeoutRef.current) {
-      clearTimeout(checkTimeoutRef.current);
-    }
-    
-    // Only check once when onboarding is completed and we haven't checked before
-    if (isOnboardingCompleted && 
-        !hasCheckedWelcome.current && 
-        !welcomeCheckPerformed && 
-        !isProcessingAction) {
-      console.log('TabLayout: Scheduling welcome tutorial check');
-      hasCheckedWelcome.current = true;
-      
-      // Use a timeout to prevent rapid calls and ensure state is stable
-      checkTimeoutRef.current = setTimeout(() => {
-        const currentState = useTutorialStore.getState();
-        // Additional safety checks to prevent loops
-        if (!currentState.welcomeCheckPerformed && 
-            !currentState.isProcessingAction &&
-            !currentState.tutorialCompleted &&
-            !currentState.showTutorial &&
-            !currentState.showWelcome &&
-            hasCheckedWelcome.current) {
-          console.log('TabLayout: Executing welcome tutorial check');
-          checkShouldShowWelcome(true);
-        } else {
-          console.log('TabLayout: Skipping welcome check - conditions not met');
-        }
-      }, 1500); // Increased timeout for maximum stability
-    }
-    
-    return () => {
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-    };
-  }, [isOnboardingCompleted, welcomeCheckPerformed, isProcessingAction, checkShouldShowWelcome]);
+  // Tutorial is now handled by app/index.tsx - no need for complex logic here
   
   return (
     <>
-      <TutorialWelcome />
       <ContextualTutorialCoachMark />
       <Tabs
         screenOptions={{

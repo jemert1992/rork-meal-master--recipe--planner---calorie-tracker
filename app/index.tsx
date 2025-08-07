@@ -7,7 +7,6 @@ import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-import TutorialWelcome from '@/components/TutorialWelcome';
 import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
 import Colors from '@/constants/colors';
 
@@ -21,7 +20,8 @@ export default function WelcomeScreen() {
     showTutorial, 
     startTutorial,
     skipTutorial,
-    stepIndex
+    stepIndex,
+    tutorialCompleted
   } = useTutorialStore();
   
   const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
@@ -49,8 +49,8 @@ export default function WelcomeScreen() {
   
   // Memoize user setup status to prevent unnecessary re-renders
   const isUserSetup = useMemo(() => {
-    return isLoggedIn && profile.completedOnboarding && !showTutorial;
-  }, [isLoggedIn, profile.completedOnboarding, showTutorial]);
+    return isLoggedIn && profile.completedOnboarding && tutorialCompleted;
+  }, [isLoggedIn, profile.completedOnboarding, tutorialCompleted]);
   
   // PERMANENT FIX: Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
@@ -66,12 +66,12 @@ export default function WelcomeScreen() {
   
   // Redirect to tabs after tutorial completion
   useEffect(() => {
-    if (!showTutorial && !hasRedirectedToTabs && isLoggedIn) {
+    if (tutorialCompleted && !hasRedirectedToTabs && isLoggedIn) {
       console.log('Redirecting to tabs after tutorial completion');
       setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
-  }, [showTutorial, hasRedirectedToTabs, isLoggedIn, router]);
+  }, [tutorialCompleted, hasRedirectedToTabs, isLoggedIn, router]);
 
   const handleStartTutorial = useCallback(() => {
     console.log('handleStartTutorial called from index.tsx');
@@ -96,13 +96,9 @@ export default function WelcomeScreen() {
   };
   
   const handleTutorialSkip = useCallback(() => {
-    if (!showTutorial) {
-      console.log('Tutorial not active, skipping skip');
-      return;
-    }
-    
+    console.log('Skipping tutorial from index.tsx');
     skipTutorial();
-  }, [showTutorial, skipTutorial]);
+  }, [skipTutorial]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,10 +187,9 @@ export default function WelcomeScreen() {
         </View>
       </View>
       
-      {/* Tutorial System - Temporarily disabled TutorialWelcome for debugging */}
-      {/* <TutorialWelcome /> */}
+      {/* Tutorial System - Single source of truth */}
+      {showTutorial && <ModernTutorialOverlay />}
       
-
     </SafeAreaView>
   );
 }
