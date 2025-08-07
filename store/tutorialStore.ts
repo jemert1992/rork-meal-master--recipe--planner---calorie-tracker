@@ -23,6 +23,10 @@ interface TutorialState {
   skipTutorial: () => void;
   completeTutorial: () => void;
   resetTutorial: () => void;
+  
+  // Ref management (for compatibility)
+  registerRef: (stepId: string, ref: RefObject<any>) => void;
+  unregisterRef: (stepId: string) => void;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -130,6 +134,17 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
       stepIndex: 0, 
       tutorialCompleted: false 
     });
+  },
+  
+  // Ref management (no-op for compatibility)
+  registerRef: (stepId: string, ref: RefObject<any>) => {
+    // No-op for compatibility with existing code
+    console.log('registerRef called for stepId:', stepId);
+  },
+  
+  unregisterRef: (stepId: string) => {
+    // No-op for compatibility with existing code
+    console.log('unregisterRef called for stepId:', stepId);
   },
 }));
 

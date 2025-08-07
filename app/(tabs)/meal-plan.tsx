@@ -12,7 +12,7 @@ import NutritionBar from '@/components/NutritionBar';
 import Colors from '@/constants/colors';
 import { DailyMeals, Recipe, RecipeFilters } from '@/types';
 import * as firebaseService from '@/services/firebaseService';
-import TutorialOverlay from '@/components/TutorialOverlay';
+
 import { useTutorialRef } from '@/hooks/useTutorialRef';
 
 export default function MealPlanScreen() {
@@ -540,7 +540,7 @@ export default function MealPlanScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']} testID="meal-plan-content">
-      <TutorialOverlay currentScreen="meal-plan" />
+
       <View style={styles.header}>
         <Text style={styles.title}>Meal Plan</Text>
         <Text style={styles.subtitle}>Plan your meals for the day</Text>

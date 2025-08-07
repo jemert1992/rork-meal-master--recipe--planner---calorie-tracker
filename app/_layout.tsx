@@ -15,7 +15,7 @@ import TutorialManager from "@/components/TutorialManager";
 
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  initialRouteName: "welcome",
 };
 
 // Create a client
@@ -85,7 +85,7 @@ function RootLayoutNav() {
       >
         {showOnboarding ? (
           <>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="welcome" options={{ headerShown: false }} />
             <Stack.Screen 
               name="onboarding/personal-info" 
               options={{ 

@@ -124,62 +124,64 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       </View>
       
       {meal ? (
-        <Pressable 
-          style={styles.mealContainer} 
-          onPress={handlePress}
-          accessibilityLabel={`${formatMealType(mealType)}: ${meal.name}`}
-          accessibilityHint={`${getCalories()} calories. Tap to view details.`}
-          accessibilityRole="button"
-        >
-          {recipe && recipe.image && (
-            <Image 
-              source={{ uri: recipe.image }} 
-              style={styles.mealImage} 
-              accessibilityLabel={`Image of ${meal.name}`}
-            />
-          )}
-          <View style={styles.mealContent}>
-            <Text style={styles.mealName}>{meal.name}</Text>
-            <Text style={styles.calories}>{getCalories()} calories</Text>
-            
-            {recipe && (
-              <View style={styles.recipeDetails}>
-                <View style={styles.recipeDetail}>
-                  <Clock size={12} color={Colors.textLight} />
-                  <Text style={styles.detailText}>{recipe.prepTime}</Text>
-                </View>
-                <View style={styles.recipeDetail}>
-                  <Users size={12} color={Colors.textLight} />
-                  <Text style={styles.detailText}>{recipe.servings} servings</Text>
-                </View>
-              </View>
+        <View style={styles.mealContainer}>
+          <Pressable 
+            style={styles.mealPressable} 
+            onPress={handlePress}
+            accessibilityLabel={`${formatMealType(mealType)}: ${meal.name}`}
+            accessibilityHint={`${getCalories()} calories. Tap to view details.`}
+            accessibilityRole="button"
+          >
+            {recipe && recipe.image && (
+              <Image 
+                source={{ uri: recipe.image }} 
+                style={styles.mealImage} 
+                accessibilityLabel={`Image of ${meal.name}`}
+              />
             )}
-            
-            {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
-              <View style={styles.customMealInfo}>
-                <View style={styles.recipeDetail}>
-                  <Info size={12} color={Colors.textLight} />
-                  <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
-                </View>
-                {meal.servings && meal.servings > 1 && (
+            <View style={styles.mealContent}>
+              <Text style={styles.mealName}>{meal.name}</Text>
+              <Text style={styles.calories}>{getCalories()} calories</Text>
+              
+              {recipe && (
+                <View style={styles.recipeDetails}>
+                  <View style={styles.recipeDetail}>
+                    <Clock size={12} color={Colors.textLight} />
+                    <Text style={styles.detailText}>{recipe.prepTime}</Text>
+                  </View>
                   <View style={styles.recipeDetail}>
                     <Users size={12} color={Colors.textLight} />
-                    <Text style={styles.detailText}>{meal.servings} servings</Text>
+                    <Text style={styles.detailText}>{recipe.servings} servings</Text>
                   </View>
-                )}
-              </View>
-            )}
-            
-            {recipe && recipe.tags.length > 0 && (
-              <View style={styles.tagsContainer}>
-                {recipe.tags.slice(0, 3).map((tag, index) => (
-                  <View key={`${recipe.id}-tag-${index}`} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              )}
+              
+              {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
+                <View style={styles.customMealInfo}>
+                  <View style={styles.recipeDetail}>
+                    <Info size={12} color={Colors.textLight} />
+                    <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
                   </View>
-                ))}
-              </View>
-            )}
-          </View>
+                  {meal.servings && meal.servings > 1 && (
+                    <View style={styles.recipeDetail}>
+                      <Users size={12} color={Colors.textLight} />
+                      <Text style={styles.detailText}>{meal.servings} servings</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              
+              {recipe && recipe.tags.length > 0 && (
+                <View style={styles.tagsContainer}>
+                  {recipe.tags.slice(0, 3).map((tag, index) => (
+                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </Pressable>
           <Pressable 
             style={styles.removeButton} 
             onPress={onRemove} 
@@ -189,7 +191,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
           >
             <X size={18} color={Colors.textLight} />
           </Pressable>
-        </Pressable>
+        </View>
       ) : (
         <Pressable 
           style={styles.addButton} 
@@ -383,6 +385,10 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+  },
+  mealPressable: {
+    flex: 1,
+    flexDirection: 'row',
   },
   mealImage: {
     width: 90,
