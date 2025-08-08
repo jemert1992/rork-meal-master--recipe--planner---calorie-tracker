@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import { ArrowRight } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
-import { useTutorialStore } from '@/store/tutorialStore';
 import { poundsToKg, feetInchesToCm } from '@/utils/unitConversions';
 import Colors from '@/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -61,7 +60,6 @@ export default function PersonalInfoScreen() {
   const router = useRouter();
   const { updateHeightImperial, updateWeightImperial, updateProfile, setUserInfoSubmitted } = useUserStore();
   const { data, updatePersonalInfo } = useOnboardingStore();
-  const { setShouldRedirectToOnboarding } = useTutorialStore();
   
   const [name, setName] = useState(data.name || '');
   const [age, setAge] = useState(data.age?.toString() || '');
@@ -161,9 +159,6 @@ export default function PersonalInfoScreen() {
       // Mark user info as submitted
       setUserInfoSubmitted(true);
       
-      // Clear the redirect flag
-      setShouldRedirectToOnboarding(false);
-      
       // Navigate to dietary preferences to continue onboarding
       router.push('/onboarding/dietary-preferences');
     } catch (error) {
@@ -182,7 +177,7 @@ export default function PersonalInfoScreen() {
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Let's get to know you</Text>
+          <Text style={styles.title}>Let&apos;s get to know you</Text>
           <Text style={styles.subtitle}>Tell us about yourself to get personalized meal recommendations</Text>
         </View>
         
