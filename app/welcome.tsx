@@ -23,8 +23,8 @@ export default function WelcomeScreen() {
     tutorialCompleted
   } = useTutorialStore();
   const { height: screenHeight } = useWindowDimensions();
-  const isSmallScreen = screenHeight < 700;
-  const styles = useMemo(() => createStyles(isSmallScreen), [isSmallScreen]);
+  const smallScreen = screenHeight < 700;
+  const styles = useMemo(() => createStyles(smallScreen), [smallScreen]);
   
   const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
   const [mounted, setMounted] = useState<boolean>(false);
@@ -121,7 +121,7 @@ export default function WelcomeScreen() {
               colors={[Colors.primary, Colors.secondary]}
               style={styles.logo}
             >
-              <ChefHat size={isSmallScreen ? 40 : 48} color={Colors.white} />
+              <ChefHat size={smallScreen ? 40 : 48} color={Colors.white} />
             </LinearGradient>
             <View style={styles.sparkleContainer}>
               <Sparkles size={16} color={Colors.primary} style={styles.sparkle1} />
@@ -178,7 +178,7 @@ export default function WelcomeScreen() {
   );
 }
 
-const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
+const createStyles = (smallScreen: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0F0F23',
@@ -224,24 +224,24 @@ const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 32,
-    paddingTop: isSmallScreen ? 60 : 80,
-    paddingBottom: isSmallScreen ? 40 : 50,
+    paddingTop: smallScreen ? 60 : 80,
+    paddingBottom: smallScreen ? 40 : 50,
     justifyContent: 'space-between',
   },
   heroSection: {
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
-    marginTop: isSmallScreen ? -40 : -60,
+    marginTop: smallScreen ? -40 : -60,
   },
   logoContainer: {
     position: 'relative',
-    marginBottom: isSmallScreen ? 24 : 32,
+    marginBottom: smallScreen ? 24 : 32,
   },
   logo: {
-    width: isSmallScreen ? 100 : 120,
-    height: isSmallScreen ? 100 : 120,
-    borderRadius: isSmallScreen ? 50 : 60,
+    width: smallScreen ? 100 : 120,
+    height: smallScreen ? 100 : 120,
+    borderRadius: smallScreen ? 50 : 60,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primary,
@@ -274,32 +274,32 @@ const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
     left: -10,
   },
   welcomeText: {
-    fontSize: isSmallScreen ? 18 : 20,
+    fontSize: smallScreen ? 18 : 20,
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '400',
     marginBottom: 4,
     textAlign: 'center',
   },
   brandName: {
-    fontSize: isSmallScreen ? 42 : 48,
+    fontSize: smallScreen ? 42 : 48,
     fontWeight: '800',
     color: Colors.white,
-    marginBottom: isSmallScreen ? 12 : 16,
+    marginBottom: smallScreen ? 12 : 16,
     textAlign: 'center',
     letterSpacing: -1,
   },
   tagline: {
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: smallScreen ? 16 : 18,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    lineHeight: isSmallScreen ? 22 : 26,
+    lineHeight: smallScreen ? 22 : 26,
     paddingHorizontal: 20,
     fontWeight: '400',
   },
   featuresPreview: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginVertical: isSmallScreen ? 32 : 40,
+    marginVertical: smallScreen ? 32 : 40,
     paddingHorizontal: 10,
   },
   featureHighlight: {
@@ -308,11 +308,11 @@ const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
     paddingHorizontal: 8,
   },
   featureEmoji: {
-    fontSize: isSmallScreen ? 24 : 28,
+    fontSize: smallScreen ? 24 : 28,
     marginBottom: 8,
   },
   featureText: {
-    fontSize: isSmallScreen ? 12 : 13,
+    fontSize: smallScreen ? 12 : 13,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     fontWeight: '500',
@@ -320,15 +320,15 @@ const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
   },
   ctaSection: {
     alignItems: 'center',
-    paddingBottom: isSmallScreen ? 20 : 30,
+    paddingBottom: smallScreen ? 20 : 30,
   },
   ctaText: {
-    fontSize: isSmallScreen ? 18 : 20,
+    fontSize: smallScreen ? 18 : 20,
     fontWeight: '600',
     color: Colors.white,
     textAlign: 'center',
-    marginBottom: isSmallScreen ? 24 : 32,
-    lineHeight: isSmallScreen ? 24 : 28,
+    marginBottom: smallScreen ? 24 : 32,
+    lineHeight: smallScreen ? 24 : 28,
   },
   startButton: {
     borderRadius: 20,
@@ -352,14 +352,14 @@ const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: isSmallScreen ? 18 : 20,
+    paddingVertical: smallScreen ? 18 : 20,
     paddingHorizontal: 40,
     borderRadius: 20,
   },
   buttonText: {
     color: Colors.white,
     fontWeight: '700',
-    fontSize: isSmallScreen ? 18 : 19,
+    fontSize: smallScreen ? 18 : 19,
     marginRight: 8,
   },
 
