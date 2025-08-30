@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,8 +11,7 @@ import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
 
 import Colors from '@/constants/colors';
 
-const { height: screenHeight } = Dimensions.get('window');
-const isSmallScreen = screenHeight < 700;
+
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -23,8 +22,12 @@ export default function WelcomeScreen() {
     stepIndex,
     tutorialCompleted
   } = useTutorialStore();
+  const { height: screenHeight } = useWindowDimensions();
+  const isSmallScreen = screenHeight < 700;
   
   const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
+  const [mounted, setMounted] = useState<boolean>(false);
+  useEffect(() => setMounted(true), []);
 
   console.log('WelcomeScreen render - showTutorial:', showTutorial);
   console.log('WelcomeScreen render - stepIndex:', stepIndex);
@@ -33,18 +36,17 @@ export default function WelcomeScreen() {
 
   // Initialize user as logged in if not already, so tutorial can show
   useEffect(() => {
+    if (!mounted) return;
     if (!isLoggedIn) {
       console.log('Initializing user for tutorial');
-      // Set user as logged in with basic onboarding completed so tutorial can show
       const { login } = useUserStore.getState();
-      
       login({ 
         name: 'New User',
-        onboardingCompleted: true, // This allows tutorial to show
-        completedOnboarding: false // This indicates full onboarding is not done
+        onboardingCompleted: true,
+        completedOnboarding: false
       });
     }
-  }, [isLoggedIn]);
+  }, [mounted, isLoggedIn]);
   
   // Memoize user setup status to prevent unnecessary re-renders
   const isUserSetup = useMemo(() => {
@@ -53,24 +55,25 @@ export default function WelcomeScreen() {
   
   // PERMANENT FIX: Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
+    if (!mounted) return;
     if (isUserSetup && !hasRedirectedToTabs) {
       console.log('User is fully set up, redirecting to tabs');
       setHasRedirectedToTabs(true);
-      // Use setTimeout to prevent immediate navigation that could cause loops
       setTimeout(() => {
         router.replace('/(tabs)');
       }, 300);
     }
-  }, [isUserSetup, hasRedirectedToTabs, router]);
+  }, [mounted, isUserSetup, hasRedirectedToTabs, router]);
   
   // Redirect to tabs after tutorial completion
   useEffect(() => {
+    if (!mounted) return;
     if (tutorialCompleted && !hasRedirectedToTabs && isLoggedIn) {
       console.log('Redirecting to tabs after tutorial completion');
       setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
-  }, [tutorialCompleted, hasRedirectedToTabs, isLoggedIn, router]);
+  }, [mounted, tutorialCompleted, hasRedirectedToTabs, isLoggedIn, router]);
 
   const handleStartTutorial = useCallback(() => {
     console.log('handleStartTutorial called from welcome screen');
@@ -88,6 +91,10 @@ export default function WelcomeScreen() {
       });
     }, 100);
   }, [startTutorial, showTutorial, stepIndex]);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (showTutorial) {
     console.log('WelcomeScreen: showTutorial true, rendering ModernTutorialOverlay');

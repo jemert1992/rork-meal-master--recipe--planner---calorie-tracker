@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Colors from "@/constants/colors";
@@ -59,18 +59,29 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const { isLoggedIn, profile, userInfoSubmitted } = useUserStore();
   const { tutorialCompleted } = useTutorialStore();
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Navigation guard logic
   useEffect(() => {
+    if (!mounted) return;
     if (tutorialCompleted && !userInfoSubmitted) {
       router.replace('/onboarding/personal-info');
     }
-  }, [tutorialCompleted, userInfoSubmitted]);
+  }, [mounted, tutorialCompleted, userInfoSubmitted]);
   
   // Memoize the showOnboarding calculation to prevent infinite re-renders
   const showOnboarding = useMemo(() => {
-    return !isLoggedIn || !profile.onboardingCompleted;
-  }, [isLoggedIn, profile.onboardingCompleted]);
+    const onboardingCompleted = profile?.onboardingCompleted ?? false;
+    return !isLoggedIn || !onboardingCompleted;
+  }, [isLoggedIn, profile?.onboardingCompleted]);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>

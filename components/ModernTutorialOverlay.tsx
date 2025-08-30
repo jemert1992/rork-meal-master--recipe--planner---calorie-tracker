@@ -5,8 +5,8 @@ import {
   Text,
   Pressable,
   Modal,
-  Dimensions,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 
 import { 
@@ -24,9 +24,10 @@ import Colors from '@/constants/colors';
 import { GlobalStyles } from '@/styles/globalStyles';
 import { useTutorialStore } from '@/store/tutorialStore';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 
 export default function ModernTutorialOverlay() {
+  const { width } = useWindowDimensions();
   const {
     showTutorial,
     stepIndex,
@@ -82,11 +83,11 @@ export default function ModernTutorialOverlay() {
       animationType="fade"
       statusBarTranslucent={true}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} testID="tutorial-overlay-root">
         <View style={[StyleSheet.absoluteFill, Platform.OS === 'web' ? styles.webBlur : styles.androidBlur]} />
         
-        <View style={styles.container}>
-          <View style={styles.tutorialCard}>
+        <View style={[styles.container]} testID="tutorial-overlay-container">
+          <View style={[styles.tutorialCard, { maxWidth: 400, width: '100%' }]} testID="tutorial-card">
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressTrack}>
@@ -179,7 +180,6 @@ const styles = StyleSheet.create({
     zIndex: 10001,
   },
   tutorialCard: {
-    width: Math.min(screenWidth - 40, 400),
     backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 24,
