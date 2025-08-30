@@ -46,10 +46,10 @@ export default function MealPlanScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mealSuggestions, setMealSuggestions] = useState<typeof recipes>([]);
-  const [showDietaryWarning, setShowDietaryWarning] = useState(false);
-  const [isLoadingFirestoreRecipes, setIsLoadingFirestoreRecipes] = useState(false);
+  const [showDietaryWarning, setShowDietaryWarning] = useState<boolean>(false);
+  const [isLoadingFirestoreRecipes, setIsLoadingFirestoreRecipes] = useState<boolean>(false);
   const [firestoreRecipes, setFirestoreRecipes] = useState<Recipe[]>([]);
-  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
   const [alternativesAvailable, setAlternativesAvailable] = useState<{
     breakfast: boolean;
     lunch: boolean;
@@ -488,9 +488,22 @@ export default function MealPlanScreen() {
     }
   }, [selectedDate, useFirestore, dateString, recipes, profile]);
 
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState<boolean>(false);
+
   const handleToggleSuggestions = useCallback(() => {
     setShowSuggestions(!showSuggestions);
   }, [showSuggestions]);
+
+  const openSuggestionsModal = useCallback(() => {
+    if (!showSuggestions) {
+      setShowSuggestions(true);
+    }
+    setShowSuggestionsModal(true);
+  }, [showSuggestions]);
+
+  const closeSuggestionsModal = useCallback(() => {
+    setShowSuggestionsModal(false);
+  }, []);
 
   const handleAddSuggestion = useCallback((recipeId: string, recipeName: string, mealType: string) => {
     // Check if recipe is already used in meal plan
@@ -649,72 +662,104 @@ export default function MealPlanScreen() {
           hasAlternatives={alternativesAvailable.dinner}
         />
 
-        {/* Meal Suggestions Section */}
+        {/* Meal Suggestions Section - Redesigned */}
         <View style={styles.suggestionsContainer}>
-          <Pressable 
-            style={styles.suggestionsHeader} 
-            onPress={handleToggleSuggestions}
-            accessibilityLabel={showSuggestions ? "Hide meal suggestions" : "Show meal suggestions"}
-            accessibilityRole="button"
-          >
-            <Text style={styles.sectionTitle}>Meal Suggestions</Text>
-            {showSuggestions ? (
-              <ChevronUp size={20} color={Colors.text} />
-            ) : (
-              <ChevronDown size={20} color={Colors.text} />
-            )}
-          </Pressable>
+          <View style={styles.suggestionsHeaderRow}>
+            <Text style={styles.sectionTitle}>Suggested Recipes</Text>
+            <View style={styles.suggestionsActions}>
+              <Pressable 
+                style={styles.browseAllButton}
+                onPress={openSuggestionsModal}
+                accessibilityLabel="Browse more suggestions"
+                testID="browse-suggestions"
+              >
+                <Text style={styles.browseAllText}>Browse</Text>
+                <ChevronUp size={16} color={Colors.primary} />
+              </Pressable>
+            </View>
+          </View>
 
-          {showSuggestions && (
-            <View style={styles.suggestionsList}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalCards}
+          >
+            {isLoadingFirestoreRecipes ? (
+              <View style={styles.loadingContainerSmall}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.loadingText}>Loading...</Text>
+              </View>
+            ) : mealSuggestions.length > 0 ? (
+              mealSuggestions.map((recipe) => (
+                <Pressable
+                  key={recipe.id}
+                  style={styles.suggestionCard}
+                  onPress={() => handleAddSuggestion(recipe.id, recipe.name, recipe.mealType || 'any')}
+                  accessibilityLabel={`Add ${recipe.name} to meal plan`}
+                >
+                  <View style={styles.cardImage}>
+                    <View style={styles.cardImageInner} />
+                  </View>
+                  <Text style={styles.cardTitle} numberOfLines={2}>{recipe.name}</Text>
+                  <Text style={styles.cardMeta}>{recipe.calories} cal • {(recipe.mealType || 'any').toUpperCase()}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <View style={styles.emptyContainerSmall}>
+                <Text style={styles.emptyText}>No suggestions</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+
+        {/* Suggestions Fullscreen Modal */}
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={showSuggestionsModal}
+          onRequestClose={closeSuggestionsModal}
+        >
+          <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Pick a Recipe</Text>
+              <Pressable style={styles.closeButton} onPress={closeSuggestionsModal} testID="close-suggestions-modal">
+                <X size={24} color={Colors.text} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
               {isLoadingFirestoreRecipes ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <ActivityIndicator size="large" color={Colors.primary} />
                   <Text style={styles.loadingText}>Loading suggestions...</Text>
                 </View>
               ) : mealSuggestions.length > 0 ? (
-                mealSuggestions.map((recipe) => (
-                  <Pressable 
-                    key={recipe.id}
-                    style={styles.suggestionItem}
-                    onPress={() => handleAddSuggestion(recipe.id, recipe.name, recipe.mealType || 'any')}
-                    accessibilityLabel={`Add ${recipe.name} to meal plan`}
-                    accessibilityHint={`${recipe.calories} calories, tags: ${recipe.tags.join(', ')}`}
-                  >
-                    <View style={styles.suggestionContent}>
-                      <Text style={styles.suggestionName}>{recipe.name}</Text>
-                      <Text style={styles.suggestionCalories}>{recipe.calories} calories</Text>
-                      <View style={styles.suggestionDetails}>
-                        {recipe.mealType && (
-                          <Text style={styles.mealTypeTag}>
-                            {recipe.mealType.charAt(0).toUpperCase() + recipe.mealType.slice(1)}
-                          </Text>
-                        )}
-                        {recipe.tags.length > 0 && (
-                          <View style={styles.tagContainer}>
-                            {recipe.tags.slice(0, 3).map((tag, index) => (
-                              <Text key={`${recipe.id}-tag-${index}`} style={styles.tagText}>
-                                {tag}
-                              </Text>
-                            ))}
-                          </View>
-                        )}
+                <View style={styles.gridInner}>
+                  {mealSuggestions.map((recipe) => (
+                    <Pressable
+                      key={`grid-${recipe.id}`}
+                      style={styles.gridCard}
+                      onPress={() => {
+                        handleAddSuggestion(recipe.id, recipe.name, recipe.mealType || 'any');
+                        closeSuggestionsModal();
+                      }}
+                    >
+                      <View style={styles.gridImage}>
+                        <View style={styles.cardImageInner} />
                       </View>
-                    </View>
-                    <Plus size={16} color={Colors.primary} />
-                  </Pressable>
-                ))
+                      <Text style={styles.gridTitle} numberOfLines={2}>{recipe.name}</Text>
+                      <Text style={styles.gridMeta}>{recipe.calories} cal • {(recipe.mealType || 'any').toUpperCase()}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               ) : (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No suggestions available</Text>
-                  <Text style={styles.emptySubtext}>
-                    Try adjusting your dietary preferences or adding more recipes to your collection
-                  </Text>
+                  <Text style={styles.emptySubtext}>Try adjusting your preferences</Text>
                 </View>
               )}
-            </View>
-          )}
-        </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
         
         {/* Nutrition Goals Section */}
         {profile.calorieGoal && (
@@ -1000,33 +1045,82 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 16,
   },
-  suggestionsHeader: {
+  suggestionsHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
+    marginBottom: 12,
+    paddingHorizontal: 4,
   },
-  suggestionsList: {
+  suggestionsActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  browseAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  browseAllText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    marginRight: 6,
+    fontSize: 13,
+  },
+  horizontalCards: {
+    paddingVertical: 6,
+    paddingRight: 8,
+  },
+  suggestionCard: {
+    width: 200,
     backgroundColor: Colors.surface,
     borderRadius: 16,
-    padding: 16,
+    marginRight: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
+  },
+  cardImage: {
+    height: 110,
+    borderRadius: 12,
+    backgroundColor: Colors.backgroundLight,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  cardImageInner: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  cardMeta: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  loadingContainerSmall: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  emptyContainerSmall: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
   suggestionItem: {
     flexDirection: 'row',
@@ -1141,7 +1235,58 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.warning,
   },
   bottomPadding: {
-    height: 80, // Extra padding at the bottom
+    height: 40,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  gridContainer: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  gridInner: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridCard: {
+    width: '48%',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    marginBottom: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  gridImage: {
+    height: 120,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  gridTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  gridMeta: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   // Error Modal Styles
   modalOverlay: {
@@ -1184,6 +1329,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 16,
     lineHeight: 22,
+  },
+  suggestionsList: {
+    marginBottom: 8,
   },
   suggestionsTitle: {
     fontSize: 16,
