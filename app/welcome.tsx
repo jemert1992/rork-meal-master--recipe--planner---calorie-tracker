@@ -24,6 +24,7 @@ export default function WelcomeScreen() {
   } = useTutorialStore();
   const { height: screenHeight } = useWindowDimensions();
   const isSmallScreen = screenHeight < 700;
+  const styles = useMemo(() => createStyles(isSmallScreen), [isSmallScreen]);
   
   const [hasRedirectedToTabs, setHasRedirectedToTabs] = useState(false);
   const [mounted, setMounted] = useState<boolean>(false);
@@ -177,7 +178,7 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (isSmallScreen: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0F0F23',
