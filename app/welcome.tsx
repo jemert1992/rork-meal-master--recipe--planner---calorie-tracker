@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight, ChefHat, Sparkles } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useTutorialStore } from '@/store/tutorialStore';
+import ModernTutorialOverlay from '@/components/ModernTutorialOverlay';
 
 
 import Colors from '@/constants/colors';
@@ -88,26 +89,24 @@ export default function WelcomeScreen() {
     }, 100);
   }, [startTutorial, showTutorial, stepIndex]);
 
+  if (showTutorial) {
+    console.log('WelcomeScreen: showTutorial true, rendering ModernTutorialOverlay');
+    return <ModernTutorialOverlay />;
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} testID="welcome-screen">
       <StatusBar style="light" />
-      
-      {/* Background with subtle pattern */}
       <LinearGradient
         colors={['#0F0F23', '#1A1A2E', '#16213E']}
         style={styles.backgroundGradient}
       />
-      
-      {/* Floating elements for visual interest */}
       <View style={styles.floatingElements}>
         <View style={[styles.floatingCircle, styles.circle1]} />
         <View style={[styles.floatingCircle, styles.circle2]} />
         <View style={[styles.floatingCircle, styles.circle3]} />
       </View>
-      
-      {/* Content */}
       <View style={styles.content}>
-        {/* Main Logo and Branding */}
         <View style={styles.heroSection}>
           <View style={styles.logoContainer}>
             <LinearGradient
@@ -122,15 +121,12 @@ export default function WelcomeScreen() {
               <Sparkles size={14} color={Colors.primary} style={styles.sparkle3} />
             </View>
           </View>
-          
           <Text style={styles.welcomeText}>Welcome to</Text>
           <Text style={styles.brandName}>Zestora</Text>
           <Text style={styles.tagline}>
             Your AI-powered meal planning & nutrition companion
           </Text>
         </View>
-        
-        {/* Feature highlights */}
         <View style={styles.featuresPreview}>
           <View style={styles.featureHighlight}>
             <Text style={styles.featureEmoji}>🎯</Text>
@@ -145,13 +141,10 @@ export default function WelcomeScreen() {
             <Text style={styles.featureText}>Auto Grocery Lists</Text>
           </View>
         </View>
-        
-        {/* Call to Action */}
         <View style={styles.ctaSection}>
           <Text style={styles.ctaText}>
             Ready to transform your eating habits?
           </Text>
-          
           <Pressable 
             style={({ pressed }) => [
               styles.startButton,
@@ -161,6 +154,7 @@ export default function WelcomeScreen() {
             hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Start Tutorial"
+            testID="start-tutorial-button"
           >
             <LinearGradient
               colors={[Colors.primary, Colors.primaryDark]}
@@ -170,13 +164,8 @@ export default function WelcomeScreen() {
               <ArrowRight size={20} color={Colors.white} />
             </LinearGradient>
           </Pressable>
-          
-
         </View>
       </View>
-      
-
-      
     </SafeAreaView>
   );
 }

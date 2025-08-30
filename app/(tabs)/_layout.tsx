@@ -3,14 +3,12 @@ import { Tabs } from 'expo-router';
 import { Home, Calendar, ShoppingCart, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
-import TutorialManager from '@/components/TutorialManager';
 
 export default function TabLayout() {
   // Tutorial is now handled by app/index.tsx - no need for complex logic here
   
   return (
     <>
-      <TutorialManager />
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors.primary,
