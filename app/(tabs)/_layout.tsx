@@ -63,7 +63,7 @@ export default function TabLayout() {
         }}
       />
       {/* Hide API settings from tab bar while keeping the route accessible if needed */}
-      <Tabs.Screen name="api-settings" options={{ href: null, tabBarButton: () => null }} />
+      <Tabs.Screen name="api-settings" options={{ href: null }} />
       </Tabs>
     </>
   );
