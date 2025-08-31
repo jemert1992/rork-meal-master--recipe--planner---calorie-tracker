@@ -1596,214 +1596,198 @@ export const useMealPlanStore = create<MealPlanState>()(
       },
       
       generateWeeklyMealPlan: async (startDate, endDate) => {
-        // Get user profile for personalization
         const userProfile = getUserProfile();
-        const { 
-          dietType = 'any', 
-          allergies = [], 
+        const {
+          dietType = 'any',
+          allergies = [],
           excludedIngredients = [],
           calorieGoal = 2000,
           fitnessGoals = []
         } = userProfile;
-        
-        // Reset weekly used recipe IDs
+
         set({ weeklyUsedRecipeIds: new Set<string>() });
-        
-        // Generate dates between startDate and endDate (inclusive)
+
         const dates: string[] = [];
         let currentDate = new Date(startDate);
         const lastDate = new Date(endDate);
-        
         while (currentDate <= lastDate) {
           dates.push(currentDate.toISOString().split('T')[0]);
           currentDate.setDate(currentDate.getDate() + 1);
         }
-        
-        // Track generation results
+
         const result: GenerationResult = {
           success: true,
           generatedMeals: [],
           error: null,
           suggestions: []
         };
-        
-        // Count successful and failed days
+
+        const mealSplit = {
+          breakfast: 0.3,
+          lunch: 0.35,
+          dinner: 0.35,
+        } as const;
+        const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
+        const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
+        const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
+
+        const used = new Set<string>();
+        const currentState = get();
+        Object.values(currentState.mealPlan).forEach(day => {
+          if (day.breakfast?.recipeId) used.add(day.breakfast.recipeId);
+          if (day.lunch?.recipeId) used.add(day.lunch.recipeId);
+          if (day.dinner?.recipeId) used.add(day.dinner.recipeId);
+        });
+
+        const fetchWithTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T | null> => {
+          return new Promise((resolve) => {
+            let settled = false;
+            const t = setTimeout(() => {
+              if (!settled) resolve(null);
+            }, ms);
+            p.then((val) => {
+              if (!settled) {
+                settled = true;
+                clearTimeout(t);
+                resolve(val);
+              }
+            }).catch(() => {
+              if (!settled) {
+                settled = true;
+                clearTimeout(t);
+                resolve(null);
+              }
+            });
+          });
+        };
+
+        const parallelLimit = Math.max(9, dates.length * 3);
+        const [bk, ln, dn] = await Promise.all([
+          fetchWithTimeout(firebaseService.getRecipesForMealPlan('breakfast', {
+            dietType,
+            allergies,
+            excludedIngredients,
+            fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+            calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
+            excludeIds: Array.from(used)
+          }, parallelLimit), 3500),
+          fetchWithTimeout(firebaseService.getRecipesForMealPlan('lunch', {
+            dietType,
+            allergies,
+            excludedIngredients,
+            fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+            calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
+            excludeIds: Array.from(used)
+          }, parallelLimit), 3500),
+          fetchWithTimeout(firebaseService.getRecipesForMealPlan('dinner', {
+            dietType,
+            allergies,
+            excludedIngredients,
+            fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+            calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
+            excludeIds: Array.from(used)
+          }, parallelLimit), 3500)
+        ]);
+
+        let breakfastPool = Array.isArray(bk) ? bk : [];
+        let lunchPool = Array.isArray(ln) ? ln : [];
+        let dinnerPool = Array.isArray(dn) ? dn : [];
+
+        if (breakfastPool.length === 0 || lunchPool.length === 0 || dinnerPool.length === 0) {
+          try {
+            const { mockRecipes } = require('@/constants/mockData');
+            const all: any[] = mockRecipes;
+            if (breakfastPool.length === 0) {
+              breakfastPool = all.filter((r: any) => r.mealType === 'breakfast');
+            }
+            if (lunchPool.length === 0) {
+              lunchPool = all.filter((r: any) => r.mealType === 'lunch');
+            }
+            if (dinnerPool.length === 0) {
+              dinnerPool = all.filter((r: any) => r.mealType === 'dinner');
+            }
+          } catch {}
+        }
+
+        const newMealPlan = { ...get().mealPlan } as MealPlan;
         let successfulDays = 0;
         let failedDays = 0;
         let partialDays = 0;
-        
-        // Generate meal plan for each date
+
+        const pickFromPool = (pool: any[], targetCalories: number): any | null => {
+          const candidates = pool.filter((r) => !used.has(r.id));
+          if (candidates.length === 0) return null;
+          candidates.sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
+          return candidates[0] ?? null;
+        };
+
         for (const date of dates) {
           try {
-            // Get the current day plan
-            const currentDayPlan = get().mealPlan[date] || {};
-            
-            // Define meal split percentages for calorie distribution
-            const mealSplit = {
-              breakfast: 0.3, // 30% of daily calories
-              lunch: 0.35,    // 35% of daily calories
-              dinner: 0.35,   // 35% of daily calories
-            };
-            
-            // Calculate target calories per meal
-            const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
-            const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
-            const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
-            
-            // Get already used recipe IDs to avoid duplicates
-            const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
-            
-            // Track meals generated for this day
+            const currentDayPlan = newMealPlan[date] || {};
             const dayMealsGenerated: string[] = [];
-            
-            // Generate breakfast if missing
+
             if (!currentDayPlan.breakfast) {
-              // Use Firestore to get suitable breakfast recipes
-              const breakfastRecipes = await firebaseService.getRecipesForMealPlan('breakfast', {
-                dietType,
-                allergies,
-                excludedIngredients,
-                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
-                calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
-                excludeIds: weeklyUsedRecipeIds
-              }, 5);
-              
-              if (breakfastRecipes.length > 0) {
-                const breakfastRecipe = breakfastRecipes[0];
-                const breakfast = {
-                  recipeId: breakfastRecipe.id,
-                  name: breakfastRecipe.name,
-                  calories: breakfastRecipe.calories,
-                  protein: breakfastRecipe.protein,
-                  carbs: breakfastRecipe.carbs,
-                  fat: breakfastRecipe.fat,
-                  fiber: breakfastRecipe.fiber
+              const chosen = pickFromPool(breakfastPool, breakfastCalories);
+              if (chosen) {
+                currentDayPlan.breakfast = {
+                  recipeId: chosen.id,
+                  name: chosen.name,
+                  calories: chosen.calories,
+                  protein: chosen.protein,
+                  carbs: chosen.carbs,
+                  fat: chosen.fat,
+                  fiber: chosen.fiber
                 };
-                
-                // Add to meal plan
-                set((state) => {
-                  const dayPlan = state.mealPlan[date] || {};
-                  const updatedDayPlan = { ...dayPlan, breakfast };
-                  
-                  // Add to weekly used recipe IDs
-                  state.weeklyUsedRecipeIds.add(breakfastRecipe.id);
-                  
-                  return {
-                    mealPlan: {
-                      ...state.mealPlan,
-                      [date]: updatedDayPlan
-                    },
-                    weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
-                  };
-                });
-                
-                dayMealsGenerated.push('breakfast');
+                used.add(chosen.id);
                 result.generatedMeals.push(`${date}-breakfast`);
+                dayMealsGenerated.push('breakfast');
               }
             } else {
-              // Breakfast already exists
               dayMealsGenerated.push('breakfast');
             }
-            
-            // Generate lunch if missing
+
             if (!currentDayPlan.lunch) {
-              // Use Firestore to get suitable lunch recipes
-              const lunchRecipes = await firebaseService.getRecipesForMealPlan('lunch', {
-                dietType,
-                allergies,
-                excludedIngredients,
-                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
-                calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
-                excludeIds: Array.from(get().weeklyUsedRecipeIds) // Get updated list
-              }, 5);
-              
-              if (lunchRecipes.length > 0) {
-                const lunchRecipe = lunchRecipes[0];
-                const lunch = {
-                  recipeId: lunchRecipe.id,
-                  name: lunchRecipe.name,
-                  calories: lunchRecipe.calories,
-                  protein: lunchRecipe.protein,
-                  carbs: lunchRecipe.carbs,
-                  fat: lunchRecipe.fat,
-                  fiber: lunchRecipe.fiber
+              const chosen = pickFromPool(lunchPool, lunchCalories);
+              if (chosen) {
+                currentDayPlan.lunch = {
+                  recipeId: chosen.id,
+                  name: chosen.name,
+                  calories: chosen.calories,
+                  protein: chosen.protein,
+                  carbs: chosen.carbs,
+                  fat: chosen.fat,
+                  fiber: chosen.fiber
                 };
-                
-                // Add to meal plan
-                set((state) => {
-                  const dayPlan = state.mealPlan[date] || {};
-                  const updatedDayPlan = { ...dayPlan, lunch };
-                  
-                  // Add to weekly used recipe IDs
-                  state.weeklyUsedRecipeIds.add(lunchRecipe.id);
-                  
-                  return {
-                    mealPlan: {
-                      ...state.mealPlan,
-                      [date]: updatedDayPlan
-                    },
-                    weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
-                  };
-                });
-                
-                dayMealsGenerated.push('lunch');
+                used.add(chosen.id);
                 result.generatedMeals.push(`${date}-lunch`);
+                dayMealsGenerated.push('lunch');
               }
             } else {
-              // Lunch already exists
               dayMealsGenerated.push('lunch');
             }
-            
-            // Generate dinner if missing
+
             if (!currentDayPlan.dinner) {
-              // Use Firestore to get suitable dinner recipes
-              const dinnerRecipes = await firebaseService.getRecipesForMealPlan('dinner', {
-                dietType,
-                allergies,
-                excludedIngredients,
-                fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
-                calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
-                excludeIds: Array.from(get().weeklyUsedRecipeIds) // Get updated list
-              }, 5);
-              
-              if (dinnerRecipes.length > 0) {
-                const dinnerRecipe = dinnerRecipes[0];
-                const dinner = {
-                  recipeId: dinnerRecipe.id,
-                  name: dinnerRecipe.name,
-                  calories: dinnerRecipe.calories,
-                  protein: dinnerRecipe.protein,
-                  carbs: dinnerRecipe.carbs,
-                  fat: dinnerRecipe.fat,
-                  fiber: dinnerRecipe.fiber
+              const chosen = pickFromPool(dinnerPool, dinnerCalories);
+              if (chosen) {
+                currentDayPlan.dinner = {
+                  recipeId: chosen.id,
+                  name: chosen.name,
+                  calories: chosen.calories,
+                  protein: chosen.protein,
+                  carbs: chosen.carbs,
+                  fat: chosen.fat,
+                  fiber: chosen.fiber
                 };
-                
-                // Add to meal plan
-                set((state) => {
-                  const dayPlan = state.mealPlan[date] || {};
-                  const updatedDayPlan = { ...dayPlan, dinner };
-                  
-                  // Add to weekly used recipe IDs
-                  state.weeklyUsedRecipeIds.add(dinnerRecipe.id);
-                  
-                  return {
-                    mealPlan: {
-                      ...state.mealPlan,
-                      [date]: updatedDayPlan
-                    },
-                    weeklyUsedRecipeIds: new Set(state.weeklyUsedRecipeIds)
-                  };
-                });
-                
-                dayMealsGenerated.push('dinner');
+                used.add(chosen.id);
                 result.generatedMeals.push(`${date}-dinner`);
+                dayMealsGenerated.push('dinner');
               }
             } else {
-              // Dinner already exists
               dayMealsGenerated.push('dinner');
             }
-            
-            // Check if all meals were generated for this day
+
+            newMealPlan[date] = currentDayPlan;
+
             if (dayMealsGenerated.length === 3) {
               successfulDays++;
             } else if (dayMealsGenerated.length > 0) {
@@ -1811,13 +1795,12 @@ export const useMealPlanStore = create<MealPlanState>()(
             } else {
               failedDays++;
             }
-          } catch (error) {
-            console.error(`Error generating meal plan for ${date}:`, error);
+          } catch (e) {
+            console.error(`Error generating meal plan for ${date}:`, e);
             failedDays++;
           }
         }
-        
-        // Update result based on generation statistics
+
         if (successfulDays === dates.length) {
           result.success = true;
           result.error = null;
@@ -1829,26 +1812,26 @@ export const useMealPlanStore = create<MealPlanState>()(
             `Generated complete meal plans for ${successfulDays} of ${dates.length} days.`,
             `Generated partial meal plans for ${partialDays} of ${dates.length} days.`
           ];
-          
           if (failedDays > 0) {
             result.suggestions.push(`Could not generate meals for ${failedDays} days. Try adding more recipes or adjusting your dietary preferences.`);
           }
         } else {
           result.success = false;
-          result.error = "Failed to generate any meals for the week.";
+          result.error = 'Failed to generate any meals for the week.';
           result.suggestions = [
-            "Try adjusting your dietary preferences",
-            "Add more recipes to your collection",
-            "Try generating individual days instead"
+            'Try adjusting your dietary preferences',
+            'Add more recipes to your collection',
+            'Try generating individual days instead'
           ];
         }
-        
-        // Update error state
+
         set({
+          mealPlan: newMealPlan,
+          weeklyUsedRecipeIds: new Set(used),
           lastGenerationError: result.error,
           generationSuggestions: result.suggestions
         });
-        
+
         return result;
       }
     }),
