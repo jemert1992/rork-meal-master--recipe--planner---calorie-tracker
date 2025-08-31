@@ -62,7 +62,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
-      {/* Removed API settings tab */}
+      {/* Hide API settings from tab bar while keeping the route accessible if needed */}
+      <Tabs.Screen name="api-settings" options={{ href: null, tabBarButton: () => null }} />
       </Tabs>
     </>
   );
