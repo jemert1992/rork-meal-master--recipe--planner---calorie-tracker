@@ -592,6 +592,17 @@ export default function MealPlanScreen() {
               </>
             )}
           </Pressable>
+
+          <Pressable 
+            style={styles.clearButton} 
+            onPress={openSuggestionsModal}
+            accessibilityLabel="Browse suggestions"
+            accessibilityHint="Open full-screen recipe suggestions"
+            testID="open-suggestions"
+          >
+            <ChevronUp size={16} color={Colors.primary} />
+            <Text style={[styles.clearButtonText, { color: Colors.primary }]}>Suggestions</Text>
+          </Pressable>
           
           <Pressable 
             style={styles.clearButton} 
@@ -632,7 +643,7 @@ export default function MealPlanScreen() {
       <ScrollView 
         ref={mealPlanContentRef}
         style={styles.content} 
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 160 }]}
         showsVerticalScrollIndicator={false}
       >
         <MealPlanItem
@@ -662,55 +673,7 @@ export default function MealPlanScreen() {
           hasAlternatives={alternativesAvailable.dinner}
         />
 
-        {/* Meal Suggestions Section - Redesigned */}
-        <View style={styles.suggestionsContainer}>
-          <View style={styles.suggestionsHeaderRow}>
-            <Text style={styles.sectionTitle}>Suggested Recipes</Text>
-            <View style={styles.suggestionsActions}>
-              <Pressable 
-                style={styles.browseAllButton}
-                onPress={openSuggestionsModal}
-                accessibilityLabel="Browse more suggestions"
-                testID="browse-suggestions"
-              >
-                <Text style={styles.browseAllText}>Browse</Text>
-                <ChevronUp size={16} color={Colors.primary} />
-              </Pressable>
-            </View>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalCards}
-          >
-            {isLoadingFirestoreRecipes ? (
-              <View style={styles.loadingContainerSmall}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.loadingText}>Loading...</Text>
-              </View>
-            ) : mealSuggestions.length > 0 ? (
-              mealSuggestions.map((recipe) => (
-                <Pressable
-                  key={recipe.id}
-                  style={styles.suggestionCard}
-                  onPress={() => handleAddSuggestion(recipe.id, recipe.name, recipe.mealType || 'any')}
-                  accessibilityLabel={`Add ${recipe.name} to meal plan`}
-                >
-                  <View style={styles.cardImage}>
-                    <View style={styles.cardImageInner} />
-                  </View>
-                  <Text style={styles.cardTitle} numberOfLines={2}>{recipe.name}</Text>
-                  <Text style={styles.cardMeta}>{recipe.calories} cal • {(recipe.mealType || 'any').toUpperCase()}</Text>
-                </Pressable>
-              ))
-            ) : (
-              <View style={styles.emptyContainerSmall}>
-                <Text style={styles.emptyText}>No suggestions</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
+        
 
         {/* Suggestions Fullscreen Modal */}
         <Modal
