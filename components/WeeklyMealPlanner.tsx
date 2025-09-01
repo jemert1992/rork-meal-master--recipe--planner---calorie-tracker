@@ -326,7 +326,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       setSharingPlan(true);
       
       // Capture the meal plan view as an image
-      const uri = await captureRef(mealPlanRef, {
+      const uri = await captureRef(mealPlanRef.current as View, {
         format: 'png',
         quality: 1,
         result: 'data-uri',
@@ -496,6 +496,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         transparent={false}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
+        testID="weekly-meal-planner-modal"
       >
         <View style={styles.modalContentFull}>
           <View style={styles.modalHeader}>
@@ -676,6 +677,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           setShowErrorModal(false);
           clearGenerationError();
         }}
+        testID="generation-error-modal"
       >
         <View style={styles.errorModalOverlay}>
           <View style={styles.errorModal}>
