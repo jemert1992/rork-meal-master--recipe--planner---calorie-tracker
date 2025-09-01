@@ -1,4 +1,4 @@
-import { MealPlan, Recipe, GroceryItem } from '@/types';
+import { MealPlan, Recipe, GroceryItem, MealItem } from '@/types';
 
 /**
  * Extracts quantity and unit from an ingredient string
@@ -147,75 +147,79 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
     category: string;
   }> = {};
   
+  // Helper to upsert an ingredient scaled by factor
+  const upsertIngredient = (nameRaw: string, factor: number) => {
+    const { quantity, unit, name } = parseIngredient(nameRaw);
+    const normalizedName = normalizeIngredientName(name);
+
+    let category = 'Other';
+    if (/\b(apple|banana|berry|berries|orange|fruit|grape|melon|pear|peach|plum|mango)\b/i.test(name)) {
+      category = 'Fruits';
+    } else if (/\b(vegetable|carrot|onion|potato|tomato|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|garlic|ginger)\b/i.test(name)) {
+      category = 'Vegetables';
+    } else if (/\b(beef|chicken|pork|turkey|lamb|meat|steak|ground|sausage|bacon)\b/i.test(name)) {
+      category = 'Meat';
+    } else if (/\b(fish|salmon|tuna|shrimp|seafood|cod|tilapia)\b/i.test(name)) {
+      category = 'Seafood';
+    } else if (/\b(milk|cheese|yogurt|cream|butter|dairy)\b/i.test(name)) {
+      category = 'Dairy';
+    } else if (/\b(bread|bagel|roll|bun|tortilla|pita|naan|bakery)\b/i.test(name)) {
+      category = 'Bakery';
+    } else if (/\b(rice|pasta|noodle|grain|quinoa|couscous|cereal|oat|flour)\b/i.test(name)) {
+      category = 'Grains';
+    } else if (/\b(bean|lentil|chickpea|legume|tofu|tempeh)\b/i.test(name)) {
+      category = 'Legumes';
+    } else if (/\b(oil|vinegar|sauce|condiment|ketchup|mustard|mayo|dressing)\b/i.test(name)) {
+      category = 'Condiments';
+    } else if (/\b(spice|herb|salt|pepper|oregano|basil|thyme|cumin|paprika|cinnamon)\b/i.test(name)) {
+      category = 'Spices';
+    } else if (/\b(sugar|honey|syrup|sweetener)\b/i.test(name)) {
+      category = 'Baking';
+    } else if (/\b(nut|seed|almond|walnut|peanut|cashew)\b/i.test(name)) {
+      category = 'Nuts & Seeds';
+    } else if (/\b(can|canned|jar|preserved)\b/i.test(name)) {
+      category = 'Canned Goods';
+    } else if (/\b(frozen)\b/i.test(name)) {
+      category = 'Frozen';
+    } else if (/\b(snack|chip|cracker|pretzel)\b/i.test(name)) {
+      category = 'Snacks';
+    } else if (/\b(juice|soda|beverage|drink|water|coffee|tea)\b/i.test(name)) {
+      category = 'Beverages';
+    }
+
+    const scaledQty = quantity * factor;
+    if (ingredientMap[normalizedName]) {
+      ingredientMap[normalizedName].quantity += scaledQty;
+    } else {
+      ingredientMap[normalizedName] = {
+        quantity: scaledQty,
+        unit,
+        originalName: name,
+        category,
+      };
+    }
+  };
+
   // Process each day in the meal plan
   Object.values(mealPlan).forEach(day => {
     // Process main meals (breakfast, lunch, dinner)
     ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
-      const meal = day[mealType as keyof typeof day];
-      
-      // Skip if meal is undefined
+      const meal = day[mealType as keyof typeof day] as MealItem | undefined;
       if (!meal) return;
-      
-      // Skip if no recipeId
-      if (!meal.recipeId) return;
-      
-      const recipe = recipes.find(r => r.id === meal.recipeId);
-      if (recipe) {
-        // Process each ingredient in the recipe
-        recipe.ingredients.forEach(ingredientStr => {
-          const { quantity, unit, name } = parseIngredient(ingredientStr);
-          const normalizedName = normalizeIngredientName(name);
-          
-          // Determine category based on ingredient name
-          let category = 'Other';
-          
-          if (/\b(apple|banana|berry|berries|orange|fruit|grape|melon|pear|peach|plum|mango)\b/i.test(name)) {
-            category = 'Fruits';
-          } else if (/\b(vegetable|carrot|onion|potato|tomato|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|garlic|ginger)\b/i.test(name)) {
-            category = 'Vegetables';
-          } else if (/\b(beef|chicken|pork|turkey|lamb|meat|steak|ground|sausage|bacon)\b/i.test(name)) {
-            category = 'Meat';
-          } else if (/\b(fish|salmon|tuna|shrimp|seafood|cod|tilapia)\b/i.test(name)) {
-            category = 'Seafood';
-          } else if (/\b(milk|cheese|yogurt|cream|butter|dairy)\b/i.test(name)) {
-            category = 'Dairy';
-          } else if (/\b(bread|bagel|roll|bun|tortilla|pita|naan|bakery)\b/i.test(name)) {
-            category = 'Bakery';
-          } else if (/\b(rice|pasta|noodle|grain|quinoa|couscous|cereal|oat|flour)\b/i.test(name)) {
-            category = 'Grains';
-          } else if (/\b(bean|lentil|chickpea|legume|tofu|tempeh)\b/i.test(name)) {
-            category = 'Legumes';
-          } else if (/\b(oil|vinegar|sauce|condiment|ketchup|mustard|mayo|dressing)\b/i.test(name)) {
-            category = 'Condiments';
-          } else if (/\b(spice|herb|salt|pepper|oregano|basil|thyme|cumin|paprika|cinnamon)\b/i.test(name)) {
-            category = 'Spices';
-          } else if (/\b(sugar|honey|syrup|sweetener)\b/i.test(name)) {
-            category = 'Baking';
-          } else if (/\b(nut|seed|almond|walnut|peanut|cashew)\b/i.test(name)) {
-            category = 'Nuts & Seeds';
-          } else if (/\b(can|canned|jar|preserved)\b/i.test(name)) {
-            category = 'Canned Goods';
-          } else if (/\b(frozen)\b/i.test(name)) {
-            category = 'Frozen';
-          } else if (/\b(snack|chip|cracker|pretzel)\b/i.test(name)) {
-            category = 'Snacks';
-          } else if (/\b(juice|soda|beverage|drink|water|coffee|tea)\b/i.test(name)) {
-            category = 'Beverages';
-          }
-          
-          // Add or update the ingredient in our map
-          if (ingredientMap[normalizedName]) {
-            // If the ingredient already exists, add to its quantity
-            ingredientMap[normalizedName].quantity += quantity;
-          } else {
-            // Otherwise, add it as a new ingredient
-            ingredientMap[normalizedName] = {
-              quantity,
-              unit,
-              originalName: name,
-              category
-            };
-          }
+
+      if (meal.recipeId) {
+        const recipe = recipes.find(r => r.id === meal.recipeId);
+        if (recipe) {
+          const factor = (meal.servings ?? 1) / Math.max(1, recipe.servings);
+          recipe.ingredients.forEach(ingredientStr => {
+            upsertIngredient(ingredientStr, factor);
+          });
+        }
+      } else if (meal.ingredients && meal.ingredients.length > 0) {
+        const factor = meal.servings ?? 1;
+        meal.ingredients.forEach(ci => {
+          const line = `${ci.quantity} ${ci.unit} ${ci.name}`.trim();
+          upsertIngredient(line, factor);
         });
       }
     });
@@ -241,8 +245,11 @@ export const generateGroceryList = (mealPlan: MealPlan, recipes: Recipe[]): Groc
     return {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
       name: displayName,
+      quantity: info.quantity,
+      unit: info.unit,
       category: info.category,
-      checked: false
+      checked: false,
+      recipeIds: [],
     };
   });
   

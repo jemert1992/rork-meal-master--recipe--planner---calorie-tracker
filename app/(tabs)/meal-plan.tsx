@@ -72,22 +72,24 @@ export default function MealPlanScreen() {
 
   // Memoize the addNutritionFromMeal function to prevent recreating it on every render
   const addNutritionFromMeal = useCallback((meal: any, recipeList: Recipe[]) => {
+    const servings = meal?.servings ?? 1;
     if (meal?.recipeId) {
       const recipe = recipeList.find(r => r.id === meal.recipeId);
       if (recipe) {
+        const factor = servings / Math.max(1, recipe.servings);
         return {
-          calories: recipe.calories || 0,
-          protein: recipe.protein || 0,
-          carbs: recipe.carbs || 0,
-          fat: recipe.fat || 0
+          calories: Math.round((recipe.calories || 0) * factor),
+          protein: Math.round((recipe.protein || 0) * factor),
+          carbs: Math.round((recipe.carbs || 0) * factor),
+          fat: Math.round((recipe.fat || 0) * factor)
         };
       }
     } else if (meal?.calories) {
       return {
-        calories: meal.calories || 0,
-        protein: meal.protein || 0,
-        carbs: meal.carbs || 0,
-        fat: meal.fat || 0
+        calories: Math.round((meal.calories || 0) * servings),
+        protein: Math.round((meal.protein || 0) * servings),
+        carbs: Math.round((meal.carbs || 0) * servings),
+        fat: Math.round((meal.fat || 0) * servings)
       };
     }
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };

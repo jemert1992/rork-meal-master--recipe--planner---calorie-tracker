@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info } from 'lucide-react-native';
+import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info, Minus, Plus } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -45,9 +45,14 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
     }
   };
 
+  const servings = meal?.servings ?? 1;
+
   const getCalories = () => {
-    if (meal?.calories) return meal.calories;
-    if (recipe) return recipe.calories || 0;
+    if (meal?.calories) return Math.round((meal.calories ?? 0) * servings);
+    if (recipe) {
+      const perServing = (recipe.calories ?? 0) / Math.max(1, recipe.servings);
+      return Math.round(perServing * servings);
+    }
     return 0;
   };
   
@@ -105,6 +110,18 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
     }
   };
 
+  const onChangeServings = useCallback((delta: number) => {
+    const next = Math.max(1, Math.min(20, (meal?.servings ?? 1) + delta));
+    if (!meal) return;
+    try {
+      console.log('Updating servings', { date, mealType, from: meal?.servings ?? 1, to: next });
+      // Persist via store
+      useMealPlanStore.getState().updateMealServings(date, mealType as 'breakfast' | 'lunch' | 'dinner', next);
+    } catch (e) {
+      console.error('Failed to update servings', e);
+    }
+  }, [meal?.servings, date, mealType]);
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -151,7 +168,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   </View>
                   <View style={styles.recipeDetail}>
                     <Users size={12} color={Colors.textLight} />
-                    <Text style={styles.detailText}>{recipe.servings} servings</Text>
+                    <Text style={styles.detailText}>x {servings}</Text>
                   </View>
                 </View>
               )}
@@ -162,12 +179,10 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                     <Info size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
                   </View>
-                  {meal.servings && meal.servings > 1 && (
-                    <View style={styles.recipeDetail}>
-                      <Users size={12} color={Colors.textLight} />
-                      <Text style={styles.detailText}>{meal.servings} servings</Text>
-                    </View>
-                  )}
+                  <View style={styles.recipeDetail}>
+                    <Users size={12} color={Colors.textLight} />
+                    <Text style={styles.detailText}>x {servings}</Text>
+                  </View>
                 </View>
               )}
               
@@ -182,11 +197,37 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
             </View>
           </Pressable>
+
+          {meal && (
+            <View style={styles.stepper} testID={`servings-stepper-${mealType}`}>
+              <Pressable 
+                onPress={() => onChangeServings(-1)} 
+                style={[styles.stepperButton, styles.stepperLeft]}
+                accessibilityLabel={`Decrease ${mealType} servings`}
+                testID={`decrease-servings-${mealType}`}
+              >
+                <Minus size={16} color={Colors.text} />
+              </Pressable>
+              <View style={styles.stepperValue}>
+                <Users size={14} color={Colors.textSecondary} />
+                <Text style={styles.stepperText}>{servings}</Text>
+              </View>
+              <Pressable 
+                onPress={() => onChangeServings(1)} 
+                style={[styles.stepperButton, styles.stepperRight]}
+                accessibilityLabel={`Increase ${mealType} servings`}
+                testID={`increase-servings-${mealType}`}
+              >
+                <Plus size={16} color={Colors.text} />
+              </Pressable>
+            </View>
+          )}
+
           <Pressable 
             style={styles.removeButton} 
             onPress={onRemove} 
             hitSlop={8}
-            accessibilityLabel={`Remove ${meal.name} from ${mealType}`}
+            accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
             accessibilityRole="button"
           >
             <X size={18} color={Colors.textLight} />
@@ -445,6 +486,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  stepperButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  stepperLeft: {
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+  stepperRight: {
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  stepperValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  stepperText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
   },
   removeButton: {
     padding: 16,

@@ -14,6 +14,7 @@ interface MealPlanState {
   lastGenerationError: string | null;
   generationSuggestions: string[];
   addMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', meal: MealItem) => void;
+  updateMealServings: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', servings: number) => void;
   removeMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
   clearDay: (date: string) => void;
   generateMealPlan: (date: string, recipes: Recipe[], specificMealType?: 'breakfast' | 'lunch' | 'dinner') => Promise<GenerationResult>;
@@ -79,7 +80,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           
           // Handle standard meal types
           if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
-            updatedDayPlan[mealType] = meal;
+            updatedDayPlan[mealType] = { ...meal, servings: meal.servings ?? 1 };
           }
           
           // Update weekly used recipe IDs if this is a new recipe
@@ -96,6 +97,22 @@ export const useMealPlanStore = create<MealPlanState>()(
             // Clear any previous generation errors when adding a meal
             lastGenerationError: null,
             generationSuggestions: []
+          };
+        });
+      },
+
+      updateMealServings: (date, mealType, servings) => {
+        set((state) => {
+          const dayPlan = state.mealPlan[date] || {} as DailyMeals;
+          const currentMeal = dayPlan[mealType];
+          if (!currentMeal) return state;
+          const clamped = Math.max(1, Math.min(20, Math.round(servings)));
+          const updatedDayPlan: DailyMeals = { ...dayPlan, [mealType]: { ...currentMeal, servings: clamped } };
+          return {
+            mealPlan: {
+              ...state.mealPlan,
+              [date]: updatedDayPlan,
+            },
           };
         });
       },
@@ -401,7 +418,8 @@ export const useMealPlanStore = create<MealPlanState>()(
             protein: newRecipe.protein,
             carbs: newRecipe.carbs,
             fat: newRecipe.fat,
-            fiber: newRecipe.fiber
+            fiber: newRecipe.fiber,
+            servings: 1,
           };
           
           // Update the meal plan
