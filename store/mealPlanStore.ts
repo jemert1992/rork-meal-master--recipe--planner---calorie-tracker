@@ -1633,10 +1633,15 @@ export const useMealPlanStore = create<MealPlanState>()(
 
         const used = new Set<string>();
         const currentState = get();
-        Object.values(currentState.mealPlan).forEach(day => {
-          if (day.breakfast?.recipeId) used.add(day.breakfast.recipeId);
-          if (day.lunch?.recipeId) used.add(day.lunch.recipeId);
-          if (day.dinner?.recipeId) used.add(day.dinner.recipeId);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        Object.entries(currentState.mealPlan).forEach(([date, day]) => {
+          const d = new Date(date);
+          if (d >= start && d <= end) {
+            if (day.breakfast?.recipeId) used.add(day.breakfast.recipeId);
+            if (day.lunch?.recipeId) used.add(day.lunch.recipeId);
+            if (day.dinner?.recipeId) used.add(day.dinner.recipeId);
+          }
         });
 
         const fetchWithTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T | null> => {
@@ -1715,7 +1720,10 @@ export const useMealPlanStore = create<MealPlanState>()(
         let partialDays = 0;
 
         const pickFromPool = (pool: any[], targetCalories: number): any | null => {
-          const candidates = pool.filter((r) => !used.has(r.id));
+          let candidates = pool.filter((r) => !used.has(r.id));
+          if (candidates.length === 0) {
+            candidates = pool; // Allow reuse across the week if we run out
+          }
           if (candidates.length === 0) return null;
           candidates.sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
           return candidates[0] ?? null;
