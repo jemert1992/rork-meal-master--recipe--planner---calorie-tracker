@@ -665,7 +665,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </View>
             </View>
           </View>
-        </View>
       </Modal>
 
       {/* Error Modal */}
