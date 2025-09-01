@@ -9,12 +9,8 @@ import {
   Image, 
   Alert, 
   ActivityIndicator, 
-  FlatList,
-  Dimensions,
-  Share,
-  Platform
+  Share
 } from 'react-native';
-import type { FlatList as FlatListType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
   Calendar, 
@@ -39,9 +35,6 @@ import { captureRef } from 'react-native-view-shot';
 type WeeklyMealPlannerProps = {
   onGenerateGroceryList: () => void;
 };
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DAY_ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 
 export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealPlannerProps) {
   const router = useRouter();
@@ -70,8 +63,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [sharingPlan, setSharingPlan] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  
-  // Ref for capturing the meal plan view for sharing
+
   const mealPlanRef = useRef<View>(null);
   
   // Get the current week starting from today
@@ -95,7 +87,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   }, []);
   
   const [weekDays, setWeekDays] = useState(getWeekDays(0));
-  const flatListRef = useRef<FlatListType<any>>(null);
   
   // Update week days when current week index changes
   React.useEffect(() => {
@@ -362,35 +353,23 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     }
   };
   
-  const renderDayItem = ({ item }: { item: typeof weekDays[0] }) => {
+  const renderDayItem = (item: typeof weekDays[0]) => {
     const dayPlan = mealPlan[item.dateString] || {};
-    
+
     return (
-      <View style={styles.dayContainer}>
+      <View style={styles.dayContainer} key={item.dateString}>
         <View style={styles.dayHeader}>
-          <View style={[
-            styles.dayNumberContainer,
-            item.isToday && styles.todayNumberContainer
-          ]}>
-            <Text style={[
-              styles.dayNumber,
-              item.isToday && styles.todayNumber
-            ]}>{item.dayNumber}</Text>
-            <Text style={[
-              styles.dayMonth,
-              item.isToday && styles.todayMonth
-            ]}>{item.month}</Text>
+          <View style={[styles.dayNumberContainer, item.isToday && styles.todayNumberContainer]}>
+            <Text style={[styles.dayNumber, item.isToday && styles.todayNumber]}>{item.dayNumber}</Text>
+            <Text style={[styles.dayMonth, item.isToday && styles.todayMonth]}>{item.month}</Text>
           </View>
           <View style={styles.dayInfo}>
             <Text style={styles.dayName}>{item.dayName}</Text>
             <Text style={styles.dayDate}>{format(item.date, 'MMMM d, yyyy')}</Text>
           </View>
           {profile.autoGenerateMeals && (
-            <Pressable 
-              style={[
-                styles.generateDayButton,
-                generatingDayPlan === item.dateString && styles.generatingDayButton
-              ]}
+            <Pressable
+              style={[styles.generateDayButton, generatingDayPlan === item.dateString && styles.generatingDayButton]}
               onPress={() => handleGenerateAllMealsForDay(item.dateString)}
               disabled={generatingDayPlan === item.dateString}
               accessibilityLabel={`Generate all meals for ${item.dayName}`}
@@ -407,56 +386,37 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         </View>
 
         <View style={styles.mealsContainer}>
-          {['breakfast', 'lunch', 'dinner'].map((mealType) => {
+          {(['breakfast', 'lunch', 'dinner'] as const).map((mealType) => {
             const meal = dayPlan[mealType as keyof typeof dayPlan];
-            
-            const recipeId = (meal && !Array.isArray(meal) && 'recipeId' in meal) ? meal.recipeId : undefined;
+            const recipeId = (meal && !Array.isArray(meal) && 'recipeId' in meal) ? (meal as any).recipeId as string | undefined : undefined;
             const { name, image } = getRecipeDetails(recipeId);
-            
-            const isGenerating = generatingMeal && 
-              generatingMeal.date === item.dateString && 
-              generatingMeal.mealType === mealType && 
-              generatingMeal.loading;
+            const isGen = !!(generatingMeal && generatingMeal.date === item.dateString && generatingMeal.mealType === mealType && generatingMeal.loading);
 
             return (
               <View key={`${item.dateString}-${mealType}`} style={styles.mealSlotContainer}>
                 <Pressable
-                  style={[
-                    styles.mealSlot,
-                    name ? styles.filledMealSlot : styles.emptyMealSlot
-                  ]}
-                  onPress={() => handleMealSlotPress(item.dateString, mealType as 'breakfast' | 'lunch' | 'dinner')}
-                  disabled={isGenerating}
-                  accessibilityLabel={name 
-                    ? `${mealType}: ${name}` 
-                    : `Add ${mealType} for ${item.dayName}`
-                  }
+                  style={[styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot]}
+                  onPress={() => handleMealSlotPress(item.dateString, mealType)}
+                  disabled={isGen}
+                  accessibilityLabel={name ? `${mealType}: ${name}` : `Add ${mealType} for ${item.dayName}`}
                   accessibilityRole="button"
                 >
                   {name ? (
                     <View style={styles.filledMealContent}>
                       {image ? (
-                        <Image 
-                          source={{ uri: image }} 
-                          style={styles.mealImage}
-                          accessibilityLabel={`Image of ${name}`}
-                        />
+                        <Image source={{ uri: image }} style={styles.mealImage} accessibilityLabel={`Image of ${name}`} />
                       ) : (
                         <View style={styles.mealImagePlaceholder} />
                       )}
                       <View style={styles.mealInfo}>
-                        <Text style={styles.mealTypeLabel}>
-                          {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                        </Text>
+                        <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
                         <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
                       </View>
                     </View>
                   ) : (
                     <View style={styles.emptyMealContent}>
-                      <Text style={styles.mealTypeLabel}>
-                        {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                      </Text>
-                      {isGenerating ? (
+                      <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
+                      {isGen ? (
                         <>
                           <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
                           <Text style={styles.generatingText}>Generating...</Text>
@@ -470,24 +430,18 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                     </View>
                   )}
                 </Pressable>
-                
-                {!name && !isGenerating && (
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.pickForMeButton,
-                      pressed && styles.pickForMeButtonPressed
-                    ]}
-                    onPress={() => handleAutoGenerateMeal(
-                      item.dateString, 
-                      mealType as 'breakfast' | 'lunch' | 'dinner'
-                    )}
+
+                {!name && !isGen && (
+                  <Pressable
+                    style={styles.pickForMeButton}
+                    onPress={() => handleAutoGenerateMeal(item.dateString, mealType)}
                     accessibilityLabel={`Auto-generate ${mealType} for ${item.dayName}`}
                     accessibilityHint="Let the app pick a recipe for you"
                     accessibilityRole="button"
                   >
                     <View style={styles.pickForMeContent}>
                       <Sparkles size={18} color={Colors.white} />
-                      <Text style={styles.pickForMeText}>✨ Pick for me ✨</Text>
+                      <Text style={styles.pickForMeText}>Pick for me</Text>
                     </View>
                   </Pressable>
                 )}
@@ -539,13 +493,12 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+        <View style={styles.modalContentFull}>
+          <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Weekly Meal Plan</Text>
               <Pressable 
                 style={styles.closeButton} 
@@ -611,25 +564,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 <ChevronRight size={20} color={Colors.text} />
               </Pressable>
             </View>
-            
-            <FlatList
-              ref={flatListRef}
-              data={weekDays}
-              renderItem={renderDayItem}
-              keyExtractor={(item) => item.dateString}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={DAY_ITEM_WIDTH}
-              snapToAlignment="center"
-              decelerationRate="fast"
-              contentContainerStyle={styles.dayListContent}
-              getItemLayout={(_, index) => ({
-                length: DAY_ITEM_WIDTH,
-                offset: DAY_ITEM_WIDTH * index,
-                index,
-              })}
-            />
+
+            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false}>
+              {weekDays.map(d => renderDayItem(d))}
+            </ScrollView>
 
             <View style={styles.modalFooter}>
               <View style={styles.footerButtonsRow}>
@@ -859,16 +797,9 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginLeft: 8,
   },
-  modalContainer: {
+  modalContentFull: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
     backgroundColor: Colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -947,12 +878,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
   },
-  dayListContent: {
+  verticalWeekContent: {
     paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   dayContainer: {
-    width: DAY_ITEM_WIDTH,
-    marginBottom: 32,
+    width: '100%',
+    marginBottom: 20,
     paddingHorizontal: 4,
   },
   dayHeader: {
@@ -1017,7 +949,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   mealSlot: {
-    height: 88,
+    minHeight: 96,
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -1061,12 +993,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mealImage: {
-    width: 88,
-    height: 88,
+    width: 96,
+    height: 96,
   },
   mealImagePlaceholder: {
-    width: 88,
-    height: 88,
+    width: 96,
+    height: 96,
     backgroundColor: Colors.backgroundLight,
   },
   mealInfo: {
@@ -1127,20 +1059,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: 22,
-    paddingHorizontal: 32,
-    borderRadius: 25,
-    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 10,
     alignSelf: 'stretch',
     shadowColor: Colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
-    transform: [{ scale: 1 }],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   pickForMeContent: {
     flexDirection: 'row',
@@ -1148,12 +1076,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pickForMeText: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '800',
     color: Colors.white,
-    marginLeft: 12,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    marginLeft: 8,
+    letterSpacing: 0.5,
   },
   pickForMeButtonPressed: {
     transform: [{ scale: 0.96 }],
