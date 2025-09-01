@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MealPlan, MealItem, DailyMeals, Recipe, DietType, GenerationResult } from '@/types';
 import { mockMealPlan } from '@/constants/mockData';
 import * as firebaseService from '@/services/firebaseService';
+import { format } from 'date-fns';
 
 interface MealPlanState {
   mealPlan: MealPlan;
@@ -1611,7 +1612,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         let currentDate = new Date(startDate);
         const lastDate = new Date(endDate);
         while (currentDate <= lastDate) {
-          dates.push(currentDate.toISOString().split('T')[0]);
+          dates.push(format(currentDate, 'yyyy-MM-dd'));
           currentDate.setDate(currentDate.getDate() + 1);
         }
 
