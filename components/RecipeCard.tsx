@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Heart, Clock, Users } from 'lucide-react-native';
 import { Recipe, FitnessGoal, DietaryPreference } from '@/types';
@@ -42,19 +42,35 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
 
   if (compact) {
     return (
-      <Pressable 
-        style={styles.compactContainer} 
-        onPress={handlePress}
-        accessibilityRole="button"
-        accessibilityLabel={`Open recipe ${recipe.name}`}
-        testID={`recipe-card-compact-${recipe.id}`}
-      >
-        <Image source={{ uri: recipe.image }} style={styles.compactImage} accessibilityLabel={`Image of ${recipe.name}`} />
-        <View style={styles.compactContent}>
-          <Text style={styles.compactTitle} numberOfLines={1}>{recipe.name}</Text>
-          <Text style={styles.compactCalories}>{recipe.calories} cal</Text>
+      Platform.OS === 'web' ? (
+        <View
+          style={styles.compactContainer}
+          // @ts-expect-error onClick is web-only
+          onClick={handlePress}
+          role="button"
+          aria-label={`Open recipe ${recipe.name}`}
+          data-testid={`recipe-card-compact-${recipe.id}`}
+        >
+          <Image source={{ uri: recipe.image }} style={styles.compactImage} accessibilityLabel={`Image of ${recipe.name}`} />
+          <View style={styles.compactContent}>
+            <Text style={styles.compactTitle} numberOfLines={1}>{recipe.name}</Text>
+            <Text style={styles.compactCalories}>{recipe.calories} cal</Text>
+          </View>
         </View>
-      </Pressable>
+      ) : (
+        <Pressable 
+          style={styles.compactContainer} 
+          onPress={handlePress}
+          accessibilityLabel={`Open recipe ${recipe.name}`}
+          testID={`recipe-card-compact-${recipe.id}`}
+        >
+          <Image source={{ uri: recipe.image }} style={styles.compactImage} accessibilityLabel={`Image of ${recipe.name}`} />
+          <View style={styles.compactContent}>
+            <Text style={styles.compactTitle} numberOfLines={1}>{recipe.name}</Text>
+            <Text style={styles.compactCalories}>{recipe.calories} cal</Text>
+          </View>
+        </Pressable>
+      )
     );
   }
 
@@ -94,79 +110,146 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
   }
 
   return (
-    <Pressable 
-      style={styles.container} 
-      onPress={handlePress}
-      accessibilityRole="button"
-      accessibilityLabel={`Open recipe ${recipe.name}`}
-      testID={`recipe-card-${recipe.id}`}
-    >
-      <Image source={{ uri: recipe.image }} style={styles.image} />
-      <Pressable 
-        style={styles.favoriteButton} 
-        onPress={handleFavoritePress}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
-        accessibilityState={{ selected: favorite }}
-        testID={`favorite-toggle-${recipe.id}`}
+    Platform.OS === 'web' ? (
+      <View
+        style={styles.container}
+        // @ts-expect-error onClick is web-only
+        onClick={handlePress}
+        role="button"
+        aria-label={`Open recipe ${recipe.name}`}
+        data-testid={`recipe-card-${recipe.id}`}
       >
-        <Heart 
-          size={24} 
-          color={favorite ? Colors.error : Colors.textSecondary} 
-          fill={favorite ? Colors.error : 'transparent'} 
-        />
-      </Pressable>
-      
-      {recipe.mealType && (
-        <View style={styles.mealTypeTag}>
-          <Text style={styles.mealTypeText}>{recipe.mealType}</Text>
-        </View>
-      )}
-      
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
-        
-        <View style={styles.metaContainer}>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaValue}>{recipe.calories}</Text>
-            <Text style={styles.metaLabel}>calories</Text>
+        <Image source={{ uri: recipe.image }} style={styles.image} />
+        {Platform.OS === 'web' ? (
+          <View
+            style={styles.favoriteButton}
+            // @ts-expect-error onClick is web-only
+            onClick={handleFavoritePress}
+            role="button"
+            aria-label={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
+            data-testid={`favorite-toggle-${recipe.id}`}
+          >
+            <Heart
+              size={24}
+              color={favorite ? Colors.error : Colors.textSecondary}
+              fill={favorite ? Colors.error : 'transparent'}
+            />
           </View>
-          <View style={styles.metaDivider} />
-          <View style={styles.metaItem}>
-            <Clock size={16} color={Colors.primary} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{recipe.prepTime}</Text>
+        ) : null}
+        {recipe.mealType && (
+          <View style={styles.mealTypeTag}>
+            <Text style={styles.mealTypeText}>{recipe.mealType}</Text>
           </View>
-          <View style={styles.metaDivider} />
-          <View style={styles.metaItem}>
-            <Users size={16} color={Colors.primary} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{recipe.servings}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.tagsContainer}>
-          {displayTags.slice(0, 3).map((tag, index) => (
-            <View key={`${recipe.id}-display-tag-${index}`} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
+        )}
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
+          <View style={styles.metaContainer}>
+            <View style={styles.metaItem}>
+              <Text style={styles.metaValue}>{recipe.calories}</Text>
+              <Text style={styles.metaLabel}>calories</Text>
             </View>
-          ))}
-          
-          {recipe.complexity && (
-            <View style={[
-              styles.tag, 
-              recipe.complexity === 'simple' ? styles.simpleTag : styles.complexTag
-            ]}>
-              <Text style={[
-                styles.tagText,
-                recipe.complexity === 'simple' ? styles.simpleTagText : styles.complexTagText
+            <View style={styles.metaDivider} />
+            <View style={styles.metaItem}>
+              <Clock size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{recipe.prepTime}</Text>
+            </View>
+            <View style={styles.metaDivider} />
+            <View style={styles.metaItem}>
+              <Users size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{recipe.servings}</Text>
+            </View>
+          </View>
+          <View style={styles.tagsContainer}>
+            {displayTags.slice(0, 3).map((tag, index) => (
+              <View key={`${recipe.id}-display-tag-${index}`} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+            {recipe.complexity && (
+              <View style={[
+                styles.tag, 
+                recipe.complexity === 'simple' ? styles.simpleTag : styles.complexTag
               ]}>
-                {recipe.complexity}
-              </Text>
-            </View>
-          )}
+                <Text style={[
+                  styles.tagText,
+                  recipe.complexity === 'simple' ? styles.simpleTagText : styles.complexTagText
+                ]}>
+                  {recipe.complexity}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
-    </Pressable>
+    ) : (
+      <Pressable 
+        style={styles.container} 
+        onPress={handlePress}
+        accessibilityLabel={`Open recipe ${recipe.name}`}
+        testID={`recipe-card-${recipe.id}`}
+      >
+        <Image source={{ uri: recipe.image }} style={styles.image} />
+        <Pressable 
+          style={styles.favoriteButton} 
+          onPress={handleFavoritePress}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
+          accessibilityState={{ selected: favorite }}
+          testID={`favorite-toggle-${recipe.id}`}
+        >
+          <Heart 
+            size={24} 
+            color={favorite ? Colors.error : Colors.textSecondary} 
+            fill={favorite ? Colors.error : 'transparent'} 
+          />
+        </Pressable>
+        {recipe.mealType && (
+          <View style={styles.mealTypeTag}>
+            <Text style={styles.mealTypeText}>{recipe.mealType}</Text>
+          </View>
+        )}
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
+          <View style={styles.metaContainer}>
+            <View style={styles.metaItem}>
+              <Text style={styles.metaValue}>{recipe.calories}</Text>
+              <Text style={styles.metaLabel}>calories</Text>
+            </View>
+            <View style={styles.metaDivider} />
+            <View style={styles.metaItem}>
+              <Clock size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{recipe.prepTime}</Text>
+            </View>
+            <View style={styles.metaDivider} />
+            <View style={styles.metaItem}>
+              <Users size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{recipe.servings}</Text>
+            </View>
+          </View>
+          <View style={styles.tagsContainer}>
+            {displayTags.slice(0, 3).map((tag, index) => (
+              <View key={`${recipe.id}-display-tag-${index}`} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+            {recipe.complexity && (
+              <View style={[
+                styles.tag, 
+                recipe.complexity === 'simple' ? styles.simpleTag : styles.complexTag
+              ]}>
+                <Text style={[
+                  styles.tagText,
+                  recipe.complexity === 'simple' ? styles.simpleTagText : styles.complexTagText
+                ]}>
+                  {recipe.complexity}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    )
   );
 }
 
