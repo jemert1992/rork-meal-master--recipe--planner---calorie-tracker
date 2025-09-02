@@ -47,7 +47,6 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
           style={styles.compactContainer}
           // @ts-expect-error onClick is web-only
           onClick={handlePress}
-          role="button"
           aria-label={`Open recipe ${recipe.name}`}
           data-testid={`recipe-card-compact-${recipe.id}`}
         >
@@ -115,7 +114,6 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         style={styles.container}
         // @ts-expect-error onClick is web-only
         onClick={handlePress}
-        role="button"
         aria-label={`Open recipe ${recipe.name}`}
         data-testid={`recipe-card-${recipe.id}`}
       >
@@ -125,7 +123,6 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             style={styles.favoriteButton}
             // @ts-expect-error onClick is web-only
             onClick={handleFavoritePress}
-            role="button"
             aria-label={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
             data-testid={`favorite-toggle-${recipe.id}`}
           >
