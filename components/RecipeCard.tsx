@@ -49,6 +49,8 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
           onClick={handlePress}
           aria-label={`Open recipe ${recipe.name}`}
           data-testid={`recipe-card-compact-${recipe.id}`}
+          role="button"
+          tabIndex={0}
         >
           <Image source={{ uri: recipe.image }} style={styles.compactImage} accessibilityLabel={`Image of ${recipe.name}`} />
           <View style={styles.compactContent}>
@@ -116,22 +118,25 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         onClick={handlePress}
         aria-label={`Open recipe ${recipe.name}`}
         data-testid={`recipe-card-${recipe.id}`}
+        role="button"
+        tabIndex={0}
       >
         <Image source={{ uri: recipe.image }} style={styles.image} />
         {Platform.OS === 'web' ? (
-          <View
+          <Pressable
             style={styles.favoriteButton}
-            // @ts-expect-error onClick is web-only
-            onClick={handleFavoritePress}
-            aria-label={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
-            data-testid={`favorite-toggle-${recipe.id}`}
+            onPress={handleFavoritePress}
+            accessibilityRole="button"
+            accessibilityLabel={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
+            accessibilityState={{ selected: favorite }}
+            testID={`favorite-toggle-${recipe.id}`}
           >
             <Heart
               size={24}
               color={favorite ? Colors.error : Colors.textSecondary}
               fill={favorite ? Colors.error : 'transparent'}
             />
-          </View>
+          </Pressable>
         ) : null}
         {recipe.mealType && (
           <View style={styles.mealTypeTag}>
