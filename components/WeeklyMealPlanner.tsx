@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -9,7 +9,8 @@ import {
   Image, 
   Alert, 
   ActivityIndicator, 
-  Share
+  Share,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
@@ -53,6 +54,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const { profile } = useUserStore();
   
   const [modalVisible, setModalVisible] = useState(false);
+  const modalCloseButtonRef = useRef<any>(null);
+  const errorCloseButtonRef = useRef<any>(null);
+  const previouslyFocusedRef = useRef<Element | null>(null as unknown as Element | null);
   const [generatingMeal, setGeneratingMeal] = useState<{
     date: string;
     mealType: 'breakfast' | 'lunch' | 'dinner';
@@ -92,6 +96,48 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   React.useEffect(() => {
     setWeekDays(getWeekDays(currentWeekIndex));
   }, [currentWeekIndex, getWeekDays]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (modalVisible) {
+        previouslyFocusedRef.current = (document?.activeElement as Element) ?? null;
+        setTimeout(() => {
+          try {
+            (modalCloseButtonRef.current as unknown as any)?.focus?.();
+          } catch (e) {
+            console.log('Focus set error (weekly modal):', e);
+          }
+        }, 0);
+      } else {
+        try {
+          (previouslyFocusedRef.current as any)?.focus?.();
+        } catch (e) {
+          // noop
+        }
+      }
+    }
+  }, [modalVisible]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (showErrorModal) {
+        previouslyFocusedRef.current = (document?.activeElement as Element) ?? null;
+        setTimeout(() => {
+          try {
+            (errorCloseButtonRef.current as unknown as any)?.focus?.();
+          } catch (e) {
+            console.log('Focus set error (error modal):', e);
+          }
+        }, 0);
+      } else {
+        try {
+          (previouslyFocusedRef.current as any)?.focus?.();
+        } catch (e) {
+          // noop
+        }
+      }
+    }
+  }, [showErrorModal]);
 
   // Show error modal when generation error occurs
   React.useEffect(() => {
@@ -497,15 +543,19 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
         testID="weekly-meal-planner-modal"
+        accessibilityViewIsModal={true}
       >
-        <View style={styles.modalContentFull}>
-          <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Weekly Meal Plan</Text>
+        <View style={styles.modalContentFull} accessible accessibilityLabel="Weekly meal plan dialog">
+          <View style={styles.modalHeader} accessibilityRole="header">
+              <Text style={styles.modalTitle} accessibilityRole="text">Weekly Meal Plan</Text>
               <Pressable 
+                ref={modalCloseButtonRef}
                 style={styles.closeButton} 
                 onPress={() => setModalVisible(false)}
-                accessibilityLabel="Close"
+                accessibilityLabel="Close weekly meal plan"
+                accessibilityHint="Closes the weekly planner dialog"
                 accessibilityRole="button"
+                testID="weekly-planner-close"
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
@@ -566,7 +616,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false} accessible accessibilityLabel="Weekly plan days list">
               {weekDays.map(d => renderDayItem(d))}
             </ScrollView>
 
@@ -678,29 +728,34 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           clearGenerationError();
         }}
         testID="generation-error-modal"
+        accessibilityViewIsModal={true}
       >
-        <View style={styles.errorModalOverlay}>
-          <View style={styles.errorModal}>
-            <View style={styles.errorModalHeader}>
+        <View style={styles.errorModalOverlay} importantForAccessibility="yes">
+          <View style={styles.errorModal} accessible accessibilityLabel="Meal plan generation issue dialog">
+            <View style={styles.errorModalHeader} accessibilityRole="header">
               <Info size={24} color={Colors.warning} />
-              <Text style={styles.errorModalTitle}>Generation Issue</Text>
+              <Text style={styles.errorModalTitle} accessibilityRole="text">Generation Issue</Text>
               <Pressable 
+                ref={errorCloseButtonRef}
                 onPress={() => {
                   setShowErrorModal(false);
                   clearGenerationError();
                 }}
                 style={styles.closeButton}
+                accessibilityLabel="Close error message"
+                accessibilityRole="button"
+                testID="error-modal-close"
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
             
-            <Text style={styles.errorModalMessage}>
+            <Text style={styles.errorModalMessage} accessibilityLiveRegion="polite">
               {lastGenerationError || "There was an issue generating your meal plan."}
             </Text>
             
             {generationSuggestions && generationSuggestions.length > 0 && (
-              <View style={styles.errorSuggestionsList}>
+              <View style={styles.errorSuggestionsList} accessible accessibilityLabel="Suggestions list">
                 <Text style={styles.errorSuggestionsTitle}>Suggestions:</Text>
                 {generationSuggestions.map((suggestion, index) => (
                   <View key={`error-suggestion-${index}`} style={styles.errorSuggestionItem}>
@@ -717,6 +772,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 setShowErrorModal(false);
                 clearGenerationError();
               }}
+              accessibilityLabel="Dismiss error"
+              accessibilityRole="button"
+              testID="error-modal-got-it"
             >
               <Text style={styles.errorModalButtonText}>Got it</Text>
             </Pressable>

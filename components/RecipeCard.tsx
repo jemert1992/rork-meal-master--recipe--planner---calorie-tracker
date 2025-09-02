@@ -45,8 +45,11 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
       <Pressable 
         style={styles.compactContainer} 
         onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={`Open recipe ${recipe.name}`}
+        testID={`recipe-card-compact-${recipe.id}`}
       >
-        <Image source={{ uri: recipe.image }} style={styles.compactImage} />
+        <Image source={{ uri: recipe.image }} style={styles.compactImage} accessibilityLabel={`Image of ${recipe.name}`} />
         <View style={styles.compactContent}>
           <Text style={styles.compactTitle} numberOfLines={1}>{recipe.name}</Text>
           <Text style={styles.compactCalories}>{recipe.calories} cal</Text>
@@ -94,12 +97,19 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
     <Pressable 
       style={styles.container} 
       onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`Open recipe ${recipe.name}`}
+      testID={`recipe-card-${recipe.id}`}
     >
       <Image source={{ uri: recipe.image }} style={styles.image} />
       <Pressable 
         style={styles.favoriteButton} 
         onPress={handleFavoritePress}
         hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={favorite ? `Remove ${recipe.name} from favorites` : `Add ${recipe.name} to favorites`}
+        accessibilityState={{ selected: favorite }}
+        testID={`favorite-toggle-${recipe.id}`}
       >
         <Heart 
           size={24} 
