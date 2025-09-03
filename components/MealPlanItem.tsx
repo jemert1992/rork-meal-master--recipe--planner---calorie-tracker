@@ -144,7 +144,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         {meal && (
           <View style={styles.headerActions}>
             <Pressable
-              style={styles.swapButton}
+              style={({ pressed }) => [styles.swapButton, pressed && styles.focusRing]}
               onPress={handleShowAlternatives}
               accessibilityLabel={`Swap ${formatMealType(mealType)}`}
               accessibilityHint="Open recipe browser to swap"
@@ -155,7 +155,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <Text style={styles.swapButtonText}>Swap</Text>
             </Pressable>
             <Pressable
-              style={styles.editButton}
+              style={({ pressed }) => [styles.editButton, pressed && styles.focusRing]}
               onPress={() => router.push(`/add-meal/${date}?mealType=${mealType}`)}
               accessibilityLabel={`Edit ${formatMealType(mealType)}`}
               accessibilityHint="Open the meal picker"
@@ -171,7 +171,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       {meal ? (
         <View style={styles.mealContainer}>
           <Pressable 
-            style={styles.mealPressable} 
+            style={({ pressed }) => [styles.mealPressable, pressed && styles.focusRing]} 
             onPress={handlePress}
             accessibilityLabel={`${formatMealType(mealType)}: ${meal.name}`}
             accessibilityHint={`${getCalories()} calories. Tap to view details.`}
@@ -230,8 +230,10 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             <View style={styles.stepper} testID={`servings-stepper-${mealType}`}>
               <Pressable 
                 onPress={() => onChangeServings(-1)} 
-                style={[styles.stepperButton, styles.stepperLeft]}
+                style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
                 accessibilityLabel={`Decrease ${mealType} servings`}
+                accessibilityRole="button"
+                accessibilityHint="Decreases servings by one"
                 testID={`decrease-servings-${mealType}`}
               >
                 <Minus size={16} color={Colors.text} />
@@ -242,8 +244,10 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               </View>
               <Pressable 
                 onPress={() => onChangeServings(1)} 
-                style={[styles.stepperButton, styles.stepperRight]}
+                style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
                 accessibilityLabel={`Increase ${mealType} servings`}
+                accessibilityRole="button"
+                accessibilityHint="Increases servings by one"
                 testID={`increase-servings-${mealType}`}
               >
                 <Plus size={16} color={Colors.text} />
@@ -252,7 +256,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
           )}
 
           <Pressable 
-            style={styles.removeButton} 
+            style={({ pressed }) => [styles.removeButton, pressed && styles.focusRing]} 
             onPress={onRemove} 
             hitSlop={8}
             accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
@@ -264,7 +268,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         </View>
       ) : (
         <Pressable 
-          style={styles.addButton} 
+          style={({ pressed }) => [styles.addButton, pressed && styles.focusRing]} 
           onPress={onAdd}
           accessibilityLabel={`Add ${mealType}`}
           accessibilityHint={`Tap to add a ${mealType} to your meal plan`}
@@ -288,7 +292,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <Text style={styles.modalTitle}>Swap {formatMealType(mealType)}</Text>
               <Pressable 
                 ref={closeAltRef}
-                style={styles.closeButton} 
+                style={({ pressed }) => [styles.closeButton, pressed && styles.focusRing]} 
                 onPress={() => setShowAlternatives(false)}
                 accessibilityLabel="Close"
                 accessibilityRole="button"
@@ -305,11 +309,12 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 placeholder="Search recipes"
                 style={styles.searchInput}
                 placeholderTextColor={Colors.textLight}
+                accessibilityLabel="Search recipes"
                 testID={`swap-search-${mealType}`}
               />
               <Pressable
                 onPress={() => setOnlySuitable(!onlySuitable)}
-                style={[styles.filterChip, onlySuitable ? styles.filterChipActive : null]}
+                style={({ pressed }) => [styles.filterChip, onlySuitable ? styles.filterChipActive : null, pressed && styles.focusRing]}
                 accessibilityRole="button"
                 accessibilityLabel="Toggle suitable only"
                 accessibilityState={{ checked: onlySuitable }}
@@ -364,7 +369,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                     )}
                   </View>
                   <Pressable 
-                    style={styles.swapActionButton}
+                    style={({ pressed }) => [styles.swapActionButton, pressed && styles.focusRing]}
                     onPress={() => handleSwapRecipe(item.id)}
                     disabled={swappingRecipe}
                     accessibilityLabel={`Swap with ${item.name}`}
@@ -398,7 +403,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
           <View style={styles.mealDetailHeader}>
             <Text style={styles.mealDetailTitle}>Meal Details</Text>
             <Pressable 
-              style={styles.closeButton} 
+              style={({ pressed }) => [styles.closeButton, pressed && styles.focusRing]} 
               onPress={() => setShowMealDetails(false)}
               accessibilityLabel="Close"
               accessibilityRole="button"
@@ -775,5 +780,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text,
+  },
+  focusRing: {
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
 });
