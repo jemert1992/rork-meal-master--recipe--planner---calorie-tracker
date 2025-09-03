@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { StyleSheet, View, Text, ScrollView, Pressable, ActivityIndicator, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter, Info, X } from 'lucide-react-native';
@@ -20,7 +20,6 @@ import { format, addDays } from 'date-fns';
 export default function MealPlanScreen() {
   const router = useRouter();
   
-  // Register tutorial ref
   const mealPlanContentRef = useTutorialRef('meal-plan-content');
   const { 
     mealPlan, 
@@ -38,15 +37,15 @@ export default function MealPlanScreen() {
   const { recipes, isLoading, useFirestore } = useRecipeStore();
   const { profile } = useUserStore();
   
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [dailyNutrition, setDailyNutrition] = useState({
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dailyNutrition, setDailyNutrition] = useState<{ calories: number; protein: number; carbs: number; fat: number }>({
     calories: 0,
     protein: 0,
     carbs: 0,
     fat: 0
   });
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [mealSuggestions, setMealSuggestions] = useState<typeof recipes>([]);
   const [showDietaryWarning, setShowDietaryWarning] = useState<boolean>(false);
   const [isLoadingFirestoreRecipes, setIsLoadingFirestoreRecipes] = useState<boolean>(false);
@@ -62,42 +61,45 @@ export default function MealPlanScreen() {
     dinner: false
   });
 
-  const dateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
-  const dayPlan = useMemo(() => mealPlan[dateString] || {}, [mealPlan, dateString]);
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState<boolean>(false);
+  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'error' }>({ visible: false, message: '', type: 'info' });
+  const snackbarTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [confirmClearVisible, setConfirmClearVisible] = useState<boolean>(false);
+  const [replaceMealModal, setReplaceMealModal] = useState<{ visible: boolean; recipeId?: string; recipeName?: string }>({ visible: false });
 
-  // GUARD: Show error modal only when generation error occurs
+  const dateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
+  const dayPlan = useMemo<Partial<DailyMeals>>(() => mealPlan[dateString] || {}, [mealPlan, dateString]);
+
   useEffect(() => {
     if (lastGenerationError) {
       setShowErrorModal(true);
     }
   }, [lastGenerationError]);
 
-  // Memoize the addNutritionFromMeal function to prevent recreating it on every render
   const addNutritionFromMeal = useCallback((meal: any, recipeList: Recipe[]) => {
-    const servings = meal?.servings ?? 1;
+    const servings: number = meal?.servings ?? 1;
     if (meal?.recipeId) {
       const recipe = recipeList.find(r => r.id === meal.recipeId);
       if (recipe) {
-        const factor = servings / Math.max(1, recipe.servings);
+        const factor = servings / Math.max(1, recipe.servings ?? 1);
         return {
-          calories: Math.round((recipe.calories || 0) * factor),
-          protein: Math.round((recipe.protein || 0) * factor),
-          carbs: Math.round((recipe.carbs || 0) * factor),
-          fat: Math.round((recipe.fat || 0) * factor)
+          calories: Math.round((recipe.calories ?? 0) * factor),
+          protein: Math.round((recipe.protein ?? 0) * factor),
+          carbs: Math.round((recipe.carbs ?? 0) * factor),
+          fat: Math.round((recipe.fat ?? 0) * factor)
         };
       }
     } else if (meal?.calories) {
       return {
-        calories: Math.round((meal.calories || 0) * servings),
-        protein: Math.round((meal.protein || 0) * servings),
-        carbs: Math.round((meal.carbs || 0) * servings),
-        fat: Math.round((meal.fat || 0) * servings)
+        calories: Math.round((meal.calories ?? 0) * servings),
+        protein: Math.round((meal.protein ?? 0) * servings),
+        carbs: Math.round((meal.carbs ?? 0) * servings),
+        fat: Math.round((meal.fat ?? 0) * servings)
       };
     }
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }, []);
 
-  // GUARD: Calculate daily nutrition only when dayPlan or recipes change
   useEffect(() => {
     let totalCalories = 0;
     let totalProtein = 0;
@@ -136,7 +138,6 @@ export default function MealPlanScreen() {
     });
   }, [dayPlan, recipes, addNutritionFromMeal]);
 
-  // GUARD: Check dietary requirements only when relevant data changes
   useEffect(() => {
     if (Object.keys(dayPlan).length === 0 || !profile.dietType || profile.dietType === 'any') {
       setShowDietaryWarning(false);
@@ -162,36 +163,26 @@ export default function MealPlanScreen() {
     setShowDietaryWarning(!(breakfastOk && lunchOk && dinnerOk));
   }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, recipes, isRecipeSuitable]);
 
-  // Load recipes from Firestore when needed
   useEffect(() => {
     let isMounted = true;
-    
     const loadFirestoreRecipes = async () => {
       if (useFirestore && showSuggestions && !isLoadingFirestoreRecipes) {
         setIsLoadingFirestoreRecipes(true);
         try {
-          // Get weekly used recipe IDs to avoid suggesting already used recipes
           updateWeeklyUsedRecipeIds(
             format(addDays(selectedDate, -3), 'yyyy-MM-dd'),
             format(addDays(selectedDate, 3), 'yyyy-MM-dd')
           );
-          
-          // Create filters based on user preferences
-          const filters: RecipeFilters = {};
-          
+          const filters: RecipeFilters = {} as RecipeFilters;
           if (profile.dietType && profile.dietType !== 'any') {
-            filters.dietaryPreference = profile.dietType;
+            (filters as any).dietaryPreference = profile.dietType;
           }
-          
           if (profile.fitnessGoals && profile.fitnessGoals.length > 0) {
-            filters.fitnessGoal = profile.fitnessGoals[0];
+            (filters as any).fitnessGoal = profile.fitnessGoals[0];
           }
-          
-          // Get recipes from Firestore
-          const { recipes: firestoreRecipes } = await firebaseService.getRecipesFromFirestore(filters, 20);
-          
+          const { recipes: fr } = await firebaseService.getRecipesFromFirestore(filters, 20);
           if (isMounted) {
-            setFirestoreRecipes(firestoreRecipes);
+            setFirestoreRecipes(fr);
           }
         } catch (error) {
           console.error('Error loading recipes from Firestore:', error);
@@ -202,29 +193,23 @@ export default function MealPlanScreen() {
         }
       }
     };
-    
     loadFirestoreRecipes();
-    
     return () => {
       isMounted = false;
     };
   }, [useFirestore, showSuggestions, selectedDate, profile.dietType, profile.fitnessGoals, updateWeeklyUsedRecipeIds]);
 
-  // Check if alternatives are available for each meal type
   useEffect(() => {
     let isMounted = true;
-    
     const checkAlternatives = async () => {
       if (!useFirestore || Object.keys(dayPlan).length === 0) {
         return;
       }
-      
       const newAlternativesAvailable = {
         breakfast: false,
         lunch: false,
         dinner: false
       };
-      
       try {
         if (dayPlan.breakfast?.recipeId) {
           const alternatives = await firebaseService.getAlternativeRecipes(
@@ -239,7 +224,6 @@ export default function MealPlanScreen() {
           );
           newAlternativesAvailable.breakfast = alternatives.length > 0;
         }
-        
         if (dayPlan.lunch?.recipeId) {
           const alternatives = await firebaseService.getAlternativeRecipes(
             'lunch',
@@ -253,7 +237,6 @@ export default function MealPlanScreen() {
           );
           newAlternativesAvailable.lunch = alternatives.length > 0;
         }
-        
         if (dayPlan.dinner?.recipeId) {
           const alternatives = await firebaseService.getAlternativeRecipes(
             'dinner',
@@ -267,7 +250,6 @@ export default function MealPlanScreen() {
           );
           newAlternativesAvailable.dinner = alternatives.length > 0;
         }
-        
         if (isMounted) {
           setAlternativesAvailable(newAlternativesAvailable);
         }
@@ -275,28 +257,18 @@ export default function MealPlanScreen() {
         console.error('Error checking alternatives:', error);
       }
     };
-    
     checkAlternatives();
-    
     return () => {
       isMounted = false;
     };
   }, [dayPlan, profile.dietType, profile.allergies, profile.excludedIngredients, useFirestore]);
 
-  // Memoize the function to generate meal suggestions
   const generateMealSuggestions = useCallback(() => {
-    // Use Firestore recipes if available, otherwise use local recipes
     const recipesToUse = useFirestore && firestoreRecipes.length > 0 ? firestoreRecipes : recipes;
-    
-    if (recipesToUse.length === 0) return [];
-    
-    const suggestions = [];
-    const mealTypes = ['breakfast', 'lunch', 'dinner'];
-    
-    // Filter recipes by dietary preferences if available
+    if (recipesToUse.length === 0) return [] as Recipe[];
+    const suggestions: Recipe[] = [];
+    const mealTypes: Array<'breakfast' | 'lunch' | 'dinner'> = ['breakfast', 'lunch', 'dinner'];
     let availableRecipes = recipesToUse.filter(recipe => !isRecipeUsedInMealPlan(recipe.id));
-    
-    // Apply user dietary preferences, allergies, and excluded ingredients
     if (profile.dietType && profile.dietType !== 'any') {
       availableRecipes = availableRecipes.filter(recipe => 
         isRecipeSuitable(
@@ -307,36 +279,26 @@ export default function MealPlanScreen() {
         )
       );
     } else if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
-      // Fallback to old dietary preferences if dietType is not set
       const filteredRecipes = availableRecipes.filter(recipe => 
         profile.dietaryPreferences?.some(pref => 
-          recipe.tags.includes(pref)
+          recipe.tags.includes(pref as string)
         )
       );
-      
-      // If no recipes match the preferences, fall back to all recipes
       if (filteredRecipes.length > 0) {
         availableRecipes = filteredRecipes;
       }
     }
-    
-    // Get suggestions for each meal type that's missing
     for (const mealType of mealTypes) {
-      // Use type assertion to tell TypeScript this is a valid key
-      if (!dayPlan[mealType as keyof DailyMeals]) {
-        // Filter recipes by tags that match the meal type
+      if (!(dayPlan as any)[mealType]) {
         const typeRecipes = availableRecipes.filter(recipe => 
           recipe.mealType === mealType ||
           (mealType === 'breakfast' && recipe.tags.some(tag => ['breakfast', 'brunch', 'morning'].includes(tag))) ||
           (mealType === 'lunch' && recipe.tags.some(tag => ['lunch', 'salad', 'sandwich', 'light'].includes(tag))) ||
           (mealType === 'dinner' && recipe.tags.some(tag => ['dinner', 'main', 'supper', 'entree'].includes(tag)))
         );
-        
-        // If we have recipes that match the meal type, add them to suggestions
         if (typeRecipes.length > 0) {
           suggestions.push(...typeRecipes.slice(0, 2));
         } else if (availableRecipes.length > 0) {
-          // Otherwise, just add some random recipes
           const randomRecipes = [...availableRecipes]
             .sort(() => 0.5 - Math.random())
             .slice(0, 2);
@@ -344,13 +306,10 @@ export default function MealPlanScreen() {
         }
       }
     }
-    
-    // Limit to 6 suggestions and remove duplicates
     const uniqueSuggestions = [...new Map(suggestions.map(item => [item.id, item])).values()];
     return uniqueSuggestions.slice(0, 6);
   }, [dayPlan, recipes, firestoreRecipes, profile.dietType, profile.allergies, profile.excludedIngredients, profile.dietaryPreferences, useFirestore, isRecipeUsedInMealPlan, isRecipeSuitable]);
 
-  // Update meal suggestions only when showSuggestions changes to true
   useEffect(() => {
     if (showSuggestions && !isLoadingFirestoreRecipes) {
       const suggestions = generateMealSuggestions();
@@ -372,59 +331,39 @@ export default function MealPlanScreen() {
   }, [removeMeal, dateString]);
 
   const handleClearDay = useCallback(() => {
-    Alert.alert(
-      'Clear Day',
-      'Are you sure you want to clear all meals for this day?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
-          style: 'destructive', 
-          onPress: () => {
-            clearDay(dateString);
-            setShowSuggestions(false);
-          }
-        },
-      ]
-    );
-  }, [clearDay, dateString]);
+    setConfirmClearVisible(true);
+  }, []);
+
+  const showSnack = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
+    if (snackbarTimerRef.current) {
+      clearTimeout(snackbarTimerRef.current);
+    }
+    setSnackbar({ visible: true, message, type });
+    snackbarTimerRef.current = setTimeout(() => {
+      setSnackbar(prev => ({ ...prev, visible: false }));
+    }, 2400);
+  }, []);
 
   const handleGenerateMealPlan = useCallback(async () => {
     setIsGenerating(true);
     try {
-      // Update weekly used recipe IDs
       updateWeeklyUsedRecipeIds(
         format(addDays(selectedDate, -3), 'yyyy-MM-dd'),
         format(addDays(selectedDate, 3), 'yyyy-MM-dd')
       );
-      
       if (useFirestore) {
-        // Generate meal plan using Firestore
         const result = await generateMealPlan(dateString, []);
-        
         if (result.success) {
           if (result.generatedMeals.length === 0) {
-            Alert.alert(
-              'No Changes Needed',
-              'Your meal plan is already complete for this day.',
-              [{ text: 'OK' }]
-            );
+            showSnack('No changes needed — day already complete', 'info');
           } else {
-            Alert.alert(
-              'Success',
-              `Generated ${result.generatedMeals.length} meal(s) for your plan!`,
-              [{ text: 'OK' }]
-            );
+            showSnack(`Generated ${result.generatedMeals.length} meal(s)`, 'success');
           }
         } else {
-          // Error will be shown in the error modal
           setShowErrorModal(true);
         }
       } else {
-        // Filter recipes by dietary preferences if available
         let recipesToUse = [...recipes];
-        
-        // Apply user dietary preferences, allergies, and excluded ingredients
         if (profile.dietType && profile.dietType !== 'any') {
           const filteredRecipes = recipes.filter(recipe => 
             isRecipeSuitable(
@@ -434,65 +373,39 @@ export default function MealPlanScreen() {
               profile.excludedIngredients
             )
           );
-          
-          // Only use filtered recipes if we have enough
           if (filteredRecipes.length >= 5) {
             recipesToUse = filteredRecipes;
           } else {
-            Alert.alert(
-              'Limited Recipe Selection',
-              `Only ${filteredRecipes.length} recipes match your dietary preferences. Using all available recipes instead.`,
-              [{ text: 'OK' }]
-            );
+            showSnack(`Only ${filteredRecipes.length} recipes match. Using all recipes.`, 'info');
           }
         } else if (profile.dietaryPreferences && profile.dietaryPreferences.length > 0) {
-          // Fallback to old dietary preferences if dietType is not set
           const filteredRecipes = recipes.filter(recipe => 
             profile.dietaryPreferences?.some(pref => 
-              recipe.tags.includes(pref)
+              recipe.tags.includes(pref as string)
             )
           );
-          
-          // Only use filtered recipes if we have enough
           if (filteredRecipes.length >= 5) {
             recipesToUse = filteredRecipes;
           }
         }
-        
         const result = await generateMealPlan(dateString, recipesToUse);
-        
         if (result.success) {
           if (result.generatedMeals.length === 0) {
-            Alert.alert(
-              'No Changes Needed',
-              'Your meal plan is already complete for this day.',
-              [{ text: 'OK' }]
-            );
+            showSnack('No changes needed — day already complete', 'info');
           } else {
-            Alert.alert(
-              'Success',
-              `Generated ${result.generatedMeals.length} meal(s) for your plan!`,
-              [{ text: 'OK' }]
-            );
+            showSnack(`Generated ${result.generatedMeals.length} meal(s)`, 'success');
           }
         } else {
-          // Error will be shown in the error modal
           setShowErrorModal(true);
         }
       }
     } catch (error) {
       console.error('Error generating meal plan:', error);
-      Alert.alert(
-        'Error',
-        'Failed to generate meal plan. Please try again.',
-        [{ text: 'OK' }]
-      );
+      showSnack('Failed to generate meal plan. Try again.', 'error');
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedDate, useFirestore, dateString, recipes, profile]);
-
-  const [showSuggestionsModal, setShowSuggestionsModal] = useState<boolean>(false);
+  }, [selectedDate, useFirestore, dateString, recipes, profile, showSnack, updateWeeklyUsedRecipeIds, generateMealPlan, isRecipeSuitable]);
 
   const handleToggleSuggestions = useCallback(() => {
     setShowSuggestions(!showSuggestions);
@@ -510,46 +423,25 @@ export default function MealPlanScreen() {
   }, []);
 
   const handleAddSuggestion = useCallback((recipeId: string, recipeName: string, mealType: string) => {
-    // Check if recipe is already used in meal plan
     if (isRecipeUsedInMealPlan(recipeId)) {
-      Alert.alert(
-        'Recipe Already Used',
-        'This recipe is already used in your meal plan. Please choose a different recipe.',
-        [{ text: 'OK' }]
-      );
+      showSnack('Recipe already used in your plan', 'info');
       return;
     }
-    
-    // Find the first available meal slot
     let targetMealType = mealType;
-    
     if (dayPlan.breakfast && dayPlan.lunch && dayPlan.dinner) {
-      // All slots filled, ask user which one to replace
-      Alert.alert(
-        'All Meals Filled',
-        'Which meal would you like to replace?',
-        [
-          { text: 'Breakfast', onPress: () => addMeal(dateString, 'breakfast', { recipeId, name: recipeName }) },
-          { text: 'Lunch', onPress: () => addMeal(dateString, 'lunch', { recipeId, name: recipeName }) },
-          { text: 'Dinner', onPress: () => addMeal(dateString, 'dinner', { recipeId, name: recipeName }) },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
+      setReplaceMealModal({ visible: true, recipeId, recipeName });
       return;
     }
-    
-    // Find the first empty slot if no specific meal type is provided
     if (!mealType || mealType === 'any') {
       if (!dayPlan.breakfast) targetMealType = 'breakfast';
       else if (!dayPlan.lunch) targetMealType = 'lunch';
       else if (!dayPlan.dinner) targetMealType = 'dinner';
-      else return; // No empty slots
+      else return;
     }
-    
     addMeal(dateString, targetMealType as 'breakfast' | 'lunch' | 'dinner', { recipeId, name: recipeName });
-  }, [dayPlan, dateString]);
+    showSnack('Added to your plan', 'success');
+  }, [dayPlan, dateString, addMeal, isRecipeUsedInMealPlan, showSnack]);
 
-  // Calculate nutrition goal progress
   const calorieProgress = profile.calorieGoal ? (dailyNutrition.calories / profile.calorieGoal) * 100 : 0;
   const proteinProgress = profile.proteinGoal ? (dailyNutrition.protein / profile.proteinGoal) * 100 : 0;
   const carbsProgress = profile.carbsGoal ? (dailyNutrition.carbs / profile.carbsGoal) * 100 : 0;
@@ -583,15 +475,17 @@ export default function MealPlanScreen() {
             style={[styles.actionButton, styles.generateButton]} 
             onPress={handleGenerateMealPlan}
             disabled={isGenerating || isLoading}
+            accessibilityRole="button"
             accessibilityLabel="Generate meal plan"
             accessibilityHint="Automatically generates a meal plan for the selected day"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             testID="pick-for-me-button"
           >
             {isGenerating ? (
               <ActivityIndicator size="small" color={Colors.white} />
             ) : (
               <>
-                <RefreshCw size={16} color={Colors.white} />
+                <RefreshCw size={18} color={Colors.white} />
                 <Text style={styles.generateButtonText}>Generate</Text>
               </>
             )}
@@ -600,21 +494,25 @@ export default function MealPlanScreen() {
           <Pressable 
             style={styles.clearButton} 
             onPress={openSuggestionsModal}
+            accessibilityRole="button"
             accessibilityLabel="Browse suggestions"
             accessibilityHint="Open full-screen recipe suggestions"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             testID="open-suggestions"
           >
-            <ChevronUp size={16} color={Colors.primary} />
+            <ChevronUp size={18} color={Colors.primary} />
             <Text style={[styles.clearButtonText, { color: Colors.primary }]}>Suggestions</Text>
           </Pressable>
           
           <Pressable 
             style={styles.clearButton} 
             onPress={handleClearDay}
+            accessibilityRole="button"
             accessibilityLabel="Clear day"
             accessibilityHint="Removes all meals for the selected day"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Trash2 size={16} color={Colors.textLight} />
+            <Trash2 size={18} color={Colors.textLight} />
             <Text style={styles.clearButtonText}>Clear</Text>
           </Pressable>
         </View>
@@ -677,9 +575,6 @@ export default function MealPlanScreen() {
           hasAlternatives={alternativesAvailable.dinner}
         />
 
-        
-
-        {/* Suggestions Fullscreen Modal */}
         <Modal
           animationType="slide"
           transparent={false}
@@ -689,7 +584,7 @@ export default function MealPlanScreen() {
           <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Pick a Recipe</Text>
-              <Pressable style={styles.closeButton} onPress={closeSuggestionsModal} testID="close-suggestions-modal">
+              <Pressable style={styles.closeButton} onPress={closeSuggestionsModal} accessibilityRole="button" accessibilityLabel="Close suggestions" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="close-suggestions-modal">
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
@@ -714,6 +609,9 @@ export default function MealPlanScreen() {
                     <Pressable
                       key={`grid-${recipe.id}`}
                       style={styles.gridCard}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Add ${recipe.name} to your plan`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       onPress={() => {
                         handleAddSuggestion(recipe.id, recipe.name, recipe.mealType || 'any');
                         closeSuggestionsModal();
@@ -736,8 +634,7 @@ export default function MealPlanScreen() {
             </ScrollView>
           </SafeAreaView>
         </Modal>
-        
-        {/* Nutrition Goals Section */}
+
         {profile.calorieGoal && (
           <View style={styles.nutritionGoalsContainer}>
             <Text style={styles.sectionTitle}>Nutrition Goals</Text>
@@ -819,11 +716,9 @@ export default function MealPlanScreen() {
           </View>
         )}
         
-        {/* Add extra padding at the bottom to ensure everything is scrollable */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Error Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -843,30 +738,36 @@ export default function MealPlanScreen() {
                   setShowErrorModal(false);
                   clearGenerationError();
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={styles.closeButton}
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
             
-            <Text style={styles.errorModalMessage}>
-              {lastGenerationError || "There was an issue generating your meal plan."}
-            </Text>
-            
-            {generationSuggestions && generationSuggestions.length > 0 && (
-              <View style={styles.suggestionsList}>
-                <Text style={styles.suggestionsTitle}>Suggestions:</Text>
-                {generationSuggestions.map((suggestion, index) => (
-                  <View key={`suggestion-${index}`} style={styles.suggestionItem}>
-                    <View style={styles.bulletPoint} />
-                    <Text style={styles.suggestionText}>{suggestion}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
+            <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ paddingBottom: 8 }}>
+              <Text style={styles.errorModalMessage}>
+                {lastGenerationError || 'There was an issue generating your meal plan.'}
+              </Text>
+              {generationSuggestions && generationSuggestions.length > 0 && (
+                <View style={styles.suggestionsList}>
+                  <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+                  {generationSuggestions.map((suggestion, index) => (
+                    <View key={`suggestion-${index}`} style={styles.suggestionItem}>
+                      <View style={styles.bulletPoint} />
+                      <Text style={styles.suggestionText}>{suggestion}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
             
             <Pressable 
               style={styles.errorModalButton}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
               onPress={() => {
                 setShowErrorModal(false);
                 clearGenerationError();
@@ -877,6 +778,86 @@ export default function MealPlanScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={confirmClearVisible}
+        onRequestClose={() => setConfirmClearVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <Text style={styles.modalTitle}>Clear this day?</Text>
+            <Text style={styles.errorModalMessage}>This will remove all meals for {dateString}.</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              <Pressable style={[styles.errorModalButton, { backgroundColor: Colors.backgroundLight }]} accessibilityRole="button" accessibilityLabel="Cancel" onPress={() => setConfirmClearVisible(false)}>
+                <Text style={[styles.errorModalButtonText, { color: Colors.text }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.errorModalButton, { backgroundColor: Colors.danger }]}
+                accessibilityRole="button"
+                accessibilityLabel="Clear day"
+                onPress={() => {
+                  clearDay(dateString);
+                  setShowSuggestions(false);
+                  setConfirmClearVisible(false);
+                  showSnack('Day cleared', 'success');
+                }}
+              >
+                <Text style={styles.errorModalButtonText}>Clear</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={replaceMealModal.visible}
+        onRequestClose={() => setReplaceMealModal({ visible: false })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <Text style={styles.modalTitle}>Replace which meal?</Text>
+            <View style={{ height: 8 }} />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              {(['breakfast','lunch','dinner'] as const).map(slot => (
+                <Pressable
+                  key={`replace-${slot}`}
+                  style={[styles.slotButton]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Replace ${slot}`}
+                  onPress={() => {
+                    if (replaceMealModal.recipeId && replaceMealModal.recipeName) {
+                      addMeal(dateString, slot, { recipeId: replaceMealModal.recipeId, name: replaceMealModal.recipeName });
+                      showSnack('Replaced', 'success');
+                    }
+                    setReplaceMealModal({ visible: false });
+                  }}
+                >
+                  <Text style={styles.slotButtonText}>{slot.charAt(0).toUpperCase() + slot.slice(1)}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable style={[styles.errorModalButton, { backgroundColor: Colors.backgroundLight, marginTop: 12 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              onPress={() => setReplaceMealModal({ visible: false })}>
+              <Text style={[styles.errorModalButtonText, { color: Colors.text }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {snackbar.visible && (
+        <View
+          accessibilityLiveRegion={Platform.OS === 'web' ? 'polite' : undefined}
+          style={[styles.snackbar, snackbar.type === 'success' ? styles.snackbarSuccess : snackbar.type === 'error' ? styles.snackbarError : styles.snackbarInfo]}
+        >
+          <Text style={styles.snackbarText}>{snackbar.message}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -933,9 +914,9 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 14,
     marginLeft: 12,
   },
   generateButton: {
@@ -960,6 +941,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
   },
   clearButtonText: {
     fontSize: 15,
@@ -994,7 +978,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   contentContainer: {
-    paddingBottom: 120, // Add extra padding to ensure content is scrollable
+    paddingBottom: 120,
   },
   sectionTitle: {
     fontSize: 20,
@@ -1016,139 +1000,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
     paddingHorizontal: 20,
-  },
-  suggestionsContainer: {
-    marginBottom: 24,
-    marginTop: 16,
-  },
-  suggestionsHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  suggestionsActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  browseAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  browseAllText: {
-    color: Colors.primary,
-    fontWeight: '700',
-    marginRight: 6,
-    fontSize: 13,
-  },
-  horizontalCards: {
-    paddingVertical: 6,
-    paddingRight: 8,
-  },
-  suggestionCard: {
-    width: 200,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    marginRight: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardImage: {
-    height: 110,
-    borderRadius: 12,
-    backgroundColor: Colors.backgroundLight,
-    marginBottom: 10,
-    overflow: 'hidden',
-  },
-  cardImageInner: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  cardMeta: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  loadingContainerSmall: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  emptyContainerSmall: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  suggestionContent: {
-    flex: 1,
-  },
-  suggestionName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 4,
-    letterSpacing: -0.1,
-  },
-  suggestionCalories: {
-    fontSize: 13,
-    color: Colors.primary,
-    marginBottom: 6,
-    fontWeight: '600',
-  },
-  suggestionDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  mealTypeTag: {
-    fontSize: 10,
-    color: Colors.white,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 6,
-    overflow: 'hidden',
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  tagText: {
-    fontSize: 10,
-    color: Colors.textLight,
-    backgroundColor: Colors.backgroundLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 4,
-    marginBottom: 4,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -1199,13 +1050,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressBarProtein: {
-    backgroundColor: '#4CAF50', // Green
+    backgroundColor: '#4CAF50',
   },
   progressBarCarbs: {
-    backgroundColor: '#2196F3', // Blue
+    backgroundColor: '#2196F3',
   },
   progressBarFat: {
-    backgroundColor: '#FF9800', // Orange
+    backgroundColor: '#FF9800',
   },
   progressBarExceeded: {
     backgroundColor: Colors.warning,
@@ -1243,7 +1094,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: 16,
     marginBottom: 12,
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
@@ -1264,7 +1115,18 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: '500',
   },
-  // Error Modal Styles
+  errorModal: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1272,18 +1134,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 40,
-  },
-  errorModal: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
   errorModalHeader: {
     flexDirection: 'row',
@@ -1298,7 +1148,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
   },
   errorModalMessage: {
     fontSize: 16,
@@ -1323,6 +1174,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginTop: 8,
   },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
   suggestionText: {
     fontSize: 14,
     color: Colors.text,
@@ -1345,5 +1201,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  cardImageInner: {
+    flex: 1,
+  },
+  slotButton: {
+    width: '32%',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  slotButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  snackbar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 24,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  snackbarText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  snackbarSuccess: {
+    backgroundColor: Colors.primary,
+  },
+  snackbarError: {
+    backgroundColor: Colors.danger,
+  },
+  snackbarInfo: {
+    backgroundColor: Colors.text,
   },
 });
