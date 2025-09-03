@@ -304,11 +304,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 
                 if (result.success) {
                   try { AccessibilityInfo.announceForAccessibility?.('Weekly plan generated'); } catch {}
-                  Alert.alert(
-                    "Weekly Plan Generated",
-                    result.suggestions[0] || "Your weekly meal plan has been generated!",
-                    [{ text: "OK" }]
-                  );
+                  showSnack('Weekly plan generated');
                 } else {
                   setShowErrorModal(true);
                   try { AccessibilityInfo.announceForAccessibility?.('Failed to generate weekly plan'); } catch {}
@@ -328,11 +324,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         
         if (result.success) {
           try { AccessibilityInfo.announceForAccessibility?.('Weekly plan generated'); } catch {}
-          Alert.alert(
-            "Weekly Plan Generated",
-            result.suggestions[0] || "Your weekly meal plan has been generated!",
-            [{ text: "OK" }]
-          );
+          showSnack('Weekly plan generated');
         } else {
           setShowErrorModal(true);
           try { AccessibilityInfo.announceForAccessibility?.('Failed to generate weekly plan'); } catch {}
@@ -382,6 +374,12 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const handleNextWeek = () => {
     setCurrentWeekIndex(prev => prev + 1);
   };
+  // Simple snackbar
+  const [snack, setSnack] = useState<{ visible: boolean; message: string }>(() => ({ visible: false, message: '' }));
+  const showSnack = useCallback((message: string) => {
+    setSnack({ visible: true, message });
+    setTimeout(() => setSnack({ visible: false, message: '' }), 2200);
+  }, []);
   
   const handleShareMealPlan = async () => {
     if (!mealPlanRef.current) return;
@@ -445,6 +443,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
       const ok = await swapMeal(swapDate, swapMealType, newRecipeId);
       if (ok) {
         try { AccessibilityInfo.announceForAccessibility?.('Meal swapped'); } catch {}
+        showSnack('Meal swapped');
         setSwapVisible(false);
       }
     } catch (e) {
@@ -838,36 +837,35 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 <Text accessibilityLiveRegion="polite" style={{ marginTop: 8, color: Colors.textSecondary }}>Loading alternatives…</Text>
               </View>
             ) : (
-              <ScrollView contentContainerStyle={styles.verticalWeekContent} accessible accessibilityLabel="Swap alternatives list">
-                {(swapAlternatives.length > 0 ? swapAlternatives : recipes)
-                  .filter(r => (swapMealType ? (r.mealType === swapMealType || r.tags.includes(swapMealType)) : true))
-                  .filter(r => r.name.toLowerCase().includes(swapQuery.toLowerCase()))
-                  .map(r => (
-                    <View key={`swap-${r.id}`} style={styles.swapListItem}>
-                      {r.image ? (
-                        <Image source={{ uri: r.image }} style={{ width: 80, height: 80 }} accessibilityLabel={`Image of ${r.name}`} />
-                      ) : (
-                        <View style={styles.mealImagePlaceholder} />)
-                      }
-                      <View style={{ flex: 1, padding: 12 }}>
-                        <Text style={styles.swapListName}>{r.name}</Text>
-                        <Text style={styles.swapListMeta}>{r.calories} calories</Text>
-                      </View>
-                      <Pressable 
-                        style={styles.swapActionButton} 
-                        onPress={() => doSwap(r.id)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Choose ${r.name}`}
-                      >
-                        <Check size={18} color={Colors.white} />
+              <ScrollView contentContainerStyle={styles.gridScrollContent} accessible accessibilityLabel="Swap alternatives grid">
+                <View style={styles.swapGridInner}>
+                  {(swapAlternatives.length > 0 ? swapAlternatives : recipes)
+                    .filter(r => (swapMealType ? (r.mealType === swapMealType || r.tags.includes(swapMealType)) : true))
+                    .filter(r => r.name.toLowerCase().includes(swapQuery.toLowerCase()))
+                    .map(r => (
+                      <Pressable key={`swap-${r.id}`} style={styles.swapGridCard} onPress={() => doSwap(r.id)} accessibilityRole="button" accessibilityLabel={`Choose ${r.name}`}>
+                        {r.image ? (
+                          <Image source={{ uri: r.image }} style={styles.swapGridImage} accessibilityLabel={`Image of ${r.name}`} />
+                        ) : (
+                          <View style={styles.swapGridImage} />
+                        )}
+                        <Text style={styles.swapGridTitle} numberOfLines={2}>{r.name}</Text>
+                        <Text style={styles.swapGridMeta}>{r.calories} cal</Text>
                       </Pressable>
-                    </View>
-                  ))}
+                    ))}
+                </View>
               </ScrollView>
             )}
           </View>
         </View>
       </Modal>
+
+      {/* Snackbar */}
+      {snack.visible && (
+        <View style={styles.snackbar} accessibilityLiveRegion="polite">
+          <Text style={styles.snackbarText}>{snack.message}</Text>
+        </View>
+      )}
 
       {/* Error Modal */}
       <Modal
@@ -1331,6 +1329,27 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
     opacity: 0.9,
   },
+  snackbar: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    backgroundColor: Colors.text,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.black,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  snackbarText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   swapActionButton: {
     width: 40,
     justifyContent: 'center',
@@ -1347,6 +1366,43 @@ const styles = StyleSheet.create({
   },
   generatingIndicator: {
     marginBottom: 4,
+  },
+  gridScrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  swapGridInner: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  swapGridCard: {
+    width: '48%',
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  swapGridImage: {
+    height: 120,
+    backgroundColor: Colors.backgroundLight,
+    width: '100%',
+  },
+  swapGridTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: 8,
+    marginHorizontal: 10,
+    marginBottom: 4,
+  },
+  swapGridMeta: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginHorizontal: 10,
+    marginBottom: 10,
   },
   swapListItem: {
     flexDirection: 'row',

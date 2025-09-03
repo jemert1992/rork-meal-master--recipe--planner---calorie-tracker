@@ -696,6 +696,15 @@ export default function MealPlanScreen() {
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={Colors.primary} />
                   <Text style={styles.loadingText}>Loading suggestions...</Text>
+                  <View style={styles.gridInner}>
+                    {[...Array(6)].map((_, i) => (
+                      <View key={`skeleton-${i}`} style={styles.gridCard}>
+                        <View style={[styles.gridImage, { backgroundColor: Colors.backgroundLight }]} />
+                        <View style={{ height: 12, backgroundColor: Colors.backgroundLight, borderRadius: 6, marginBottom: 6 }} />
+                        <View style={{ height: 10, backgroundColor: Colors.backgroundLight, borderRadius: 5, width: '60%' }} />
+                      </View>
+                    ))}
+                  </View>
                 </View>
               ) : mealSuggestions.length > 0 ? (
                 <View style={styles.gridInner}>
