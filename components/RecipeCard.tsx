@@ -49,8 +49,6 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
           onClick={handlePress}
           aria-label={`Open recipe ${recipe.name}`}
           data-testid={`recipe-card-compact-${recipe.id}`}
-          role="button"
-          tabIndex={0}
         >
           <Image source={{ uri: recipe.image }} style={styles.compactImage} accessibilityLabel={`Image of ${recipe.name}`} />
           <View style={styles.compactContent}>
@@ -118,8 +116,6 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         onClick={handlePress}
         aria-label={`Open recipe ${recipe.name}`}
         data-testid={`recipe-card-${recipe.id}`}
-        role="button"
-        tabIndex={0}
       >
         <Image source={{ uri: recipe.image }} style={styles.image} />
         {Platform.OS === 'web' ? (
