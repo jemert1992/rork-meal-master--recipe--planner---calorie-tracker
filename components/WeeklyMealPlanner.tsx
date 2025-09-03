@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   Share2,
   AlertCircle,
-  Info
+  Info,
+  Check
 } from 'lucide-react-native';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -48,7 +49,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     updateWeeklyUsedRecipeIds,
     lastGenerationError,
     generationSuggestions,
-    clearGenerationError
+    clearGenerationError,
+    getAlternativeRecipes,
+    swapMeal
   } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const { profile } = useUserStore();
@@ -67,6 +70,15 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [sharingPlan, setSharingPlan] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+
+  // Swap modal state
+  const [swapVisible, setSwapVisible] = useState(false);
+  const [swapDate, setSwapDate] = useState<string | null>(null);
+  const [swapMealType, setSwapMealType] = useState<'breakfast' | 'lunch' | 'dinner' | null>(null);
+  const [swapQuery, setSwapQuery] = useState<string>('');
+  const [swapOnlySuitable, setSwapOnlySuitable] = useState<boolean>(false);
+  const [swapLoading, setSwapLoading] = useState<boolean>(false);
+  const [swapAlternatives, setSwapAlternatives] = useState<typeof recipes>([]);
 
   const mealPlanRef = useRef<View>(null);
   
@@ -399,6 +411,38 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     }
   };
   
+  const openSwap = async (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', recipeId?: string) => {
+    setSwapDate(date);
+    setSwapMealType(mealType);
+    setSwapQuery('');
+    setSwapOnlySuitable(false);
+    setSwapVisible(true);
+    setSwapLoading(true);
+    try {
+      if (recipeId) {
+        const alts = await getAlternativeRecipes(date, mealType, recipeId);
+        setSwapAlternatives(Array.isArray(alts) ? alts : []);
+      } else {
+        setSwapAlternatives([]);
+      }
+    } catch (e) {
+      console.log('Swap alternatives fetch failed, using local recipes');
+      setSwapAlternatives([]);
+    } finally {
+      setSwapLoading(false);
+    }
+  };
+
+  const doSwap = async (newRecipeId: string) => {
+    if (!swapDate || !swapMealType) return;
+    try {
+      const ok = await swapMeal(swapDate, swapMealType, newRecipeId);
+      if (ok) setSwapVisible(false);
+    } catch (e) {
+      console.log('Swap failed', e);
+    }
+  };
+
   const renderDayItem = (item: typeof weekDays[0]) => {
     const dayPlan = mealPlan[item.dateString] || {};
 
@@ -457,6 +501,25 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                       <View style={styles.mealInfo}>
                         <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
                         <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
+                        <View style={styles.slotActionsRow}>
+                          <Pressable
+                            style={styles.slotSwapButton}
+                            onPress={() => openSwap(item.dateString, mealType, recipeId)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Swap ${mealType}`}
+                          >
+                            <RefreshCw size={14} color={Colors.primary} />
+                            <Text style={styles.slotSwapText}>Swap</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.slotEditButton}
+                            onPress={() => handleMealSlotPress(item.dateString, mealType)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit ${mealType}`}
+                          >
+                            <Text style={styles.slotEditText}>Edit</Text>
+                          </Pressable>
+                        </View>
                       </View>
                     </View>
                   ) : (
@@ -716,6 +779,67 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </View>
             </View>
           </View>
+      </Modal>
+
+      {/* Swap Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={swapVisible}
+        onRequestClose={() => setSwapVisible(false)}
+      >
+        <View style={styles.modalContentFull}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Swap {swapMealType ? swapMealType.charAt(0).toUpperCase() + swapMealType.slice(1) : ''}</Text>
+            <Pressable style={styles.closeButton} onPress={() => setSwapVisible(false)}>
+              <X size={24} color={Colors.text} />
+            </Pressable>
+          </View>
+          <View style={styles.weekNavigationContainer}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 14, color: Colors.textSecondary }}>Search</Text>
+            </View>
+          </View>
+          <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ position: 'absolute', opacity: 0 }}>Search</Text>
+                <Pressable>
+                  {/* Placeholder for input label for accessibility */}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+          <View style={{ paddingHorizontal: 16 }}>
+            {swapLoading ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+              </View>
+            ) : (
+              <ScrollView contentContainerStyle={styles.verticalWeekContent}>
+                {(swapAlternatives.length > 0 ? swapAlternatives : recipes)
+                  .filter(r => (swapMealType ? (r.mealType === swapMealType || r.tags.includes(swapMealType)) : true))
+                  .filter(r => r.name.toLowerCase().includes(swapQuery.toLowerCase()))
+                  .map(r => (
+                    <View key={`swap-${r.id}`} style={styles.swapListItem}>
+                      {r.image ? (
+                        <Image source={{ uri: r.image }} style={{ width: 80, height: 80 }} />
+                      ) : (
+                        <View style={styles.mealImagePlaceholder} />)
+                      }
+                      <View style={{ flex: 1, padding: 12 }}>
+                        <Text style={styles.swapListName}>{r.name}</Text>
+                        <Text style={styles.swapListMeta}>{r.calories} calories</Text>
+                      </View>
+                      <Pressable style={styles.swapActionButton} onPress={() => doSwap(r.id)}>
+                        <Check size={18} color={Colors.white} />
+                      </Pressable>
+                    </View>
+                  ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* Error Modal */}
@@ -1065,6 +1189,41 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'center',
   },
+  slotActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  slotSwapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  slotSwapText: {
+    marginLeft: 6,
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  slotEditButton: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  slotEditText: {
+    color: Colors.text,
+    fontWeight: '600',
+    fontSize: 12,
+  },
   mealName: {
     fontSize: 17,
     fontWeight: '700',
@@ -1145,6 +1304,14 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
     opacity: 0.9,
   },
+  swapActionButton: {
+    width: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
   generatingText: {
     fontSize: 14,
     color: Colors.textLight,
@@ -1153,6 +1320,28 @@ const styles = StyleSheet.create({
   },
   generatingIndicator: {
     marginBottom: 4,
+  },
+  swapListItem: {
+    flexDirection: 'row',
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  swapListName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  swapListMeta: {
+    fontSize: 14,
+    color: Colors.primary,
   },
   // Styles for capturing the meal plan image
   captureContainer: {

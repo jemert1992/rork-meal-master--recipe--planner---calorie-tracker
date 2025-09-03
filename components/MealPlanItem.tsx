@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info, Minus, Plus } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
@@ -29,6 +29,8 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   const [swappingRecipe, setSwappingRecipe] = useState(false);
   const [alternativesError, setAlternativesError] = useState<string | null>(null);
   const [showMealDetails, setShowMealDetails] = useState(false);
+  const [query, setQuery] = useState<string>('');
+  const [onlySuitable, setOnlySuitable] = useState<boolean>(false);
 
   const formatMealType = (type: string) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
@@ -57,54 +59,52 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   };
   
   const handleShowAlternatives = async () => {
-    if (!meal?.recipeId) return;
-    
+    if (!meal) return;
+    setShowAlternatives(true);
     setLoadingAlternatives(true);
     setAlternativesError(null);
-    setShowAlternatives(true);
-    
     try {
-      const alternativeRecipes = await getAlternativeRecipes(
-        date, 
-        mealType as 'breakfast' | 'lunch' | 'dinner',
-        meal.recipeId
-      );
-      
-      if (alternativeRecipes.length === 0) {
-        setAlternativesError("No alternative recipes found that match your dietary preferences.");
+      if (meal.recipeId) {
+        const alternativeRecipes = await getAlternativeRecipes(
+          date,
+          mealType as 'breakfast' | 'lunch' | 'dinner',
+          meal.recipeId
+        );
+        if (alternativeRecipes && alternativeRecipes.length > 0) {
+          setAlternatives(alternativeRecipes);
+        } else {
+          setAlternatives([]);
+        }
       } else {
-        setAlternatives(alternativeRecipes);
+        setAlternatives([]);
       }
     } catch (error) {
-      console.error('Error loading alternative recipes:', error);
-      setAlternativesError("Failed to load alternative recipes. Please try again later.");
+      console.log('Alternatives remote fetch failed, falling back to local', error);
+      setAlternatives([]);
     } finally {
       setLoadingAlternatives(false);
     }
   };
   
   const handleSwapRecipe = async (newRecipeId: string) => {
-    if (!meal?.recipeId) return;
-    
+    if (!meal) return;
     setSwappingRecipe(true);
-    
     try {
       const success = await swapMeal(
-        date, 
+        date,
         mealType as 'breakfast' | 'lunch' | 'dinner',
         newRecipeId
       );
-      
       if (success) {
         setShowAlternatives(false);
       } else if (lastGenerationError) {
         setAlternativesError(lastGenerationError);
       } else {
-        setAlternativesError("Failed to swap recipe. Please try again.");
+        setAlternativesError('Failed to swap recipe. Please try again.');
       }
     } catch (error) {
       console.error('Error swapping recipe:', error);
-      setAlternativesError("An unexpected error occurred. Please try again.");
+      setAlternativesError('An unexpected error occurred. Please try again.');
     } finally {
       setSwappingRecipe(false);
     }
@@ -126,17 +126,30 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.mealType}>{formatMealType(mealType)}</Text>
-        {meal?.recipeId && hasAlternatives && (
-          <Pressable 
-            style={styles.swapButton} 
-            onPress={handleShowAlternatives}
-            accessibilityLabel={`Swap ${formatMealType(mealType)}`}
-            accessibilityHint="Show alternative recipes"
-            accessibilityRole="button"
-          >
-            <RefreshCw size={14} color={Colors.primary} />
-            <Text style={styles.swapButtonText}>Swap</Text>
-          </Pressable>
+        {meal && (
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.swapButton}
+              onPress={handleShowAlternatives}
+              accessibilityLabel={`Swap ${formatMealType(mealType)}`}
+              accessibilityHint="Open recipe browser to swap"
+              accessibilityRole="button"
+              testID={`swap-button-${mealType}`}
+            >
+              <RefreshCw size={14} color={Colors.primary} />
+              <Text style={styles.swapButtonText}>Swap</Text>
+            </Pressable>
+            <Pressable
+              style={styles.editButton}
+              onPress={() => router.push(`/add-meal/${date}?mealType=${mealType}`)}
+              accessibilityLabel={`Edit ${formatMealType(mealType)}`}
+              accessibilityHint="Open the meal picker"
+              accessibilityRole="button"
+              testID={`edit-button-${mealType}`}
+            >
+              <Text style={styles.editButtonText}>Edit</Text>
+            </Pressable>
+          </View>
         )}
       </View>
       
@@ -254,103 +267,100 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Alternative {formatMealType(mealType)} Options</Text>
+              <Text style={styles.modalTitle}>Swap {formatMealType(mealType)}</Text>
               <Pressable 
                 style={styles.closeButton} 
                 onPress={() => setShowAlternatives(false)}
                 accessibilityLabel="Close"
                 accessibilityRole="button"
+                testID={`close-swap-${mealType}`}
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
+
+            <View style={styles.searchRow}>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search recipes"
+                style={styles.searchInput}
+                placeholderTextColor={Colors.textLight}
+                testID={`swap-search-${mealType}`}
+              />
+              <Pressable
+                onPress={() => setOnlySuitable(!onlySuitable)}
+                style={[styles.filterChip, onlySuitable ? styles.filterChipActive : null]}
+                accessibilityRole="button"
+                accessibilityLabel="Toggle suitable only"
+                testID={`swap-filter-suitable-${mealType}`}
+              >
+                <Text style={[styles.filterChipText, onlySuitable ? styles.filterChipTextActive : null]}>Suitable</Text>
+              </Pressable>
+            </View>
             
-            {loadingAlternatives ? (
+            {loadingAlternatives && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.loadingText}>Loading alternatives...</Text>
+                <Text style={styles.loadingText}>Loading...</Text>
               </View>
-            ) : alternativesError ? (
+            )}
+
+            {alternativesError && (
               <View style={styles.errorContainer}>
                 <AlertCircle size={40} color={Colors.warning} />
                 <Text style={styles.errorText}>{alternativesError}</Text>
-                <Text style={styles.errorSubtext}>
-                  Try adjusting your dietary preferences or adding more recipes to your collection.
-                </Text>
-                <Pressable 
-                  style={styles.tryAgainButton}
-                  onPress={() => {
-                    setAlternativesError(null);
-                    handleShowAlternatives();
-                  }}
-                >
-                  <Text style={styles.tryAgainButtonText}>Try Again</Text>
-                </Pressable>
-              </View>
-            ) : alternatives.length > 0 ? (
-              <FlatList
-                data={alternatives}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <View style={styles.alternativeItem}>
-                    {item.image ? (
-                      <Image 
-                        source={{ uri: item.image }} 
-                        style={styles.alternativeImage} 
-                        accessibilityLabel={`Image of ${item.name}`}
-                      />
-                    ) : (
-                      <View style={styles.alternativeImagePlaceholder} />
-                    )}
-                    <View style={styles.alternativeContent}>
-                      <Text style={styles.alternativeName}>{item.name}</Text>
-                      <Text style={styles.alternativeCalories}>{item.calories} calories</Text>
-                      
-                      <View style={styles.recipeDetails}>
-                        <View style={styles.recipeDetail}>
-                          <Clock size={12} color={Colors.textLight} />
-                          <Text style={styles.detailText}>{item.prepTime}</Text>
-                        </View>
-                        <View style={styles.recipeDetail}>
-                          <Users size={12} color={Colors.textLight} />
-                          <Text style={styles.detailText}>{item.servings} servings</Text>
-                        </View>
-                      </View>
-                      
-                      {item.tags.length > 0 && (
-                        <View style={styles.tagsContainer}>
-                          {item.tags.slice(0, 3).map((tag, index) => (
-                            <View key={`${item.id}-tag-${index}`} style={styles.tag}>
-                              <Text style={styles.tagText}>{tag}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                    <Pressable 
-                      style={styles.swapActionButton}
-                      onPress={() => handleSwapRecipe(item.id)}
-                      disabled={swappingRecipe}
-                      accessibilityLabel={`Swap with ${item.name}`}
-                      accessibilityRole="button"
-                    >
-                      {swappingRecipe ? (
-                        <ActivityIndicator size="small" color={Colors.white} />
-                      ) : (
-                        <Check size={18} color={Colors.white} />
-                      )}
-                    </Pressable>
-                  </View>
-                )}
-                contentContainerStyle={styles.alternativesList}
-                showsVerticalScrollIndicator={false}
-              />
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No alternative recipes found</Text>
-                <Text style={styles.emptySubtext}>Try adjusting your dietary preferences or adding more recipes</Text>
               </View>
             )}
+
+            <FlatList
+              data={(alternatives.length > 0 ? alternatives : recipes)
+                .filter(r => (r.mealType === mealType) || r.tags.includes(mealType))
+                .filter(r => !onlySuitable || true)
+                .filter(r => r.name.toLowerCase().includes(query.toLowerCase()))}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.alternativeItem}>
+                  {item.image ? (
+                    <Image 
+                      source={{ uri: item.image }} 
+                      style={styles.alternativeImage} 
+                      accessibilityLabel={`Image of ${item.name}`}
+                    />
+                  ) : (
+                    <View style={styles.alternativeImagePlaceholder} />
+                  )}
+                  <View style={styles.alternativeContent}>
+                    <Text style={styles.alternativeName}>{item.name}</Text>
+                    <Text style={styles.alternativeCalories}>{item.calories} calories</Text>
+                    {item.tags.length > 0 && (
+                      <View style={styles.tagsContainer}>
+                        {item.tags.slice(0, 3).map((tag, index) => (
+                          <View key={`${item.id}-tag-${index}`} style={styles.tag}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <Pressable 
+                    style={styles.swapActionButton}
+                    onPress={() => handleSwapRecipe(item.id)}
+                    disabled={swappingRecipe}
+                    accessibilityLabel={`Swap with ${item.name}`}
+                    accessibilityRole="button"
+                  >
+                    {swappingRecipe ? (
+                      <ActivityIndicator size="small" color={Colors.white} />
+                    ) : (
+                      <Check size={18} color={Colors.white} />
+                    )}
+                  </Pressable>
+                </View>
+              )}
+              contentContainerStyle={styles.alternativesList}
+              showsVerticalScrollIndicator={false}
+            />
           </View>
         </View>
       </Modal>
@@ -392,6 +402,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   mealType: {
     fontSize: 18,
     fontWeight: '700',
@@ -407,6 +422,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.primary + '30',
+  },
+  editButton: {
+    marginLeft: 8,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  editButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text,
   },
   swapButtonText: {
     fontSize: 13,
@@ -555,6 +584,41 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.backgroundLight,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
+  },
+  filterChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  filterChipText: {
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: Colors.primary,
   },
   modalTitle: {
     fontSize: 18,
