@@ -382,27 +382,30 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   }, []);
   
   const handleShareMealPlan = async () => {
-    if (!mealPlanRef.current) return;
-    
     try {
       setSharingPlan(true);
-      
-      // Capture the meal plan view as an image
-      const uri = await captureRef(mealPlanRef.current as View, {
-        format: 'png',
-        quality: 1,
-        result: 'data-uri',
-        width: 1080,
-        height: 1080
-      });
-      
-      // Share the image
-      await Share.share({
-        url: uri,
-        title: 'My Zestora Weekly Meal Plan',
-        message: 'Check out my weekly meal plan from Zestora! #Zestora #MealPlanning'
-      });
-      
+      if (Platform.OS === 'web') {
+        const text = 'My Zestora Weekly Meal Plan';
+        if (typeof navigator !== 'undefined' && (navigator as any).share) {
+          await (navigator as any).share({ title: 'Zestora Plan', text });
+        } else {
+          Alert.alert('Share', 'Sharing is not supported in this browser. You can take a screenshot of the plan.');
+        }
+      } else {
+        if (!mealPlanRef.current) return;
+        const uri = await captureRef(mealPlanRef.current as View, {
+          format: 'png',
+          quality: 1,
+          result: 'data-uri',
+          width: 1080,
+          height: 1080
+        });
+        await Share.share({
+          url: uri,
+          title: 'My Zestora Weekly Meal Plan',
+          message: 'Check out my weekly meal plan from Zestora! #Zestora #MealPlanning'
+        });
+      }
     } catch (error) {
       console.error('Error sharing meal plan:', error);
       Alert.alert(
@@ -493,61 +496,127 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
             return (
               <View key={`${item.dateString}-${mealType}`} style={styles.mealSlotContainer}>
-                <Pressable
-                  style={({ pressed }) => [styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot, pressed && styles.focusRing]}
-                  onPress={() => handleMealSlotPress(item.dateString, mealType)}
-                  disabled={isGen}
-                  accessibilityLabel={name ? `${mealType}: ${name}` : `Add ${mealType} for ${item.dayName}`}
-                  accessibilityRole="button"
-                >
-                  {name ? (
-                    <View style={styles.filledMealContent}>
-                      {image ? (
-                        <Image source={{ uri: image }} style={styles.mealImage} accessibilityLabel={`Image of ${name}`} />
-                      ) : (
-                        <View style={styles.mealImagePlaceholder} />
-                      )}
-                      <View style={styles.mealInfo}>
-                        <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
-                        <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
-                        <View style={styles.slotActionsRow}>
-                          <Pressable
-                            style={({ pressed }) => [styles.slotSwapButton, pressed && styles.focusRing]}
-                            onPress={() => openSwap(item.dateString, mealType, recipeId)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Swap ${mealType}`}
-                          >
-                            <RefreshCw size={14} color={Colors.primary} />
-                            <Text style={styles.slotSwapText}>Swap</Text>
-                          </Pressable>
-                          <Pressable
-                            style={({ pressed }) => [styles.slotEditButton, pressed && styles.focusRing]}
-                            onPress={() => handleMealSlotPress(item.dateString, mealType)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Edit ${mealType}`}
-                          >
-                            <Text style={styles.slotEditText}>Edit</Text>
-                          </Pressable>
+                {Platform.OS === 'web' ? (
+                  <View
+                    // @ts-expect-error onClick is web-only
+                    onClick={() => !isGen && handleMealSlotPress(item.dateString, mealType)}
+                    style={[styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot]}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={name ? `${mealType}: ${name}` : `Add ${mealType} for ${item.dayName}`}
+                    data-testid={`meal-slot-${item.dateString}-${mealType}`}
+                  >
+                    {name ? (
+                      <View style={styles.filledMealContent}>
+                        {image ? (
+                          <Image source={{ uri: image }} style={styles.mealImage} accessibilityLabel={`Image of ${name}`} />
+                        ) : (
+                          <View style={styles.mealImagePlaceholder} />
+                        )}
+                        <View style={styles.mealInfo}>
+                          <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
+                          <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
+                          <View style={styles.slotActionsRow}>
+                            <View
+                              // @ts-expect-error onClick is web-only
+                              onClick={() => openSwap(item.dateString, mealType, recipeId)}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Swap ${mealType}`}
+                              style={styles.slotSwapButton}
+                              data-testid={`swap-${item.dateString}-${mealType}`}
+                            >
+                              <RefreshCw size={14} color={Colors.primary} />
+                              <Text style={styles.slotSwapText}>Swap</Text>
+                            </View>
+                            <View
+                              // @ts-expect-error onClick is web-only
+                              onClick={() => handleMealSlotPress(item.dateString, mealType)}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Edit ${mealType}`}
+                              style={styles.slotEditButton}
+                              data-testid={`edit-${item.dateString}-${mealType}`}
+                            >
+                              <Text style={styles.slotEditText}>Edit</Text>
+                            </View>
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ) : (
-                    <View style={styles.emptyMealContent}>
-                      <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
-                      {isGen ? (
-                        <>
-                          <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
-                          <Text style={styles.generatingText}>Generating...</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Plus size={20} color={Colors.primary} />
-                          <Text style={styles.addMealText}>Add Recipe</Text>
-                        </>
-                      )}
-                    </View>
-                  )}
-                </Pressable>
+                    ) : (
+                      <View style={styles.emptyMealContent}>
+                        <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
+                        {isGen ? (
+                          <>
+                            <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
+                            <Text style={styles.generatingText}>Generating...</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={20} color={Colors.primary} />
+                            <Text style={styles.addMealText}>Add Recipe</Text>
+                          </>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot, pressed && styles.focusRing]}
+                    onPress={() => handleMealSlotPress(item.dateString, mealType)}
+                    disabled={isGen}
+                    accessibilityLabel={name ? `${mealType}: ${name}` : `Add ${mealType} for ${item.dayName}`}
+                    accessibilityRole="button"
+                  >
+                    {name ? (
+                      <View style={styles.filledMealContent}>
+                        {image ? (
+                          <Image source={{ uri: image }} style={styles.mealImage} accessibilityLabel={`Image of ${name}`} />
+                        ) : (
+                          <View style={styles.mealImagePlaceholder} />
+                        )}
+                        <View style={styles.mealInfo}>
+                          <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
+                          <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
+                          <View style={styles.slotActionsRow}>
+                            <Pressable
+                              style={({ pressed }) => [styles.slotSwapButton, pressed && styles.focusRing]}
+                              onPress={() => openSwap(item.dateString, mealType, recipeId)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Swap ${mealType}`}
+                            >
+                              <RefreshCw size={14} color={Colors.primary} />
+                              <Text style={styles.slotSwapText}>Swap</Text>
+                            </Pressable>
+                            <Pressable
+                              style={({ pressed }) => [styles.slotEditButton, pressed && styles.focusRing]}
+                              onPress={() => handleMealSlotPress(item.dateString, mealType)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Edit ${mealType}`}
+                            >
+                              <Text style={styles.slotEditText}>Edit</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.emptyMealContent}>
+                        <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
+                        {isGen ? (
+                          <>
+                            <ActivityIndicator size="small" color={Colors.primary} style={styles.generatingIndicator} />
+                            <Text style={styles.generatingText}>Generating...</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={20} color={Colors.primary} />
+                            <Text style={styles.addMealText}>Add Recipe</Text>
+                          </>
+                        )}
+                      </View>
+                    )}
+                  </Pressable>
+                )}
 
                 {!name && !isGen && (
                   <Pressable

@@ -43,16 +43,16 @@ export default function WelcomeScreen() {
       const { login } = useUserStore.getState();
       login({ 
         name: 'New User',
-        onboardingCompleted: true,
-        completedOnboarding: false
+        onboardingCompleted: true
       });
     }
   }, [mounted, isLoggedIn]);
   
   // Memoize user setup status to prevent unnecessary re-renders
   const isUserSetup = useMemo(() => {
-    return isLoggedIn && profile.completedOnboarding && tutorialCompleted;
-  }, [isLoggedIn, profile.completedOnboarding, tutorialCompleted]);
+    const done = profile.onboardingCompleted ?? false;
+    return isLoggedIn && done && tutorialCompleted;
+  }, [isLoggedIn, profile.onboardingCompleted, tutorialCompleted]);
   
   // PERMANENT FIX: Check if user is already set up, redirect to main app - GUARD: only run when conditions change
   useEffect(() => {
