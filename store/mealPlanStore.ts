@@ -13,6 +13,8 @@ interface MealPlanState {
   isLoadingAlternatives: boolean;
   lastGenerationError: string | null;
   generationSuggestions: string[];
+  uniquePerWeek: boolean;
+  recipePoolsCache: { breakfast: Recipe[]; lunch: Recipe[]; dinner: Recipe[]; ts: number; key: string } | null;
   addMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', meal: MealItem) => void;
   updateMealServings: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', servings: number) => void;
   removeMeal: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
@@ -35,6 +37,8 @@ interface MealPlanState {
   getAlternativeRecipes: (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', currentRecipeId: string) => Promise<Recipe[]>;
   clearAlternativeRecipes: () => void;
   clearGenerationError: () => void;
+  setUniquePerWeek: (value: boolean) => void;
+  clearPoolsCache: () => void;
 }
 
 // Helper function to get user profile without causing circular dependencies
@@ -64,6 +68,8 @@ export const useMealPlanStore = create<MealPlanState>()(
       isLoadingAlternatives: false,
       lastGenerationError: null,
       generationSuggestions: [],
+      uniquePerWeek: false,
+      recipePoolsCache: null,
       
       addMeal: (date, mealType, meal) => {
         // Check if the recipe is already used in the meal plan
@@ -587,6 +593,9 @@ export const useMealPlanStore = create<MealPlanState>()(
           generationSuggestions: []
         });
       },
+
+      setUniquePerWeek: (value) => set({ uniquePerWeek: value }),
+      clearPoolsCache: () => set({ recipePoolsCache: null }),
       
       generateMealPlan: async (date, recipes, specificMealType) => {
         // Get user profile for personalization
@@ -1624,7 +1633,10 @@ export const useMealPlanStore = create<MealPlanState>()(
           fitnessGoals = []
         } = userProfile;
 
-        set({ weeklyUsedRecipeIds: new Set<string>() });
+        const enforceUnique = get().uniquePerWeek;
+        if (enforceUnique) {
+          set({ weeklyUsedRecipeIds: new Set<string>() });
+        }
 
         const dates: string[] = [];
         let currentDate = parse(startDate, 'yyyy-MM-dd', new Date());
@@ -1654,83 +1666,108 @@ export const useMealPlanStore = create<MealPlanState>()(
         const currentState = get();
         const start = parse(startDate, 'yyyy-MM-dd', new Date());
         const end = parse(endDate, 'yyyy-MM-dd', new Date());
-        Object.entries(currentState.mealPlan).forEach(([date, day]) => {
-          const d = parse(date, 'yyyy-MM-dd', new Date());
-          if (d >= start && d <= end) {
-            if (day.breakfast?.recipeId) used.add(day.breakfast.recipeId);
-            if (day.lunch?.recipeId) used.add(day.lunch.recipeId);
-            if (day.dinner?.recipeId) used.add(day.dinner.recipeId);
-          }
-        });
-
-        const fetchWithTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T | null> => {
-          return new Promise((resolve) => {
-            let settled = false;
-            const t = setTimeout(() => {
-              if (!settled) resolve(null);
-            }, ms);
-            p.then((val) => {
-              if (!settled) {
-                settled = true;
-                clearTimeout(t);
-                resolve(val);
-              }
-            }).catch(() => {
-              if (!settled) {
-                settled = true;
-                clearTimeout(t);
-                resolve(null);
-              }
-            });
+        if (enforceUnique) {
+          Object.entries(currentState.mealPlan).forEach(([date, day]) => {
+            const d = parse(date, 'yyyy-MM-dd', new Date());
+            if (d >= start && d <= end) {
+              if (day.breakfast?.recipeId) used.add(day.breakfast.recipeId);
+              if (day.lunch?.recipeId) used.add(day.lunch.recipeId);
+              if (day.dinner?.recipeId) used.add(day.dinner.recipeId);
+            }
           });
-        };
+        }
 
-        const parallelLimit = Math.max(9, dates.length * 3);
-        const [bk, ln, dn] = await Promise.all([
-          fetchWithTimeout(firebaseService.getRecipesForMealPlan('breakfast', {
-            dietType,
-            allergies,
-            excludedIngredients,
-            fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
-            calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
-            excludeIds: Array.from(used)
-          }, parallelLimit), 3500),
-          fetchWithTimeout(firebaseService.getRecipesForMealPlan('lunch', {
-            dietType,
-            allergies,
-            excludedIngredients,
-            fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
-            calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
-            excludeIds: Array.from(used)
-          }, parallelLimit), 3500),
-          fetchWithTimeout(firebaseService.getRecipesForMealPlan('dinner', {
-            dietType,
-            allergies,
-            excludedIngredients,
-            fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
-            calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
-            excludeIds: Array.from(used)
-          }, parallelLimit), 3500)
-        ]);
+        const poolsKey = [
+          dietType,
+          allergies.join(','),
+          excludedIngredients.join(','),
+          String(calorieGoal),
+          fitnessGoals[0] ?? ''
+        ].join('|');
 
-        let breakfastPool = Array.isArray(bk) ? bk : [];
-        let lunchPool = Array.isArray(ln) ? ln : [];
-        let dinnerPool = Array.isArray(dn) ? dn : [];
+        const cache = get().recipePoolsCache;
+        let breakfastPool: Recipe[] = [];
+        let lunchPool: Recipe[] = [];
+        let dinnerPool: Recipe[] = [];
+        const now = Date.now();
+        const ttlMs = 5 * 60 * 1000;
+        if (cache && cache.key === poolsKey && now - cache.ts < ttlMs) {
+          breakfastPool = cache.breakfast;
+          lunchPool = cache.lunch;
+          dinnerPool = cache.dinner;
+        } else {
+          const fetchWithTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T | null> => {
+            return new Promise((resolve) => {
+              let settled = false;
+              const t = setTimeout(() => {
+                if (!settled) resolve(null);
+              }, ms);
+              p.then((val) => {
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(t);
+                  resolve(val);
+                }
+              }).catch(() => {
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(t);
+                  resolve(null);
+                }
+              });
+            });
+          };
 
-        if (breakfastPool.length === 0 || lunchPool.length === 0 || dinnerPool.length === 0) {
-          try {
-            const { mockRecipes } = require('@/constants/mockData');
-            const all: any[] = mockRecipes;
-            if (breakfastPool.length === 0) {
-              breakfastPool = all.filter((r: any) => r.mealType === 'breakfast');
-            }
-            if (lunchPool.length === 0) {
-              lunchPool = all.filter((r: any) => r.mealType === 'lunch');
-            }
-            if (dinnerPool.length === 0) {
-              dinnerPool = all.filter((r: any) => r.mealType === 'dinner');
-            }
-          } catch {}
+          const parallelLimit = Math.max(9, dates.length * 3);
+          const excludeIds = enforceUnique ? Array.from(used) : [];
+          const [bk, ln, dn] = await Promise.all([
+            fetchWithTimeout(firebaseService.getRecipesForMealPlan('breakfast', {
+              dietType,
+              allergies,
+              excludedIngredients,
+              fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+              calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
+              excludeIds
+            }, parallelLimit), 2500),
+            fetchWithTimeout(firebaseService.getRecipesForMealPlan('lunch', {
+              dietType,
+              allergies,
+              excludedIngredients,
+              fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+              calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
+              excludeIds
+            }, parallelLimit), 2500),
+            fetchWithTimeout(firebaseService.getRecipesForMealPlan('dinner', {
+              dietType,
+              allergies,
+              excludedIngredients,
+              fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
+              calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
+              excludeIds
+            }, parallelLimit), 2500)
+          ]);
+
+          breakfastPool = Array.isArray(bk) ? (bk as Recipe[]) : [];
+          lunchPool = Array.isArray(ln) ? (ln as Recipe[]) : [];
+          dinnerPool = Array.isArray(dn) ? (dn as Recipe[]) : [];
+
+          if (breakfastPool.length === 0 || lunchPool.length === 0 || dinnerPool.length === 0) {
+            try {
+              const { mockRecipes } = require('@/constants/mockData');
+              const all: Recipe[] = mockRecipes as Recipe[];
+              if (breakfastPool.length === 0) {
+                breakfastPool = all.filter((r) => r.mealType === 'breakfast');
+              }
+              if (lunchPool.length === 0) {
+                lunchPool = all.filter((r) => r.mealType === 'lunch');
+              }
+              if (dinnerPool.length === 0) {
+                dinnerPool = all.filter((r) => r.mealType === 'dinner');
+              }
+            } catch {}
+          }
+
+          set({ recipePoolsCache: { breakfast: breakfastPool, lunch: lunchPool, dinner: dinnerPool, ts: Date.now(), key: poolsKey } });
         }
 
         const newMealPlan = { ...get().mealPlan } as MealPlan;
@@ -1738,14 +1775,15 @@ export const useMealPlanStore = create<MealPlanState>()(
         let failedDays = 0;
         let partialDays = 0;
 
-        const pickFromPool = (pool: any[], targetCalories: number): any | null => {
-          let candidates = pool.filter((r) => !used.has(r.id));
-          if (candidates.length === 0) {
-            candidates = pool; // Allow reuse across the week if we run out
+        const pickFromPool = (pool: Recipe[], targetCalories: number): Recipe | null => {
+          let candidates: Recipe[] = pool;
+          if (enforceUnique) {
+            const filtered = candidates.filter((r) => !used.has(r.id));
+            candidates = filtered.length > 0 ? filtered : candidates;
           }
           if (candidates.length === 0) return null;
-          candidates.sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
-          return candidates[0] ?? null;
+          const sorted = [...candidates].sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
+          return sorted[0] ?? null;
         };
 
         for (const date of dates) {
@@ -1763,9 +1801,10 @@ export const useMealPlanStore = create<MealPlanState>()(
                   protein: chosen.protein,
                   carbs: chosen.carbs,
                   fat: chosen.fat,
-                  fiber: chosen.fiber
+                  fiber: chosen.fiber,
+                  servings: 1,
                 };
-                used.add(chosen.id);
+                if (enforceUnique) used.add(chosen.id);
                 result.generatedMeals.push(`${date}-breakfast`);
                 dayMealsGenerated.push('breakfast');
               }
@@ -1783,9 +1822,10 @@ export const useMealPlanStore = create<MealPlanState>()(
                   protein: chosen.protein,
                   carbs: chosen.carbs,
                   fat: chosen.fat,
-                  fiber: chosen.fiber
+                  fiber: chosen.fiber,
+                  servings: 1,
                 };
-                used.add(chosen.id);
+                if (enforceUnique) used.add(chosen.id);
                 result.generatedMeals.push(`${date}-lunch`);
                 dayMealsGenerated.push('lunch');
               }
@@ -1803,9 +1843,10 @@ export const useMealPlanStore = create<MealPlanState>()(
                   protein: chosen.protein,
                   carbs: chosen.carbs,
                   fat: chosen.fat,
-                  fiber: chosen.fiber
+                  fiber: chosen.fiber,
+                  servings: 1,
                 };
-                used.add(chosen.id);
+                if (enforceUnique) used.add(chosen.id);
                 result.generatedMeals.push(`${date}-dinner`);
                 dayMealsGenerated.push('dinner');
               }
@@ -1854,7 +1895,7 @@ export const useMealPlanStore = create<MealPlanState>()(
 
         set({
           mealPlan: newMealPlan,
-          weeklyUsedRecipeIds: new Set(used),
+          weeklyUsedRecipeIds: enforceUnique ? new Set(used) : new Set<string>(),
           lastGenerationError: result.error,
           generationSuggestions: result.suggestions
         });
@@ -1872,12 +1913,13 @@ export const useMealPlanStore = create<MealPlanState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Ensure weeklyUsedRecipeIds is a proper Set after rehydration
           state.weeklyUsedRecipeIds = new Set<string>();
           state.alternativeRecipes = {};
           state.isLoadingAlternatives = false;
           state.lastGenerationError = null;
           state.generationSuggestions = [];
+          state.recipePoolsCache = null;
+          state.uniquePerWeek = state.uniquePerWeek ?? false;
         }
       },
     }
