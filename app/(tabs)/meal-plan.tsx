@@ -15,6 +15,8 @@ import * as firebaseService from '@/services/firebaseService';
 
 import { useTutorialRef } from '@/hooks/useTutorialRef';
 
+import { format, addDays } from 'date-fns';
+
 export default function MealPlanScreen() {
   const router = useRouter();
   
@@ -60,7 +62,7 @@ export default function MealPlanScreen() {
     dinner: false
   });
 
-  const dateString = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+  const dateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
   const dayPlan = useMemo(() => mealPlan[dateString] || {}, [mealPlan, dateString]);
 
   // GUARD: Show error modal only when generation error occurs
@@ -170,8 +172,8 @@ export default function MealPlanScreen() {
         try {
           // Get weekly used recipe IDs to avoid suggesting already used recipes
           updateWeeklyUsedRecipeIds(
-            new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 3).toISOString().split('T')[0],
-            new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 3).toISOString().split('T')[0]
+            format(addDays(selectedDate, -3), 'yyyy-MM-dd'),
+            format(addDays(selectedDate, 3), 'yyyy-MM-dd')
           );
           
           // Create filters based on user preferences
@@ -392,8 +394,8 @@ export default function MealPlanScreen() {
     try {
       // Update weekly used recipe IDs
       updateWeeklyUsedRecipeIds(
-        new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 3).toISOString().split('T')[0],
-        new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 3).toISOString().split('T')[0]
+        format(addDays(selectedDate, -3), 'yyyy-MM-dd'),
+        format(addDays(selectedDate, 3), 'yyyy-MM-dd')
       );
       
       if (useFirestore) {
