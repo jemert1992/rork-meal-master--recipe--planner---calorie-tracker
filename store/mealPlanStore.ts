@@ -1753,149 +1753,151 @@ export const useMealPlanStore = create<MealPlanState>()(
 
           if (breakfastPool.length === 0 || lunchPool.length === 0 || dinnerPool.length === 0) {
             try {
-              const { mockRecipes } = require('@/constants/mockData');
-              const all: Recipe[] = mockRecipes as Recipe[];
+              const { useRecipeStore } = require('@/store/recipeStore');
+              const allRecipesStore: Recipe[] = (useRecipeStore.getState().recipes as Recipe[]) ?? [];
               if (breakfastPool.length === 0) {
-                breakfastPool = all.filter((r) => r.mealType === 'breakfast');
+                breakfastPool = allRecipesStore.filter((r: Recipe) => r.mealType === 'breakfast');
               }
               if (lunchPool.length === 0) {
-                lunchPool = all.filter((r) => r.mealType === 'lunch');
+                lunchPool = allRecipesStore.filter((r: Recipe) => r.mealType === 'lunch');
               }
               if (dinnerPool.length === 0) {
-                dinnerPool = all.filter((r) => r.mealType === 'dinner');
+                dinnerPool = allRecipesStore.filter((r: Recipe) => r.mealType === 'dinner');
               }
+            } catch {}
+          }
+
+          if (breakfastPool.length === 0 || lunchPool.length === 0 || dinnerPool.length === 0) {
+            try {
+              const { mockRecipes } = require('@/constants/mockData');
+              const all: Recipe[] = mockRecipes as Recipe[];
+              if (breakfastPool.length === 0) breakfastPool = all.filter((r) => r.mealType === 'breakfast');
+              if (lunchPool.length === 0) lunchPool = all.filter((r) => r.mealType === 'lunch');
+              if (dinnerPool.length === 0) dinnerPool = all.filter((r) => r.mealType === 'dinner');
             } catch {}
           }
 
           set({ recipePoolsCache: { breakfast: breakfastPool, lunch: lunchPool, dinner: dinnerPool, ts: Date.now(), key: poolsKey } });
         }
 
-        const newMealPlan = { ...get().mealPlan } as MealPlan;
-        let successfulDays = 0;
-        let failedDays = 0;
-        let partialDays = 0;
-
-        const pickFromPool = (pool: Recipe[], targetCalories: number): Recipe | null => {
-          let candidates: Recipe[] = pool;
-          if (enforceUnique) {
-            const filtered = candidates.filter((r) => !used.has(r.id));
-            candidates = filtered.length > 0 ? filtered : candidates;
+        const getLocalFallbacks = (mealType: 'breakfast' | 'lunch' | 'dinner'): Recipe[] => {
+          try {
+            const { useRecipeStore } = require('@/store/recipeStore');
+            const allRecipes: Recipe[] = (useRecipeStore.getState().recipes as Recipe[]) ?? [];
+            return allRecipes.filter((r) => r.mealType === mealType);
+          } catch {
+            try {
+              const { mockRecipes } = require('@/constants/mockData');
+              return (mockRecipes as Recipe[]).filter((r) => r.mealType === mealType);
+            } catch {
+              return [] as Recipe[];
+            }
           }
+        };
+
+        const newMealPlan = { ...get().mealPlan } as MealPlan;
+        let filledCount = 0;
+
+        const pickFromPools = (primary: Recipe[], fallback: Recipe[], targetCalories: number): Recipe | null => {
+          const combine = (arr: Recipe[]) => {
+            let candidates = arr;
+            if (enforceUnique) {
+              const filtered = candidates.filter((r) => !used.has(r.id));
+              candidates = filtered.length > 0 ? filtered : candidates;
+            }
+            return candidates;
+          };
+          let candidates = [...combine(primary)];
+          if (candidates.length === 0) candidates = [...combine(fallback)];
           if (candidates.length === 0) return null;
-          const sorted = [...candidates].sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
+          const sorted = candidates.sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
           return sorted[0] ?? null;
         };
 
         for (const date of dates) {
-          try {
-            const currentDayPlan = newMealPlan[date] || {};
-            const dayMealsGenerated: string[] = [];
+          const currentDayPlan = newMealPlan[date] || {};
 
-            if (!currentDayPlan.breakfast) {
-              const chosen = pickFromPool(breakfastPool, breakfastCalories);
-              if (chosen) {
-                currentDayPlan.breakfast = {
-                  recipeId: chosen.id,
-                  name: chosen.name,
-                  calories: chosen.calories,
-                  protein: chosen.protein,
-                  carbs: chosen.carbs,
-                  fat: chosen.fat,
-                  fiber: chosen.fiber,
-                  servings: 1,
-                };
-                if (enforceUnique) used.add(chosen.id);
-                result.generatedMeals.push(`${date}-breakfast`);
-                dayMealsGenerated.push('breakfast');
-              }
-            } else {
-              dayMealsGenerated.push('breakfast');
+          if (!currentDayPlan.breakfast) {
+            let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast'), breakfastCalories);
+            if (!chosen && !enforceUnique && breakfastPool.length > 0) chosen = breakfastPool[0];
+            if (chosen) {
+              currentDayPlan.breakfast = {
+                recipeId: chosen.id,
+                name: chosen.name,
+                calories: chosen.calories,
+                protein: chosen.protein,
+                carbs: chosen.carbs,
+                fat: chosen.fat,
+                fiber: chosen.fiber,
+                servings: 1,
+              };
+              used.add(chosen.id);
+              result.generatedMeals.push(`${date}-breakfast`);
+              filledCount++;
             }
-
-            if (!currentDayPlan.lunch) {
-              const chosen = pickFromPool(lunchPool, lunchCalories);
-              if (chosen) {
-                currentDayPlan.lunch = {
-                  recipeId: chosen.id,
-                  name: chosen.name,
-                  calories: chosen.calories,
-                  protein: chosen.protein,
-                  carbs: chosen.carbs,
-                  fat: chosen.fat,
-                  fiber: chosen.fiber,
-                  servings: 1,
-                };
-                if (enforceUnique) used.add(chosen.id);
-                result.generatedMeals.push(`${date}-lunch`);
-                dayMealsGenerated.push('lunch');
-              }
-            } else {
-              dayMealsGenerated.push('lunch');
-            }
-
-            if (!currentDayPlan.dinner) {
-              const chosen = pickFromPool(dinnerPool, dinnerCalories);
-              if (chosen) {
-                currentDayPlan.dinner = {
-                  recipeId: chosen.id,
-                  name: chosen.name,
-                  calories: chosen.calories,
-                  protein: chosen.protein,
-                  carbs: chosen.carbs,
-                  fat: chosen.fat,
-                  fiber: chosen.fiber,
-                  servings: 1,
-                };
-                if (enforceUnique) used.add(chosen.id);
-                result.generatedMeals.push(`${date}-dinner`);
-                dayMealsGenerated.push('dinner');
-              }
-            } else {
-              dayMealsGenerated.push('dinner');
-            }
-
-            newMealPlan[date] = currentDayPlan;
-
-            if (dayMealsGenerated.length === 3) {
-              successfulDays++;
-            } else if (dayMealsGenerated.length > 0) {
-              partialDays++;
-            } else {
-              failedDays++;
-            }
-          } catch (e) {
-            console.error(`Error generating meal plan for ${date}:`, e);
-            failedDays++;
           }
+
+          if (!currentDayPlan.lunch) {
+            let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch'), lunchCalories);
+            if (!chosen && !enforceUnique && lunchPool.length > 0) chosen = lunchPool[0];
+            if (chosen) {
+              currentDayPlan.lunch = {
+                recipeId: chosen.id,
+                name: chosen.name,
+                calories: chosen.calories,
+                protein: chosen.protein,
+                carbs: chosen.carbs,
+                fat: chosen.fat,
+                fiber: chosen.fiber,
+                servings: 1,
+              };
+              used.add(chosen.id);
+              result.generatedMeals.push(`${date}-lunch`);
+              filledCount++;
+            }
+          }
+
+          if (!currentDayPlan.dinner) {
+            let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner'), dinnerCalories);
+            if (!chosen && !enforceUnique && dinnerPool.length > 0) chosen = dinnerPool[0];
+            if (chosen) {
+              currentDayPlan.dinner = {
+                recipeId: chosen.id,
+                name: chosen.name,
+                calories: chosen.calories,
+                protein: chosen.protein,
+                carbs: chosen.carbs,
+                fat: chosen.fat,
+                fiber: chosen.fiber,
+                servings: 1,
+              };
+              used.add(chosen.id);
+              result.generatedMeals.push(`${date}-dinner`);
+              filledCount++;
+            }
+          }
+
+          newMealPlan[date] = currentDayPlan;
         }
 
-        if (successfulDays === dates.length) {
-          result.success = true;
-          result.error = null;
-          result.suggestions = ["All meals were successfully generated!"];
-        } else if (successfulDays > 0 || partialDays > 0) {
-          result.success = true;
-          result.error = null;
-          result.suggestions = [
-            `Generated complete meal plans for ${successfulDays} of ${dates.length} days.`,
-            `Generated partial meal plans for ${partialDays} of ${dates.length} days.`
-          ];
-          if (failedDays > 0) {
-            result.suggestions.push(`Could not generate meals for ${failedDays} days. Try adding more recipes or adjusting your dietary preferences.`);
-          }
-        } else {
+        const totalSlots = dates.length * 3;
+        if (filledCount === 0) {
           result.success = false;
-          result.error = 'Failed to generate any meals for the week.';
-          result.suggestions = [
-            'Try adjusting your dietary preferences',
-            'Add more recipes to your collection',
-            'Try generating individual days instead'
-          ];
+          result.error = 'No recipes available to generate a weekly plan.';
+          result.suggestions = ['Add recipes to your collection or enable API sources, then try again.'];
+        } else {
+          result.success = true;
+          result.error = null;
+          if (filledCount < totalSlots) {
+            result.suggestions = [`Filled ${filledCount} of ${totalSlots} slots. Some meals used relaxed matching due to limited recipes.`];
+          } else {
+            result.suggestions = ['All week meals filled successfully.'];
+          }
         }
 
         set({
           mealPlan: newMealPlan,
-          weeklyUsedRecipeIds: enforceUnique ? new Set(used) : new Set<string>(),
+          weeklyUsedRecipeIds: new Set(used),
           lastGenerationError: result.error,
           generationSuggestions: result.suggestions
         });
