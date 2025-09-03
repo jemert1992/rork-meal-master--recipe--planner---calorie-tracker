@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MealPlan, MealItem, DailyMeals, Recipe, DietType, GenerationResult } from '@/types';
 import { mockMealPlan } from '@/constants/mockData';
 import * as firebaseService from '@/services/firebaseService';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 
 interface MealPlanState {
   mealPlan: MealPlan;
@@ -1627,8 +1627,8 @@ export const useMealPlanStore = create<MealPlanState>()(
         set({ weeklyUsedRecipeIds: new Set<string>() });
 
         const dates: string[] = [];
-        let currentDate = new Date(startDate);
-        const lastDate = new Date(endDate);
+        let currentDate = parse(startDate, 'yyyy-MM-dd', new Date());
+        const lastDate = parse(endDate, 'yyyy-MM-dd', new Date());
         while (currentDate <= lastDate) {
           dates.push(format(currentDate, 'yyyy-MM-dd'));
           currentDate.setDate(currentDate.getDate() + 1);
@@ -1652,10 +1652,10 @@ export const useMealPlanStore = create<MealPlanState>()(
 
         const used = new Set<string>();
         const currentState = get();
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        const start = parse(startDate, 'yyyy-MM-dd', new Date());
+        const end = parse(endDate, 'yyyy-MM-dd', new Date());
         Object.entries(currentState.mealPlan).forEach(([date, day]) => {
-          const d = new Date(date);
+          const d = parse(date, 'yyyy-MM-dd', new Date());
           if (d >= start && d <= end) {
             if (day.breakfast?.recipeId) used.add(day.breakfast.recipeId);
             if (day.lunch?.recipeId) used.add(day.lunch.recipeId);
