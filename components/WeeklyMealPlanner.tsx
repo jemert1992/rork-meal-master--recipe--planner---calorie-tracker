@@ -26,7 +26,9 @@ import {
   Share2,
   AlertCircle,
   Info,
-  Check
+  Check,
+  Minus,
+  Plus as PlusIcon
 } from 'lucide-react-native';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -52,7 +54,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     generationSuggestions,
     clearGenerationError,
     getAlternativeRecipes,
-    swapMeal
+    swapMeal,
+    updateMealServings
   } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const { profile } = useUserStore();
@@ -492,7 +495,16 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             const meal = dayPlan[mealType as keyof typeof dayPlan];
             const recipeId = (meal && !Array.isArray(meal) && 'recipeId' in meal) ? (meal as any).recipeId as string | undefined : undefined;
             const { name, image } = getRecipeDetails(recipeId);
+            const servings = (meal && !Array.isArray(meal) && 'servings' in meal) ? Math.max(1, Math.min(20, Number((meal as any).servings ?? 1))) : 1;
             const isGen = !!(generatingMeal && generatingMeal.date === item.dateString && generatingMeal.mealType === mealType && generatingMeal.loading);
+            const changeServings = (delta: number) => {
+              const next = Math.max(1, Math.min(20, servings + delta));
+              try {
+                updateMealServings(item.dateString, mealType, next);
+              } catch (e) {
+                console.log('Failed to update servings', e);
+              }
+            };
 
             return (
               <View key={`${item.dateString}-${mealType}`} style={styles.mealSlotContainer}>
@@ -517,9 +529,36 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                           <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
                           <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
                           <View style={styles.slotActionsRow}>
+                            <View style={styles.stepper} data-testid={`week-stepper-${item.dateString}-${mealType}`}>
+                              <View
+                                // @ts-expect-error onClick is web-only
+                                onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; changeServings(-1); }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Decrease ${mealType} servings`}
+                                style={styles.stepperButton}
+                                data-testid={`week-decrease-servings-${item.dateString}-${mealType}`}
+                              >
+                                <Minus size={14} color={Colors.text} />
+                              </View>
+                              <View style={styles.stepperValue} aria-label={`Servings x ${servings}`}>
+                                <Text style={styles.stepperText}>x {servings}</Text>
+                              </View>
+                              <View
+                                // @ts-expect-error onClick is web-only
+                                onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; changeServings(1); }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Increase ${mealType} servings`}
+                                style={styles.stepperButton}
+                                data-testid={`week-increase-servings-${item.dateString}-${mealType}`}
+                              >
+                                <PlusIcon size={14} color={Colors.text} />
+                              </View>
+                            </View>
                             <View
                               // @ts-expect-error onClick is web-only
-                              onClick={() => openSwap(item.dateString, mealType, recipeId)}
+                              onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; openSwap(item.dateString, mealType, recipeId); }}
                               role="button"
                               tabIndex={0}
                               aria-label={`Swap ${mealType}`}
@@ -531,7 +570,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                             </View>
                             <View
                               // @ts-expect-error onClick is web-only
-                              onClick={() => handleMealSlotPress(item.dateString, mealType)}
+                              onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; handleMealSlotPress(item.dateString, mealType); }}
                               role="button"
                               tabIndex={0}
                               aria-label={`Edit ${mealType}`}
@@ -579,6 +618,29 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                           <Text style={styles.mealTypeLabel}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
                           <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
                           <View style={styles.slotActionsRow}>
+                            <View style={styles.stepper} testID={`week-stepper-${item.dateString}-${mealType}`}>
+                              <Pressable 
+                                onPress={() => changeServings(-1)}
+                                accessibilityLabel={`Decrease ${mealType} servings`}
+                                accessibilityRole="button"
+                                style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
+                                testID={`week-decrease-servings-${item.dateString}-${mealType}`}
+                              >
+                                <Minus size={14} color={Colors.text} />
+                              </Pressable>
+                              <View style={styles.stepperValue}>
+                                <Text style={styles.stepperText}>x {servings}</Text>
+                              </View>
+                              <Pressable 
+                                onPress={() => changeServings(1)}
+                                accessibilityLabel={`Increase ${mealType} servings`}
+                                accessibilityRole="button"
+                                style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
+                                testID={`week-increase-servings-${item.dateString}-${mealType}`}
+                              >
+                                <PlusIcon size={14} color={Colors.text} />
+                              </Pressable>
+                            </View>
                             <Pressable
                               style={({ pressed }) => [styles.slotSwapButton, pressed && styles.focusRing]}
                               onPress={() => openSwap(item.dateString, mealType, recipeId)}
@@ -1664,5 +1726,33 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary,
     shadowOpacity: 0.2,
     shadowRadius: 6,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  stepperButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  stepperLeft: {
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+  stepperRight: {
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  stepperValue: {
+    paddingHorizontal: 8,
+  },
+  stepperText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.text,
   },
 });
