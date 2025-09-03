@@ -10,7 +10,8 @@ import {
   Alert, 
   ActivityIndicator, 
   Share,
-  Platform
+  Platform,
+  AccessibilityInfo
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
@@ -79,6 +80,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const [swapOnlySuitable, setSwapOnlySuitable] = useState<boolean>(false);
   const [swapLoading, setSwapLoading] = useState<boolean>(false);
   const [swapAlternatives, setSwapAlternatives] = useState<typeof recipes>([]);
+  const swapCloseButtonRef = useRef<any>(null);
+  const previouslyFocusedSwapRef = useRef<Element | null>(null as unknown as Element | null);
 
   const mealPlanRef = useRef<View>(null);
   
@@ -155,6 +158,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   React.useEffect(() => {
     if (lastGenerationError) {
       setShowErrorModal(true);
+      try { AccessibilityInfo.announceForAccessibility?.('There was a problem generating your meal plan'); } catch {}
     }
   }, [lastGenerationError]);
 
@@ -299,14 +303,15 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 const result = await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
                 
                 if (result.success) {
+                  try { AccessibilityInfo.announceForAccessibility?.('Weekly plan generated'); } catch {}
                   Alert.alert(
                     "Weekly Plan Generated",
                     result.suggestions[0] || "Your weekly meal plan has been generated!",
                     [{ text: "OK" }]
                   );
                 } else {
-                  // Error will be shown in the error modal
                   setShowErrorModal(true);
+                  try { AccessibilityInfo.announceForAccessibility?.('Failed to generate weekly plan'); } catch {}
                 }
                 
                 setGeneratingWeeklyPlan(false);
@@ -322,14 +327,15 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         const result = await generateWeeklyMealPlan(weekDays[0].dateString, weekDays[6].dateString);
         
         if (result.success) {
+          try { AccessibilityInfo.announceForAccessibility?.('Weekly plan generated'); } catch {}
           Alert.alert(
             "Weekly Plan Generated",
             result.suggestions[0] || "Your weekly meal plan has been generated!",
             [{ text: "OK" }]
           );
         } else {
-          // Error will be shown in the error modal
           setShowErrorModal(true);
+          try { AccessibilityInfo.announceForAccessibility?.('Failed to generate weekly plan'); } catch {}
         }
         
         setGeneratingWeeklyPlan(false);
@@ -437,9 +443,13 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     if (!swapDate || !swapMealType) return;
     try {
       const ok = await swapMeal(swapDate, swapMealType, newRecipeId);
-      if (ok) setSwapVisible(false);
+      if (ok) {
+        try { AccessibilityInfo.announceForAccessibility?.('Meal swapped'); } catch {}
+        setSwapVisible(false);
+      }
     } catch (e) {
       console.log('Swap failed', e);
+      try { AccessibilityInfo.announceForAccessibility?.('Failed to swap meal'); } catch {}
     }
   };
 
@@ -485,7 +495,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             return (
               <View key={`${item.dateString}-${mealType}`} style={styles.mealSlotContainer}>
                 <Pressable
-                  style={[styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot]}
+                  style={({ pressed }) => [styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot, pressed && styles.focusRing]}
                   onPress={() => handleMealSlotPress(item.dateString, mealType)}
                   disabled={isGen}
                   accessibilityLabel={name ? `${mealType}: ${name}` : `Add ${mealType} for ${item.dayName}`}
@@ -503,7 +513,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                         <Text style={styles.mealName} numberOfLines={1}>{name}</Text>
                         <View style={styles.slotActionsRow}>
                           <Pressable
-                            style={styles.slotSwapButton}
+                            style={({ pressed }) => [styles.slotSwapButton, pressed && styles.focusRing]}
                             onPress={() => openSwap(item.dateString, mealType, recipeId)}
                             accessibilityRole="button"
                             accessibilityLabel={`Swap ${mealType}`}
@@ -512,7 +522,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                             <Text style={styles.slotSwapText}>Swap</Text>
                           </Pressable>
                           <Pressable
-                            style={styles.slotEditButton}
+                            style={({ pressed }) => [styles.slotEditButton, pressed && styles.focusRing]}
                             onPress={() => handleMealSlotPress(item.dateString, mealType)}
                             accessibilityRole="button"
                             accessibilityLabel={`Edit ${mealType}`}
@@ -542,7 +552,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
                 {!name && !isGen && (
                   <Pressable
-                    style={styles.pickForMeButton}
+                    style={({ pressed }) => [styles.pickForMeButton, pressed && styles.focusRing]}
                     onPress={() => handleAutoGenerateMeal(item.dateString, mealType)}
                     accessibilityLabel={`Auto-generate ${mealType} for ${item.dayName}`}
                     accessibilityHint="Let the app pick a recipe for you"
@@ -565,7 +575,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   return (
     <View style={styles.container}>
       <Pressable 
-        style={styles.planButton} 
+        style={({ pressed }) => [styles.planButton, pressed && styles.focusRing]} 
         onPress={() => setModalVisible(true)}
         accessibilityLabel="Plan your weekly meals"
         accessibilityHint={`${plannedMealsCount} of ${totalPossibleMeals} meals planned`}
@@ -589,7 +599,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
       {plannedMealsCount > 0 && (
         <Pressable 
-          style={styles.groceryButton} 
+          style={({ pressed }) => [styles.groceryButton, pressed && styles.focusRing]} 
           onPress={onGenerateGroceryList}
           accessibilityLabel="Generate grocery list"
           accessibilityHint="Create a shopping list based on your meal plan"
@@ -626,7 +636,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
             <View style={styles.weeklyActionContainer}>
               <Pressable 
-                style={[styles.generateWeeklyButton, generatingWeeklyPlan && styles.generatingButton]} 
+                style={({ pressed }) => [styles.generateWeeklyButton, generatingWeeklyPlan && styles.generatingButton, pressed && styles.focusRing]} 
                 onPress={handleGenerateWeeklyMealPlan}
                 disabled={generatingWeeklyPlan}
                 accessibilityLabel="Generate weekly meal plan"
@@ -655,7 +665,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             
             <View style={styles.weekNavigationContainer}>
               <Pressable 
-                style={styles.weekNavigationButton} 
+                style={({ pressed }) => [styles.weekNavigationButton, pressed && styles.focusRing]} 
                 onPress={handlePreviousWeek}
                 accessibilityLabel="Previous week"
                 accessibilityRole="button"
@@ -669,7 +679,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </Text>
               
               <Pressable 
-                style={styles.weekNavigationButton} 
+                style={({ pressed }) => [styles.weekNavigationButton, pressed && styles.focusRing]} 
                 onPress={handleNextWeek}
                 accessibilityLabel="Next week"
                 accessibilityRole="button"
@@ -686,9 +696,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             <View style={styles.modalFooter}>
               <View style={styles.footerButtonsRow}>
                 <Pressable 
-                  style={[
+                  style={({ pressed }) => [
                     styles.generateButton,
-                    plannedMealsCount === 0 && styles.disabledButton
+                    plannedMealsCount === 0 && styles.disabledButton,
+                    pressed && styles.focusRing
                   ]} 
                   onPress={() => {
                     onGenerateGroceryList();
@@ -707,9 +718,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 </Pressable>
                 
                 <Pressable 
-                  style={[
+                  style={({ pressed }) => [
                     styles.shareButton,
-                    (plannedMealsCount === 0 || sharingPlan) && styles.disabledButton
+                    (plannedMealsCount === 0 || sharingPlan) && styles.disabledButton,
+                    pressed && styles.focusRing
                   ]} 
                   onPress={handleShareMealPlan}
                   disabled={plannedMealsCount === 0 || sharingPlan}
@@ -787,11 +799,20 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         transparent={false}
         visible={swapVisible}
         onRequestClose={() => setSwapVisible(false)}
+        testID="swap-modal"
+        accessibilityViewIsModal={true}
       >
-        <View style={styles.modalContentFull}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Swap {swapMealType ? swapMealType.charAt(0).toUpperCase() + swapMealType.slice(1) : ''}</Text>
-            <Pressable style={styles.closeButton} onPress={() => setSwapVisible(false)}>
+        <View style={styles.modalContentFull} accessible accessibilityLabel="Swap meal dialog">
+          <View style={styles.modalHeader} accessibilityRole="header">
+            <Text style={styles.modalTitle} accessibilityRole="text">Swap {swapMealType ? swapMealType.charAt(0).toUpperCase() + swapMealType.slice(1) : ''}</Text>
+            <Pressable 
+              ref={swapCloseButtonRef}
+              style={styles.closeButton} 
+              onPress={() => setSwapVisible(false)}
+              accessibilityLabel="Close swap dialog"
+              accessibilityRole="button"
+              testID="swap-modal-close"
+            >
               <X size={24} color={Colors.text} />
             </Pressable>
           </View>
@@ -814,16 +835,17 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             {swapLoading ? (
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color={Colors.primary} />
+                <Text accessibilityLiveRegion="polite" style={{ marginTop: 8, color: Colors.textSecondary }}>Loading alternatives…</Text>
               </View>
             ) : (
-              <ScrollView contentContainerStyle={styles.verticalWeekContent}>
+              <ScrollView contentContainerStyle={styles.verticalWeekContent} accessible accessibilityLabel="Swap alternatives list">
                 {(swapAlternatives.length > 0 ? swapAlternatives : recipes)
                   .filter(r => (swapMealType ? (r.mealType === swapMealType || r.tags.includes(swapMealType)) : true))
                   .filter(r => r.name.toLowerCase().includes(swapQuery.toLowerCase()))
                   .map(r => (
                     <View key={`swap-${r.id}`} style={styles.swapListItem}>
                       {r.image ? (
-                        <Image source={{ uri: r.image }} style={{ width: 80, height: 80 }} />
+                        <Image source={{ uri: r.image }} style={{ width: 80, height: 80 }} accessibilityLabel={`Image of ${r.name}`} />
                       ) : (
                         <View style={styles.mealImagePlaceholder} />)
                       }
@@ -831,7 +853,12 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                         <Text style={styles.swapListName}>{r.name}</Text>
                         <Text style={styles.swapListMeta}>{r.calories} calories</Text>
                       </View>
-                      <Pressable style={styles.swapActionButton} onPress={() => doSwap(r.id)}>
+                      <Pressable 
+                        style={styles.swapActionButton} 
+                        onPress={() => doSwap(r.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Choose ${r.name}`}
+                      >
                         <Check size={18} color={Colors.white} />
                       </Pressable>
                     </View>
@@ -1505,5 +1532,12 @@ const styles = StyleSheet.create({
   generatingDayButton: {
     backgroundColor: Colors.primary,
     opacity: 0.7,
+  },
+  focusRing: {
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
 });

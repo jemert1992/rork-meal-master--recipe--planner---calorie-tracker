@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator, TextInput } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator, TextInput, Platform, AccessibilityInfo } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info, Minus, Plus } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
@@ -31,6 +31,8 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   const [showMealDetails, setShowMealDetails] = useState(false);
   const [query, setQuery] = useState<string>('');
   const [onlySuitable, setOnlySuitable] = useState<boolean>(false);
+  const closeAltRef = useRef<any>(null);
+  const prevFocusRef = useRef<Element | null>(null as unknown as Element | null);
 
   const formatMealType = (type: string) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
@@ -121,6 +123,19 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       console.error('Failed to update servings', e);
     }
   }, [meal?.servings, date, mealType]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (showAlternatives) {
+        prevFocusRef.current = (document?.activeElement as Element) ?? null;
+        setTimeout(() => {
+          try { (closeAltRef.current as any)?.focus?.(); } catch {}
+        }, 0);
+      } else {
+        try { (prevFocusRef.current as any)?.focus?.(); } catch {}
+      }
+    }
+  }, [showAlternatives]);
 
   return (
     <View style={styles.container}>
@@ -242,6 +257,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             hitSlop={8}
             accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
             accessibilityRole="button"
+            testID={`remove-${mealType}`}
           >
             <X size={18} color={Colors.textLight} />
           </Pressable>
@@ -263,12 +279,15 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         transparent={true}
         visible={showAlternatives}
         onRequestClose={() => setShowAlternatives(false)}
+        testID={`swap-alt-modal-${mealType}`}
+        accessibilityViewIsModal={true}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+          <View style={styles.modalContent} accessible accessibilityLabel={`Swap ${formatMealType(mealType)} dialog`}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Swap {formatMealType(mealType)}</Text>
               <Pressable 
+                ref={closeAltRef}
                 style={styles.closeButton} 
                 onPress={() => setShowAlternatives(false)}
                 accessibilityLabel="Close"
@@ -293,6 +312,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 style={[styles.filterChip, onlySuitable ? styles.filterChipActive : null]}
                 accessibilityRole="button"
                 accessibilityLabel="Toggle suitable only"
+                accessibilityState={{ checked: onlySuitable }}
                 testID={`swap-filter-suitable-${mealType}`}
               >
                 <Text style={[styles.filterChipText, onlySuitable ? styles.filterChipTextActive : null]}>Suitable</Text>
@@ -307,7 +327,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             )}
 
             {alternativesError && (
-              <View style={styles.errorContainer}>
+              <View style={styles.errorContainer} accessibilityLiveRegion="polite">
                 <AlertCircle size={40} color={Colors.warning} />
                 <Text style={styles.errorText}>{alternativesError}</Text>
               </View>
@@ -349,6 +369,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                     disabled={swappingRecipe}
                     accessibilityLabel={`Swap with ${item.name}`}
                     accessibilityRole="button"
+                    testID={`choose-alt-${mealType}-${item.id}`}
                   >
                     {swappingRecipe ? (
                       <ActivityIndicator size="small" color={Colors.white} />
