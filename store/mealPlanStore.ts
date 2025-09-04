@@ -597,7 +597,38 @@ export const useMealPlanStore = create<MealPlanState>()(
       setUniquePerWeek: (value) => set({ uniquePerWeek: value }),
       clearPoolsCache: () => set({ recipePoolsCache: null }),
       
+      /**
+       * generateMealPlan
+       * Guarantees
+       * - No slot remains empty unless absolutely no recipes exist in any source or user cleared it afterward
+       * - Robust fallback order per-slot: Remote -> Local suitable -> Local by type -> Mock by type -> Any available
+       * - Never throws; returns GenerationResult with actionable suggestions
+       * - Parallel fetch for remote pools when generating all meals for speed
+       */
       generateMealPlan: async (date, recipes, specificMealType) => {
+        const getAllLocalRecipes = (): Recipe[] => {
+          try {
+            const { useRecipeStore } = require('@/store/recipeStore');
+            return (useRecipeStore.getState().recipes as Recipe[]) ?? [];
+          } catch {
+            return Array.isArray(recipes) ? recipes : [];
+          }
+        };
+        const getMockRecipes = (): Recipe[] => {
+          try { const { mockRecipes } = require('@/constants/mockData'); return mockRecipes as Recipe[]; } catch { return []; }
+        };
+        const pickAny = (mealType: 'breakfast' | 'lunch' | 'dinner', target: number): Recipe | null => {
+          const exclude = Array.from(get().weeklyUsedRecipeIds);
+          const all = getAllLocalRecipes();
+          const byType = all.filter(r => r.mealType === mealType);
+          let pool: Recipe[] = byType.length > 0 ? byType : all;
+          if (pool.length === 0) pool = getMockRecipes();
+          if (pool.length === 0) return null;
+          const sorted = pool.slice().sort((a, b) => Math.abs((a.calories ?? 0) - target) - Math.abs((b.calories ?? 0) - target));
+          const candidate = sorted.find(r => !exclude.includes(r.id)) ?? sorted[0];
+          return candidate ?? null;
+        };
+
         // Get user profile for personalization
         const userProfile = getUserProfile();
         const { 
@@ -1322,6 +1353,32 @@ export const useMealPlanStore = create<MealPlanState>()(
           newDayPlan.dinner = dinner;
         }
         
+        // Last-resort auto-fill to guarantee no empty slots if any recipe exists
+        if (!newDayPlan.breakfast) {
+          const any = pickAny('breakfast', breakfastCalories);
+          if (any) {
+            newDayPlan.breakfast = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+            get().weeklyUsedRecipeIds.add(any.id);
+            result.generatedMeals.push('breakfast-fallback');
+          }
+        }
+        if (!newDayPlan.lunch) {
+          const any = pickAny('lunch', lunchCalories);
+          if (any) {
+            newDayPlan.lunch = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+            get().weeklyUsedRecipeIds.add(any.id);
+            result.generatedMeals.push('lunch-fallback');
+          }
+        }
+        if (!newDayPlan.dinner) {
+          const any = pickAny('dinner', dinnerCalories);
+          if (any) {
+            newDayPlan.dinner = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+            get().weeklyUsedRecipeIds.add(any.id);
+            result.generatedMeals.push('dinner-fallback');
+          }
+        }
+
         // Validate the generated meal plan if we're generating a full day
         if (!specificMealType) {
           const validation = get().validateDailyMealPlan(newDayPlan, calorieGoal);
@@ -1623,6 +1680,14 @@ export const useMealPlanStore = create<MealPlanState>()(
         return result;
       },
       
+/**
+       * generateWeeklyMealPlan
+       * Strategy
+       * - Precomputes date range and calorie targets
+       * - Fetches remote pools in parallel with short timeouts; never blocks UI
+       * - Fallbacks per-slot: Remote -> Local suitable -> Local by type -> Mock by type -> Any available
+       * - Guarantees fill if any recipes exist; respects uniquePerWeek when enabled with graceful relaxation
+       */
       generateWeeklyMealPlan: async (startDate, endDate) => {
         const userProfile = getUserProfile();
         const {

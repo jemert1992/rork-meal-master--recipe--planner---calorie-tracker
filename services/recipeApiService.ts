@@ -28,7 +28,13 @@ function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'di
   return undefined;
 }
 
-// Function to validate a Recipe object
+/**
+ * validateRecipe
+ * Ensures required Recipe fields are present and normalized so downstream generators never crash.
+ * - Coerces mealType into a valid value or undefined
+ * - Guarantees numeric nutrition fields are numbers (falls back to estimates when missing)
+ * - Derives complexity and preference tags when possible
+ */
 function validateRecipe(recipe: any): Recipe {
   // Determine complexity based on prep time and ingredients count
   let complexity: 'simple' | 'complex' | undefined = undefined;
@@ -75,69 +81,52 @@ function validateRecipe(recipe: any): Recipe {
     });
   }
   
+  const calories = typeof recipe.calories === 'number' ? recipe.calories : Math.floor(Math.random() * 300) + 200;
+  const protein = typeof recipe.protein === 'number' ? recipe.protein : Math.floor(Math.random() * 20) + 10;
+  const carbs = typeof recipe.carbs === 'number' ? recipe.carbs : Math.floor(Math.random() * 30) + 20;
+  const fat = typeof recipe.fat === 'number' ? recipe.fat : Math.floor(Math.random() * 15) + 5;
+  const fiber = typeof recipe.fiber === 'number' ? recipe.fiber : Math.floor(Math.random() * 5) + 1;
+
   return {
     ...recipe,
     mealType: toValidMealType(recipe.mealType),
     complexity,
     dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
     fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
-    fiber: recipe.fiber || Math.floor(Math.random() * 5) + 1 // Add estimated fiber if not present
+    calories,
+    protein,
+    carbs,
+    fat,
+    fiber,
   };
 }
 
 // Function to load initial recipes from all enabled API sources
+/**
+ * loadInitialRecipesFromAllSources
+ * Fetches from enabled sources in parallel; never blocks UI and degrades gracefully.
+ * Fallbacks: if all sources fail/empty, returns mockRecipes.
+ */
 export const loadInitialRecipesFromAllSources = async (
   limit: number = 20,
   sources: ApiSourcesConfig
 ): Promise<Recipe[]> => {
   try {
-    const recipes: Recipe[] = [];
-    
-    // Load from MealDB if enabled
-    if (sources.useMealDB) {
-      try {
-        const mealDbRecipes = await loadRecipesFromMealDB(limit);
-        recipes.push(...mealDbRecipes);
-      } catch (error) {
-        console.error('Error loading recipes from MealDB:', error);
-        // Don't throw, try other sources
-      }
-    }
-    
-    // Load from Spoonacular if enabled
-    if (sources.useSpoonacular) {
-      try {
-        const spoonacularRecipes = await loadRecipesFromSpoonacular(limit);
-        recipes.push(...spoonacularRecipes);
-      } catch (error) {
-        console.error('Error loading recipes from Spoonacular:', error);
-        // Don't throw, try other sources
-      }
-    }
-    
-    // Load from Edamam if enabled
-    if (sources.useEdamam) {
-      try {
-        const edamamRecipes = await edamamService.loadInitialRecipes(limit);
-        recipes.push(...edamamRecipes);
-      } catch (error) {
-        console.error('Error loading recipes from Edamam:', error);
-        // Don't throw, try other sources
-      }
-    }
-    
-    // Load from Firebase if enabled (not implemented yet)
-    if (sources.useFirebase) {
-      // Placeholder for future implementation
-      console.log('Firebase API not implemented yet');
-    }
-    
-    // If no recipes were loaded from APIs, return mock data
+    const tasks: Array<Promise<Recipe[] | null>> = [];
+    if (sources.useMealDB) tasks.push(loadRecipesFromMealDB(limit).catch(() => null));
+    if (sources.useSpoonacular) tasks.push(loadRecipesFromSpoonacular(limit).catch(() => null));
+    if (sources.useEdamam) tasks.push(edamamService.loadInitialRecipes(limit).catch(() => null));
+    // Firebase placeholder – keep non-blocking
+    if (sources.useFirebase) tasks.push(Promise.resolve([]));
+
+    const settled = await Promise.allSettled(tasks);
+    const recipes: Recipe[] = settled.flatMap((r) => (r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [])).filter(Boolean) as Recipe[];
+
     if (recipes.length === 0) {
       console.warn('No recipes loaded from APIs, using mock data');
       return mockRecipes.map(validateRecipe);
     }
-    
+
     return recipes.map(validateRecipe);
   } catch (error) {
     console.error('Error loading recipes from APIs:', error);
@@ -146,54 +135,25 @@ export const loadInitialRecipesFromAllSources = async (
 };
 
 // Function to search recipes from all enabled API sources
+/**
+ * searchRecipesFromAllSources
+ * Runs enabled source searches in parallel. Falls back to mock search if all empty/fail.
+ */
 export const searchRecipesFromAllSources = async (
   query: string,
   limit: number = 20,
   sources: ApiSourcesConfig
 ): Promise<Recipe[]> => {
   try {
-    const recipes: Recipe[] = [];
-    
-    // Search from MealDB if enabled
-    if (sources.useMealDB) {
-      try {
-        const mealDbRecipes = await searchRecipesFromMealDB(query);
-        recipes.push(...mealDbRecipes);
-      } catch (error) {
-        console.error('Error searching recipes from MealDB:', error);
-        // Don't throw, try other sources
-      }
-    }
-    
-    // Search from Spoonacular if enabled
-    if (sources.useSpoonacular) {
-      try {
-        const spoonacularRecipes = await searchRecipesFromSpoonacular(query, limit);
-        recipes.push(...spoonacularRecipes);
-      } catch (error) {
-        console.error('Error searching recipes from Spoonacular:', error);
-        // Don't throw, try other sources
-      }
-    }
-    
-    // Search from Edamam if enabled
-    if (sources.useEdamam) {
-      try {
-        const edamamRecipes = await edamamService.searchRecipesByQuery(query, limit);
-        recipes.push(...edamamRecipes);
-      } catch (error) {
-        console.error('Error searching recipes from Edamam:', error);
-        // Don't throw, try other sources
-      }
-    }
-    
-    // Search from Firebase if enabled (not implemented yet)
-    if (sources.useFirebase) {
-      // Placeholder for future implementation
-      console.log('Firebase API search not implemented yet');
-    }
-    
-    // If no recipes were found from APIs, search mock data
+    const tasks: Array<Promise<Recipe[] | null>> = [];
+    if (sources.useMealDB) tasks.push(searchRecipesFromMealDB(query).catch(() => null));
+    if (sources.useSpoonacular) tasks.push(searchRecipesFromSpoonacular(query, limit).catch(() => null));
+    if (sources.useEdamam) tasks.push(edamamService.searchRecipesByQuery(query, limit).catch(() => null));
+    if (sources.useFirebase) tasks.push(Promise.resolve([]));
+
+    const settled = await Promise.allSettled(tasks);
+    const recipes: Recipe[] = settled.flatMap((r) => (r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [])).filter(Boolean) as Recipe[];
+
     if (recipes.length === 0) {
       console.warn('No recipes found from APIs, searching mock data');
       const mockSearchResults = mockRecipes.filter(recipe => 
@@ -203,11 +163,10 @@ export const searchRecipesFromAllSources = async (
       );
       return mockSearchResults.slice(0, limit).map(validateRecipe);
     }
-    
+
     return recipes.slice(0, limit).map(validateRecipe);
   } catch (error) {
     console.error('Error searching recipes from APIs:', error);
-    // Fallback to local search
     const mockSearchResults = mockRecipes.filter(recipe => 
       recipe.name.toLowerCase().includes(query.toLowerCase()) ||
       recipe.tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())) ||
