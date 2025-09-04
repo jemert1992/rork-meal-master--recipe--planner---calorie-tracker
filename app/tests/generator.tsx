@@ -195,7 +195,7 @@ export default function GeneratorTestsScreen() {
               <Text style={styles.resultName}>{r.name}</Text>
               <Text style={styles.resultDetails}>{r.details}</Text>
             </View>
-          ))}
+          ))
         )}
       </View>
 
