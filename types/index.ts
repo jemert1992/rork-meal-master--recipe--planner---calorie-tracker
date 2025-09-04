@@ -19,6 +19,7 @@ export type Recipe = {
   fat: number;
   fiber?: number;
   ingredients: string[];
+  parsedIngredients?: RecipeIngredient[];
   instructions: string[];
   tags: string[];
   mealType?: MealType;
@@ -37,8 +38,8 @@ export type RecipeCategory = {
 
 export type RecipeIngredient = {
   name: string;
-  quantity: number;
-  unit: string;
+  quantity?: number;
+  unit?: string;
 };
 
 export type FirestoreRecipe = {

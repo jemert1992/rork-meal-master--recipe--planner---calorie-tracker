@@ -1,5 +1,6 @@
 import { Recipe } from '@/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { normalizeIngredientList } from '@/utils/ingredientParser';
 
 // Edamam Recipe Search API configuration
 const EDAMAM_API_URL = 'https://api.edamam.com/api/recipes/v2';
@@ -257,19 +258,21 @@ const convertEdamamToRecipe = (edamamRecipe: EdamamRecipe): Recipe => {
   const fat = Math.round(edamamRecipe.totalNutrients.FAT?.quantity / edamamRecipe.yield) || 0;
   const fiber = Math.round(edamamRecipe.totalNutrients.FIBTG?.quantity / edamamRecipe.yield) || 0;
   
+  const normalized = normalizeIngredientList(edamamRecipe.ingredientLines);
   return {
     id: `edamam-${recipeId}`,
     name: edamamRecipe.label,
     image: edamamRecipe.image,
-    prepTime: `${Math.round(edamamRecipe.totalTime / 3)} min`, // Estimate prep time as 1/3 of total time
-    cookTime: `${Math.round(edamamRecipe.totalTime * 2 / 3)} min`, // Estimate cook time as 2/3 of total time
+    prepTime: `${Math.round(edamamRecipe.totalTime / 3)} min`,
+    cookTime: `${Math.round(edamamRecipe.totalTime * 2 / 3)} min`,
     servings: Math.round(edamamRecipe.yield),
-    calories: Math.round(edamamRecipe.calories / edamamRecipe.yield), // Calories per serving
+    calories: Math.round(edamamRecipe.calories / edamamRecipe.yield),
     protein,
     carbs,
     fat,
     fiber,
-    ingredients: edamamRecipe.ingredientLines,
+    ingredients: normalized.strings.length > 0 ? normalized.strings : ['Ingredients unavailable'],
+    parsedIngredients: normalized.parsed,
     instructions,
     tags,
     mealType: validMealType,

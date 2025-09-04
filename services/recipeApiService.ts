@@ -1,6 +1,7 @@
 import { Recipe } from '@/types';
 import { mockRecipes } from '@/constants/mockData';
 import * as edamamService from '@/services/edamamService';
+import { normalizeIngredientList } from '@/utils/ingredientParser';
 
 // API configuration
 const MEALDB_API_URL = 'https://www.themealdb.com/api/json/v1/1';
@@ -36,68 +37,88 @@ function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'di
  * - Derives complexity and preference tags when possible
  */
 function validateRecipe(recipe: any): Recipe {
-  // Determine complexity based on prep time and ingredients count
-  let complexity: 'simple' | 'complex' | undefined = undefined;
-  if (recipe.prepTime && recipe.ingredients) {
-    const prepTimeMinutes = parseInt(recipe.prepTime.split(' ')[0]);
-    const ingredientsCount = recipe.ingredients.length;
-    
-    if (prepTimeMinutes <= 15 && ingredientsCount <= 5) {
-      complexity = 'simple';
-    } else if (prepTimeMinutes >= 30 || ingredientsCount >= 8) {
-      complexity = 'complex';
-    } else {
-      complexity = 'simple';
-    }
+  const coerceString = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback);
+  const coerceNumber = (v: unknown, fallback: number): number => (typeof v === 'number' && !isNaN(v) ? v : fallback);
+  const coerceStringArray = (arr: unknown): string[] =>
+    Array.isArray(arr) ? arr.map((x) => coerceString(x, '')).map((s) => s.trim()).filter((s) => s.length > 0) : [];
+
+  const id = coerceString(recipe.id, `local-${Math.random().toString(36).slice(2)}`);
+  const name = coerceString(recipe.name, 'Untitled Recipe');
+  const prepTime = coerceString(recipe.prepTime, '15 min');
+  const cookTime = recipe.cookTime ? coerceString(recipe.cookTime, undefined as unknown as string) : undefined;
+  const servings = Math.max(1, coerceNumber(recipe.servings, 2));
+
+  const { strings: ingredientsStrings, parsed } = normalizeIngredientList(recipe.ingredients);
+  const ingredients = ingredientsStrings.length > 0 ? ingredientsStrings : ['Ingredients unavailable'];
+
+  let instructions = coerceStringArray(recipe.instructions);
+  if (instructions.length === 0 && ingredients.length > 0) {
+    instructions = ingredients.map((ing) => `Use ${ing}`);
   }
-  
-  // Extract dietary preferences from tags
+
+  const rawTags = coerceStringArray(recipe.tags).map((t) => t.toLowerCase());
+
+  const parseMinutes = (timeStr: string): number => {
+    const m = (timeStr || '').match(/(\d+(?:\.\d+)?)/);
+    return m ? Math.round(parseFloat(m[1])) : 15;
+  };
+
+  const ingredientsCount = ingredients.length;
+  const prepTimeMinutes = parseMinutes(prepTime);
+  let complexity: 'simple' | 'complex' | undefined = undefined;
+  if (prepTimeMinutes <= 15 && ingredientsCount <= 5) {
+    complexity = 'simple';
+  } else if (prepTimeMinutes >= 30 || ingredientsCount >= 8) {
+    complexity = 'complex';
+  } else {
+    complexity = 'simple';
+  }
+
   const dietaryPreferences: Recipe['dietaryPreferences'] = [];
   const dietaryTags = [
-    'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 
+    'vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free',
     'dairy-free', 'low-carb', 'high-protein'
   ];
-  
-  if (recipe.tags) {
-    recipe.tags.forEach((tag: string) => {
-      if (dietaryTags.includes(tag)) {
-        dietaryPreferences.push(tag as any);
-      }
-    });
-  }
-  
-  // Extract fitness goals from tags
+  rawTags.forEach((tag: string) => {
+    if (dietaryTags.includes(tag)) dietaryPreferences.push(tag as any);
+  });
+
   const fitnessGoals: Recipe['fitnessGoals'] = [];
   const fitnessTags = [
-    'weight-loss', 'muscle-gain', 'general-health', 
+    'weight-loss', 'muscle-gain', 'general-health',
     'heart-health', 'energy-boost'
   ];
-  
-  if (recipe.tags) {
-    recipe.tags.forEach((tag: string) => {
-      if (fitnessTags.includes(tag)) {
-        fitnessGoals.push(tag as any);
-      }
-    });
-  }
-  
-  const calories = typeof recipe.calories === 'number' ? recipe.calories : Math.floor(Math.random() * 300) + 200;
-  const protein = typeof recipe.protein === 'number' ? recipe.protein : Math.floor(Math.random() * 20) + 10;
-  const carbs = typeof recipe.carbs === 'number' ? recipe.carbs : Math.floor(Math.random() * 30) + 20;
-  const fat = typeof recipe.fat === 'number' ? recipe.fat : Math.floor(Math.random() * 15) + 5;
-  const fiber = typeof recipe.fiber === 'number' ? recipe.fiber : Math.floor(Math.random() * 5) + 1;
+  rawTags.forEach((tag: string) => {
+    if (fitnessTags.includes(tag)) fitnessGoals.push(tag as any);
+  });
+
+  const calories = coerceNumber(recipe.calories, Math.floor(Math.random() * 300) + 200);
+  const protein = coerceNumber(recipe.protein, Math.floor(Math.random() * 20) + 10);
+  const carbs = coerceNumber(recipe.carbs, Math.floor(Math.random() * 30) + 20);
+  const fat = coerceNumber(recipe.fat, Math.floor(Math.random() * 15) + 5);
+  const fiber = recipe.fiber !== undefined ? coerceNumber(recipe.fiber, 0) : Math.floor(Math.random() * 5) + 1;
 
   return {
-    ...recipe,
-    mealType: toValidMealType(recipe.mealType),
-    complexity,
-    dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
-    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
+    id,
+    name,
+    image: recipe.image ? coerceString(recipe.image, undefined as unknown as string) : undefined,
+    prepTime,
+    cookTime,
+    servings,
     calories,
     protein,
     carbs,
     fat,
     fiber,
+    ingredients,
+    parsedIngredients: parsed,
+    instructions,
+    tags: rawTags,
+    mealType: toValidMealType(recipe.mealType),
+    complexity,
+    dietaryPreferences: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
+    fitnessGoals: fitnessGoals.length > 0 ? fitnessGoals : undefined,
+    source: recipe.source ? coerceString(recipe.source) : recipe.source,
   };
 }
 
@@ -348,6 +369,9 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     }
   }
   
+  // Normalize ingredient list for validation and parsing
+  const normalized = normalizeIngredientList(ingredients);
+
   // Extract instructions
   const instructionsText = meal.strInstructions || '';
   const instructions = instructionsText
@@ -439,7 +463,7 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
         mealType = 'lunch';
       } else {
         // For main dishes with protein, default to dinner
-        const hasProtein = ingredients.some(ingredient => 
+        const hasProtein = normalized.strings.some((ingredient: string) => 
           /\b(chicken|beef|pork|lamb|fish|seafood|shrimp|turkey|meat)\b/i.test(ingredient)
         );
         
@@ -453,15 +477,15 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   
   // Determine complexity based on ingredients count and estimated prep time
   const complexity: 'simple' | 'complex' = 
-    ingredients.length <= 7 ? 'simple' : 'complex';
+    (normalized.strings?.length ?? 0) <= 7 ? 'simple' : 'complex';
   
   // Extract dietary preferences
   const dietaryPreferences: Recipe['dietaryPreferences'] = [];
   
   // Check for vegetarian
   const meatIngredients = ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'meat', 'fish', 'seafood', 'shrimp', 'bacon'];
-  const isVegetarian = !ingredients.some(ingredient => 
-    meatIngredients.some(meat => ingredient.toLowerCase().includes(meat))
+  const isVegetarian = !normalized.strings.some((ingredient: string) => 
+    meatIngredients.some((meat: string) => ingredient.toLowerCase().includes(meat))
   );
   
   if (isVegetarian) {
@@ -469,8 +493,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     
     // Check for vegan (vegetarian but also no dairy or eggs)
     const nonVeganIngredients = ['milk', 'cheese', 'cream', 'yogurt', 'butter', 'egg', 'honey'];
-    const isVegan = !ingredients.some(ingredient => 
-      nonVeganIngredients.some(nonVegan => ingredient.toLowerCase().includes(nonVegan))
+    const isVegan = !normalized.strings.some((ingredient: string) => 
+      nonVeganIngredients.some((nonVegan: string) => ingredient.toLowerCase().includes(nonVegan))
     );
     
     if (isVegan) {
@@ -480,8 +504,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   
   // Check for low-carb
   const highCarbIngredients = ['pasta', 'rice', 'bread', 'potato', 'sugar', 'flour', 'corn'];
-  const isLowCarb = !ingredients.some(ingredient => 
-    highCarbIngredients.some(carb => ingredient.toLowerCase().includes(carb))
+  const isLowCarb = !normalized.strings.some((ingredient: string) => 
+    highCarbIngredients.some((carb: string) => ingredient.toLowerCase().includes(carb))
   );
   
   if (isLowCarb) {
@@ -489,8 +513,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     
     // Check for keto (low-carb and high-fat)
     const highFatIngredients = ['oil', 'butter', 'cream', 'cheese', 'avocado', 'nuts'];
-    const isKeto = ingredients.some(ingredient => 
-      highFatIngredients.some(fat => ingredient.toLowerCase().includes(fat))
+    const isKeto = normalized.strings.some((ingredient: string) => 
+      highFatIngredients.some((fat: string) => ingredient.toLowerCase().includes(fat))
     );
     
     if (isKeto) {
@@ -500,8 +524,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   
   // Check for high-protein
   const highProteinIngredients = ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'fish', 'seafood', 'egg', 'tofu', 'lentil', 'bean', 'quinoa'];
-  const isHighProtein = ingredients.some(ingredient => 
-    highProteinIngredients.some(protein => ingredient.toLowerCase().includes(protein))
+  const isHighProtein = normalized.strings.some((ingredient: string) => 
+    highProteinIngredients.some((protein: string) => ingredient.toLowerCase().includes(protein))
   );
   
   if (isHighProtein) {
@@ -523,8 +547,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   
   // Heart health recipes are typically low in saturated fat and sodium
   const heartHealthyIngredients = ['olive oil', 'fish', 'nuts', 'seeds', 'avocado', 'whole grain', 'oat'];
-  const isHeartHealthy = ingredients.some(ingredient => 
-    heartHealthyIngredients.some(healthy => ingredient.toLowerCase().includes(healthy))
+  const isHeartHealthy = normalized.strings.some((ingredient: string) => 
+    heartHealthyIngredients.some((healthy: string) => ingredient.toLowerCase().includes(healthy))
   );
   
   if (isHeartHealthy) {
@@ -533,8 +557,8 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
   
   // Energy boost recipes typically include complex carbs and protein
   const energyBoostIngredients = ['oat', 'banana', 'nut', 'seed', 'quinoa', 'sweet potato'];
-  const isEnergyBoost = ingredients.some(ingredient => 
-    energyBoostIngredients.some(energy => ingredient.toLowerCase().includes(energy))
+  const isEnergyBoost = normalized.strings.some((ingredient: string) => 
+    energyBoostIngredients.some((energy: string) => ingredient.toLowerCase().includes(energy))
   );
   
   if (isEnergyBoost) {
@@ -558,15 +582,16 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
     id: `mealdb-${meal.idMeal}`,
     name: meal.strMeal,
     image: meal.strMealThumb,
-    prepTime: `${Math.floor(Math.random() * 20) + 5} min`, // Random prep time
-    cookTime: `${Math.floor(Math.random() * 40) + 10} min`, // Random cook time
-    servings: Math.floor(Math.random() * 4) + 2, // 2-6 servings
+    prepTime: `${Math.floor(Math.random() * 20) + 5} min`,
+    cookTime: `${Math.floor(Math.random() * 40) + 10} min`,
+    servings: Math.floor(Math.random() * 4) + 2,
     calories: estimatedCalories,
     protein: estimatedProtein,
     carbs: estimatedCarbs,
     fat: estimatedFat,
     fiber: estimatedFiber,
-    ingredients,
+    ingredients: normalized.strings.length > 0 ? normalized.strings : ['Ingredients unavailable'],
+    parsedIngredients: normalized.parsed,
     instructions,
     tags,
     mealType: validMealType,
@@ -673,19 +698,15 @@ const getRecipeFromSpoonacularById = async (id: string): Promise<Recipe | null> 
 // Helper function to convert Spoonacular format to our Recipe format
 const convertSpoonacularToRecipe = (recipe: any): Recipe => {
   // Extract ingredients
-  const ingredients = recipe.extendedIngredients?.map((ingredient: any) => {
+  const ingredientLines = recipe.extendedIngredients?.map((ingredient: any) => {
     const amount = ingredient.measures?.us?.amount || ingredient.amount || '';
     const unit = ingredient.measures?.us?.unitShort || ingredient.unit || '';
     const name = ingredient.originalName || ingredient.name || '';
-    
-    if (amount && unit) {
-      return `${amount} ${unit} ${name}`;
-    } else if (amount) {
-      return `${amount} ${name}`;
-    } else {
-      return name;
-    }
+    if (amount && unit) return `${amount} ${unit} ${name}`;
+    if (amount) return `${amount} ${name}`;
+    return name;
   }) || [];
+  const normalized = normalizeIngredientList(ingredientLines);
   
   // Extract instructions
   let instructions: string[] = [];
@@ -791,7 +812,7 @@ const convertSpoonacularToRecipe = (recipe: any): Recipe => {
   
   // Determine complexity based on ingredients count and preparation time
   const complexity: 'simple' | 'complex' = 
-    (ingredients.length <= 7 && recipe.readyInMinutes && recipe.readyInMinutes <= 30) 
+    (normalized.strings.length <= 7 && recipe.readyInMinutes && recipe.readyInMinutes <= 30) 
       ? 'simple' 
       : 'complex';
   
@@ -959,7 +980,8 @@ const convertSpoonacularToRecipe = (recipe: any): Recipe => {
     carbs,
     fat,
     fiber,
-    ingredients,
+    ingredients: normalized.strings.length > 0 ? normalized.strings : ['Ingredients unavailable'],
+    parsedIngredients: normalized.parsed,
     instructions,
     tags,
     mealType,
