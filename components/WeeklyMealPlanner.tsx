@@ -1001,10 +1001,10 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         accessibilityViewIsModal={true}
       >
         <View style={styles.errorModalOverlay} importantForAccessibility="yes">
-          <View style={styles.errorModal} accessibilityLabel="Meal plan generation issue dialog">
+          <View style={styles.errorModal} accessibilityLabel="Meal plan help dialog">
             <View style={styles.errorModalHeader} accessibilityRole="header">
               <Info size={24} color={Colors.warning} />
-              <Text style={styles.errorModalTitle} accessibilityRole="text">Generation Issue</Text>
+              <Text style={styles.errorModalTitle} accessibilityRole="text">{lastGenerationError ? "Couldn't generate plan" : 'Meal plan help'}</Text>
               <Pressable 
                 ref={errorCloseButtonRef}
                 onPress={() => {
@@ -1012,7 +1012,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   clearGenerationError();
                 }}
                 style={styles.closeButton}
-                accessibilityLabel="Close error message"
+                accessibilityLabel="Close"
                 accessibilityRole="button"
                 testID="error-modal-close"
               >
@@ -1020,34 +1020,64 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </Pressable>
             </View>
             
-            <Text style={styles.errorModalMessage} accessibilityLiveRegion="polite">
-              {lastGenerationError || "There was an issue generating your meal plan."}
-            </Text>
-            
-            {generationSuggestions && generationSuggestions.length > 0 && (
-              <View style={styles.errorSuggestionsList} accessibilityLabel="Suggestions list">
-                <Text style={styles.errorSuggestionsTitle}>Suggestions:</Text>
-                {generationSuggestions.map((suggestion, index) => (
-                  <View key={`error-suggestion-${index}`} style={styles.errorSuggestionItem}>
-                    <View style={styles.errorBulletPoint} />
-                    <Text style={styles.errorSuggestionText}>{suggestion}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            
-            <Pressable 
-              style={styles.errorModalButton}
-              onPress={() => {
-                setShowErrorModal(false);
-                clearGenerationError();
-              }}
-              accessibilityLabel="Dismiss error"
-              accessibilityRole="button"
-              testID="error-modal-got-it"
-            >
-              <Text style={styles.errorModalButtonText}>Got it</Text>
-            </Pressable>
+            <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={{ paddingBottom: 8 }} accessibilityLiveRegion="polite">
+              <Text style={styles.errorModalMessage}>
+                {lastGenerationError ?? 'We hit a snag while generating the plan.'}
+              </Text>
+              {generationSuggestions && generationSuggestions.length > 0 && (
+                <View style={styles.errorSuggestionsList} accessibilityLabel="Suggestions list">
+                  <Text style={styles.errorSuggestionsTitle}>How to fix it:</Text>
+                  {generationSuggestions.map((suggestion, index) => (
+                    <View key={`error-suggestion-${index}`} style={styles.errorSuggestionItem}>
+                      <View style={styles.errorBulletPoint} />
+                      <Text style={styles.errorSuggestionText}>{suggestion}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable 
+                style={[styles.errorModalButton, { flex: 1 }]}
+                onPress={async () => {
+                  setShowErrorModal(false);
+                  // regenerate current visible week
+                  const _days = getWeekDays(currentWeekIndex);
+                  updateWeeklyUsedRecipeIds(_days[0].dateString, _days[6].dateString);
+                  await handleGenerateWeeklyMealPlan();
+                }}
+                accessibilityLabel="Try again"
+                accessibilityRole="button"
+                testID="weekly-error-retry"
+              >
+                <Text style={styles.errorModalButtonText}>Try Again</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.errorModalButton, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.borderLight }]}
+                onPress={() => {
+                  setShowErrorModal(false);
+                  router.push('/onboarding/dietary-preferences');
+                }}
+                accessibilityLabel="Adjust dietary preferences"
+                accessibilityRole="button"
+                testID="weekly-error-preferences"
+              >
+                <Text style={[styles.errorModalButtonText, { color: Colors.text }]}>Adjust Preferences</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.errorModalButton, { flex: 1, backgroundColor: Colors.primaryLight, borderWidth: 1, borderColor: Colors.primary }]}
+                onPress={() => {
+                  setShowErrorModal(false);
+                  setModalVisible(true);
+                }}
+                accessibilityLabel="Open weekly planner"
+                accessibilityRole="button"
+                testID="weekly-error-open-planner"
+              >
+                <Text style={[styles.errorModalButtonText, { color: Colors.primary }]}>Open Planner</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>

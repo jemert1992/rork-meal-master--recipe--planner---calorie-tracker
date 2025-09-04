@@ -736,7 +736,7 @@ export default function MealPlanScreen() {
           <View style={styles.errorModal}>
             <View style={styles.errorModalHeader}>
               <Info size={24} color={Colors.warning} />
-              <Text style={styles.errorModalTitle}>Generation Issue</Text>
+              <Text style={styles.errorModalTitle}>{lastGenerationError ? "Couldn't generate today's plan" : 'Meal plan help'}</Text>
               <Pressable 
                 onPress={() => {
                   setShowErrorModal(false);
@@ -746,18 +746,19 @@ export default function MealPlanScreen() {
                 accessibilityLabel="Close"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={styles.closeButton}
+                testID="error-close"
               >
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
             
-            <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ paddingBottom: 8 }}>
+            <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={{ paddingBottom: 8 }} accessibilityLiveRegion="polite">
               <Text style={styles.errorModalMessage}>
-                {lastGenerationError || 'There was an issue generating your meal plan.'}
+                {lastGenerationError ?? 'We hit a snag while generating meals for this day.'}
               </Text>
               {generationSuggestions && generationSuggestions.length > 0 && (
                 <View style={styles.suggestionsList}>
-                  <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+                  <Text style={styles.suggestionsTitle}>How to fix it:</Text>
                   {generationSuggestions.map((suggestion, index) => (
                     <View key={`suggestion-${index}`} style={styles.suggestionItem}>
                       <View style={styles.bulletPoint} />
@@ -768,17 +769,45 @@ export default function MealPlanScreen() {
               )}
             </ScrollView>
             
-            <Pressable 
-              style={styles.errorModalButton}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss"
-              onPress={() => {
-                setShowErrorModal(false);
-                clearGenerationError();
-              }}
-            >
-              <Text style={styles.errorModalButtonText}>Got it</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable 
+                style={[styles.errorModalButton, { flex: 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Try again"
+                testID="error-retry"
+                onPress={async () => {
+                  setShowErrorModal(false);
+                  await handleGenerateMealPlan();
+                }}
+              >
+                <Text style={styles.errorModalButtonText}>Try Again</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.errorModalButton, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.borderLight }]}
+                accessibilityRole="button"
+                accessibilityLabel="Adjust dietary preferences"
+                testID="error-preferences"
+                onPress={() => {
+                  setShowErrorModal(false);
+                  router.push('/onboarding/dietary-preferences');
+                }}
+              >
+                <Text style={[styles.errorModalButtonText, { color: Colors.text }]}>Adjust Preferences</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.errorModalButton, { flex: 1, backgroundColor: Colors.primaryLight, borderWidth: 1, borderColor: Colors.primary }]}
+                accessibilityRole="button"
+                accessibilityLabel="Browse suggestions"
+                testID="error-browse-suggestions"
+                onPress={() => {
+                  setShowErrorModal(false);
+                  if (!showSuggestions) setShowSuggestions(true);
+                  setShowSuggestionsModal(true);
+                }}
+              >
+                <Text style={[styles.errorModalButtonText, { color: Colors.primary }]}>Browse Suggestions</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
