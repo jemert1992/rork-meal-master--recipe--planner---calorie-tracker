@@ -457,13 +457,13 @@ export default function MealPlanScreen() {
 
       <DateSelector selectedDate={selectedDate} onDateChange={handleDateChange} />
 
-      <View style={styles.actionsContainer}>
+      <View style={styles.actionsContainer} testID="actions-container">
         <View style={styles.nutritionSummary}>
-          <Text style={styles.calorieText}>
+          <Text style={styles.calorieText} numberOfLines={1}>
             {dailyNutrition.calories} 
             {profile.calorieGoal ? ` / ${profile.calorieGoal}` : ''} calories
           </Text>
-          <Text style={styles.macroText}>
+          <Text style={styles.macroText} numberOfLines={1}>
             P: {dailyNutrition.protein}{profile.proteinGoal ? `/${profile.proteinGoal}` : ''}g • 
             C: {dailyNutrition.carbs}{profile.carbsGoal ? `/${profile.carbsGoal}` : ''}g • 
             F: {dailyNutrition.fat}{profile.fatGoal ? `/${profile.fatGoal}` : ''}g
@@ -887,15 +887,17 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
     paddingHorizontal: 24,
+    gap: 8,
     marginBottom: 20,
     marginTop: 8,
   },
   nutritionSummary: {
-    flex: 1,
+    flex: 0,
+    width: '100%',
   },
   calorieText: {
     fontSize: 18,
@@ -910,6 +912,8 @@ const styles = StyleSheet.create({
   buttonGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 8,
   },
   actionButton: {
     flexDirection: 'row',
