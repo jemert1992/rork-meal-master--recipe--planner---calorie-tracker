@@ -117,7 +117,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         aria-label={`Open recipe ${recipe.name}`}
         data-testid={`recipe-card-${recipe.id}`}
       >
-        <Image source={{ uri: recipe.image }} style={styles.image} />
+        <Image source={{ uri: recipe.image }} style={styles.image} accessibilityRole="image" accessibilityLabel={`Image of ${recipe.name}`} />
         {Platform.OS === 'web' ? (
           <Pressable
             style={styles.favoriteButton}
@@ -131,6 +131,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
               size={24}
               color={favorite ? Colors.error : Colors.textSecondary}
               fill={favorite ? Colors.error : 'transparent'}
+              accessible={false}
             />
           </Pressable>
         ) : null}
@@ -148,12 +149,12 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Clock size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Clock size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
               <Text style={styles.metaText}>{recipe.prepTime}</Text>
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Users size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Users size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
               <Text style={styles.metaText}>{recipe.servings}</Text>
             </View>
           </View>
@@ -186,7 +187,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         accessibilityLabel={`Open recipe ${recipe.name}`}
         testID={`recipe-card-${recipe.id}`}
       >
-        <Image source={{ uri: recipe.image }} style={styles.image} />
+        <Image source={{ uri: recipe.image }} style={styles.image} accessibilityRole="image" accessibilityLabel={`Image of ${recipe.name}`} />
         <Pressable 
           style={styles.favoriteButton} 
           onPress={handleFavoritePress}
@@ -200,6 +201,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             size={24} 
             color={favorite ? Colors.error : Colors.textSecondary} 
             fill={favorite ? Colors.error : 'transparent'} 
+            accessible={false}
           />
         </Pressable>
         {recipe.mealType && (
@@ -216,12 +218,12 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Clock size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Clock size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
               <Text style={styles.metaText}>{recipe.prepTime}</Text>
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Users size={16} color={Colors.primary} style={styles.metaIcon} />
+              <Users size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
               <Text style={styles.metaText}>{recipe.servings}</Text>
             </View>
           </View>

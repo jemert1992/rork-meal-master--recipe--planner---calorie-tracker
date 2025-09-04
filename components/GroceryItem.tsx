@@ -27,7 +27,7 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
           styles.checkbox,
           checked && styles.checkboxChecked
         ]}>
-          {checked && <Check size={16} color={Colors.white} />}
+          {checked && <Check size={16} color={Colors.white} accessible={false} />}
         </View>
       </Pressable>
       
@@ -56,7 +56,7 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
         accessibilityHint="Deletes this item from the list"
         testID={`grocery-remove-${item.id}`}
       >
-        <Trash2 size={18} color={Colors.error} />
+        <Trash2 size={18} color={Colors.error} accessible={false} />
       </Pressable>
     </View>
   );

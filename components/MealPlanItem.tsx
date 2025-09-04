@@ -200,11 +200,11 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               {recipe && (
                 <View style={styles.recipeDetails} accessible accessibilityRole="summary" accessibilityLabel="Recipe details">
                   <View style={styles.recipeDetail}>
-                    <Clock size={12} color={Colors.textLight} />
+                    <Clock size={12} color={Colors.textLight} accessible={false} />
                     <Text style={styles.detailText}>{recipe.prepTime}</Text>
                   </View>
                   <View style={styles.recipeDetail}>
-                    <Users size={12} color={Colors.textLight} />
+                    <Users size={12} color={Colors.textLight} accessible={false} />
                     <Text style={styles.detailText}>x {servings}</Text>
                   </View>
                 </View>
@@ -217,7 +217,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                     <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
                   </View>
                   <View style={styles.recipeDetail}>
-                    <Users size={12} color={Colors.textLight} />
+                    <Users size={12} color={Colors.textLight} accessible={false} />
                     <Text style={styles.detailText}>x {servings}</Text>
                   </View>
                 </View>
@@ -284,7 +284,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             accessibilityHint="Removes this meal from the plan"
             testID={`remove-${mealType}`}
           >
-            <X size={18} color={Colors.textLight} />
+            <X size={18} color={Colors.textLight} accessible={false} />
           </Pressable>
         </View>
       ) : (
@@ -319,7 +319,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 accessibilityRole="button"
                 testID={`close-swap-${mealType}`}
               >
-                <X size={24} color={Colors.text} />
+                <X size={24} color={Colors.text} accessible={false} />
               </Pressable>
             </View>
 
@@ -403,7 +403,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                       {swappingRecipe ? (
                         <ActivityIndicator size="small" color={Colors.white} />
                       ) : (
-                        <Check size={18} color={Colors.white} />
+                        <Check size={18} color={Colors.white} accessible={false} />
                       )}
                     </Pressable>
                   </View>
@@ -432,7 +432,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               accessibilityLabel="Close"
               accessibilityRole="button"
             >
-              <X size={24} color={Colors.text} />
+              <X size={24} color={Colors.text} accessible={false} />
             </Pressable>
           </View>
           {meal && <MealDetailView meal={meal} />}

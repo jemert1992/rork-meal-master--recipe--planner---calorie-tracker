@@ -70,7 +70,7 @@ interface SnackCardProps {
 const SnackCard = ({ snack }: SnackCardProps) => {
   return (
     <View style={styles.snackCard}>
-      <Image source={{ uri: snack.image }} style={styles.snackImage} />
+      <Image source={{ uri: snack.image }} style={styles.snackImage} accessibilityRole="image" accessibilityLabel={`Image of ${snack.name}`} />
       <View style={styles.snackContent}>
         <Text style={styles.snackName}>{snack.name}</Text>
         <Text style={styles.snackDescription} numberOfLines={2}>{snack.description}</Text>
@@ -121,12 +121,14 @@ const SnacksBanner = () => {
           <Image 
             source={{ uri: 'https://images.unsplash.com/photo-1604210565264-8917562a63d9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60' }} 
             style={styles.bannerImage} 
+            accessibilityRole="image"
+            accessibilityLabel="Healthy snacks thumbnail"
           />
           <View style={styles.bannerTextContainer}>
             <Text style={styles.bannerTitle}>Did you know we have snacks too?</Text>
             <Text style={styles.bannerSubtitle}>Discover nutritious between-meal options</Text>
           </View>
-          <ChevronRight size={20} color={Colors.primary} />
+          <ChevronRight size={20} color={Colors.primary} accessible={false} />
         </View>
       </Pressable>
 
@@ -146,7 +148,7 @@ const SnacksBanner = () => {
                 accessibilityLabel="Close snacks modal"
                 accessibilityRole="button"
               >
-                <X size={24} color={Colors.text} />
+                <X size={24} color={Colors.text} accessible={false} />
               </Pressable>
             </View>
             
