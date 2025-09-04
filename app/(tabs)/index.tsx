@@ -11,6 +11,7 @@ import { generateGroceryList } from '@/utils/generateGroceryList';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
+import OneShotOnboardingCard, { getOneShotSeen } from '@/components/OneShotOnboardingCard';
 import SnacksBanner from '@/components/SnacksBanner';
 
 import { useTutorialStore } from '@/store/tutorialStore';
@@ -63,7 +64,7 @@ const initialRecipeCategories = [
 export default function RecipesScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatListType<any>>(null);
-  const { showTutorial, tutorialCompleted, startTutorial, skipTutorial, forceHideTutorial, resetTutorial } = useTutorialStore();
+  const { showTutorial, tutorialCompleted, startTutorial, skipTutorial, resetTutorial } = useTutorialStore();
   const { isLoggedIn, profile } = useUserStore();
   
   // Register tutorial refs
@@ -96,6 +97,23 @@ export default function RecipesScreen() {
   const [recipeCategories, setRecipeCategories] = useState(initialRecipeCategories);
   const [displayedRecipes, setDisplayedRecipes] = useState<Recipe[]>([]);
   const [edamamConfigured, setEdamamConfigured] = useState(false);
+  const [showIntro, setShowIntro] = useState<boolean>(false);
+  
+  useEffect(() => {
+    let mounted = true;
+    const decideIntro = async () => {
+      try {
+        const seen = await getOneShotSeen();
+        if (!seen && isLoggedIn && (profile.onboardingCompleted ?? false)) {
+          if (mounted) setShowIntro(true);
+        }
+      } catch (e) {
+        console.log('decideIntro error', e);
+      }
+    };
+    decideIntro();
+    return () => { mounted = false; };
+  }, [isLoggedIn, profile.onboardingCompleted]);
   
   // GUARD: Check Edamam credentials only once on mount
   useEffect(() => {
@@ -493,6 +511,11 @@ export default function RecipesScreen() {
           }
         />
       )}
+
+      <OneShotOnboardingCard
+        visible={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
     </SafeAreaView>
   );
 }
