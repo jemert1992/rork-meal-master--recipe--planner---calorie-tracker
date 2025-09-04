@@ -55,7 +55,9 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     clearGenerationError,
     getAlternativeRecipes,
     swapMeal,
-    updateMealServings
+    updateMealServings,
+    isGenerating,
+    generationProgress
   } = useMealPlanStore();
   const { recipes } = useRecipeStore();
   const { profile } = useUserStore();
@@ -756,14 +758,14 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
             <View style={styles.weeklyActionContainer}>
               <Pressable 
-                style={({ pressed }) => [styles.generateWeeklyButton, generatingWeeklyPlan && styles.generatingButton, pressed && styles.focusRing]} 
+                style={({ pressed }) => [styles.generateWeeklyButton, (generatingWeeklyPlan || isGenerating) && styles.generatingButton, pressed && styles.focusRing]} 
                 onPress={handleGenerateWeeklyMealPlan}
-                disabled={generatingWeeklyPlan}
+                disabled={generatingWeeklyPlan || isGenerating}
                 accessibilityLabel="Generate weekly meal plan"
                 accessibilityHint="Automatically generate meals for the entire week"
                 accessibilityRole="button"
               >
-                {generatingWeeklyPlan ? (
+                {generatingWeeklyPlan || isGenerating ? (
                   <>
                     <ActivityIndicator size="small" color={Colors.white} style={styles.buttonIcon} />
                     <Text style={styles.generateWeeklyButtonText}>Generating...</Text>
@@ -775,6 +777,11 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   </>
                 )}
               </Pressable>
+              {isGenerating && (
+                <View style={styles.progressTrack} accessibilityLabel={`Generating… ${Math.round(generationProgress*100)} percent`}>
+                  <View style={[styles.progressBar, { width: `${Math.round(generationProgress*100)}%` }]} />
+                </View>
+              )}
               
               <Text style={styles.weeklyPlanInfo}>
                 {profile.dietType && profile.dietType !== 'any' 
@@ -787,6 +794,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               <Pressable 
                 style={({ pressed }) => [styles.weekNavigationButton, pressed && styles.focusRing]} 
                 onPress={handlePreviousWeek}
+                disabled={isGenerating}
                 accessibilityLabel="Previous week"
                 accessibilityRole="button"
               >
@@ -801,6 +809,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               <Pressable 
                 style={({ pressed }) => [styles.weekNavigationButton, pressed && styles.focusRing]} 
                 onPress={handleNextWeek}
+                disabled={isGenerating}
                 accessibilityLabel="Next week"
                 accessibilityRole="button"
               >
@@ -818,14 +827,14 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 <Pressable 
                   style={({ pressed }) => [
                     styles.generateButton,
-                    plannedMealsCount === 0 && styles.disabledButton,
+                    (plannedMealsCount === 0 || isGenerating) && styles.disabledButton,
                     pressed && styles.focusRing
                   ]} 
                   onPress={() => {
                     onGenerateGroceryList();
                     setModalVisible(false);
                   }}
-                  disabled={plannedMealsCount === 0}
+                  disabled={plannedMealsCount === 0 || isGenerating}
                   accessibilityLabel="Generate grocery list"
                   accessibilityHint={plannedMealsCount === 0 
                     ? "You need to add meals to your plan first" 
@@ -1213,6 +1222,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textLight,
     textAlign: 'center',
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 6,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: Colors.primary,
   },
   weekNavigationContainer: {
     flexDirection: 'row',
