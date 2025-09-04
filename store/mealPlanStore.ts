@@ -578,10 +578,6 @@ export const useMealPlanStore = create<MealPlanState>()(
       setUniquePerWeek: (value) => set({ uniquePerWeek: value }),
       clearPoolsCache: () => set({ recipePoolsCache: null }),
       
-      /**
-       * Smart variety heuristic
-       * Prefers changing main ingredient and cuisine on consecutive days for the same meal type and within the same day across meals.
-       */
       generateMealPlan: async (date, recipes, specificMealType) => {
         set({ isGenerating: true, generationProgress: 0 });
         const getAllLocalRecipes = (): Recipe[] => {
@@ -594,6 +590,14 @@ export const useMealPlanStore = create<MealPlanState>()(
         };
         const getMockRecipes = (): Recipe[] => {
           try { const { mockRecipes } = require('@/constants/mockData'); return mockRecipes as Recipe[]; } catch { return []; }
+        };
+        const diagnosticsFor = (mealType: 'breakfast' | 'lunch' | 'dinner', dietType: DietType, allergies: string[], excludedIngredients: string[]) => {
+          const all = [...getAllLocalRecipes(), ...getMockRecipes()].filter(r => r.mealType === mealType);
+          const total = all.length;
+          const afterDiet = all.filter(r => get().isRecipeSuitable({ ...r, tags: r.tags ?? [] }, dietType, [], [])).length;
+          const afterAllergies = all.filter(r => get().isRecipeSuitable({ ...r, tags: r.tags ?? [] }, 'any', allergies, excludedIngredients)).length;
+          const afterFull = all.filter(r => get().isRecipeSuitable(r, dietType, allergies, excludedIngredients)).length;
+          return { total, afterDiet, afterAllergies, afterFull };
         };
         const getRecipeById = (id: string | undefined): Recipe | undefined => {
           if (!id) return undefined;
@@ -705,9 +709,21 @@ export const useMealPlanStore = create<MealPlanState>()(
                 });
                 apply(filtered[0], specificMealType);
               } else {
+                const diag = diagnosticsFor(specificMealType, dietType, allergies, excludedIngredients);
+                const uniq = get().uniquePerWeek;
                 result.success = false;
-                result.error = `No suitable ${specificMealType} recipes found that match your dietary preferences.`;
-                result.suggestions = ['Try adjusting your dietary preferences', `Add more ${specificMealType} recipes to your collection`, 'Try a different meal type'];
+                result.error = `No ${specificMealType} could be generated. Your current preferences filter out available recipes.`;
+                const tips: string[] = [];
+                if (diag.total === 0) {
+                  tips.push(`No ${specificMealType} recipes exist locally. Add recipes or enable API sources.`);
+                } else if (diag.afterFull === 0) {
+                  tips.push('Adjust dietary preferences or exclusions (some items block all recipes).');
+                }
+                if (uniq && get().weeklyUsedRecipeIds.size > 0) {
+                  tips.push('Disable "unique per week" to allow repeats when options are limited.');
+                }
+                tips.push(`Edit this ${specificMealType} slot manually.`);
+                result.suggestions = tips;
                 set({ lastGenerationError: result.error, generationSuggestions: result.suggestions });
               }
             }
@@ -785,9 +801,18 @@ export const useMealPlanStore = create<MealPlanState>()(
             if (needsLunch) selectFirst(ln, 'lunch', lunchCalories);
             if (needsDinner) selectFirst(dn, 'dinner', dinnerCalories);
             if (result.generatedMeals.length === 0) {
+              const bd = diagnosticsFor('breakfast', dietType, allergies, excludedIngredients);
+              const ld = diagnosticsFor('lunch', dietType, allergies, excludedIngredients);
+              const dd = diagnosticsFor('dinner', dietType, allergies, excludedIngredients);
               result.success = false;
-              result.error = 'Could not generate any meals that match your dietary preferences.';
-              result.suggestions = ['Try adjusting your dietary preferences','Add more recipes to your collection','Try generating individual meals instead'];
+              result.error = 'No meals could be generated for this day under current preferences.';
+              const tips: string[] = [];
+              const noneLocal = (bd.total + ld.total + dd.total) === 0;
+              if (noneLocal) tips.push('No local recipes available. Add recipes first or enable API sources.');
+              if (bd.afterFull + ld.afterFull + dd.afterFull === 0 && !noneLocal) tips.push('Your dietary preferences exclude all available recipes. Relax exclusions or switch diet.');
+              if (get().uniquePerWeek && get().weeklyUsedRecipeIds.size > 0) tips.push('Disable "unique per week" to allow repeats.');
+              tips.push('Open the planner and fill specific slots manually.');
+              result.suggestions = tips;
               set({ lastGenerationError: result.error, generationSuggestions: result.suggestions });
               set({ isGenerating: false, generationProgress: 1 });
               return result;
@@ -1000,10 +1025,6 @@ export const useMealPlanStore = create<MealPlanState>()(
         return result;
       },
       
-      /**
-       * generateWeeklyMealPlan with variety preference
-       * Avoids repeating main ingredient/cuisine on consecutive days per meal type while honoring calorie targets.
-       */
       generateWeeklyMealPlan: async (startDate, endDate) => {
         set({ isGenerating: true, generationProgress: 0 });
         const userProfile = getUserProfile();
@@ -1252,9 +1273,20 @@ export const useMealPlanStore = create<MealPlanState>()(
         }
 
         if (filledCount === 0) {
+          const diagB = { total: breakfastPool.length };
+          const diagL = { total: lunchPool.length };
+          const diagD = { total: dinnerPool.length };
           result.success = false;
-          result.error = 'No recipes available to generate a weekly plan.';
-          result.suggestions = ['Add recipes to your collection or enable API sources, then try again.'];
+          result.error = 'Weekly generation failed due to very limited or incompatible recipe pool.';
+          const tips: string[] = [];
+          if ((diagB.total + diagL.total + diagD.total) === 0) {
+            tips.push('No recipes available for any meal type. Add recipes or enable API sources.');
+          } else {
+            tips.push('Your dietary preferences or exclusions filter out most recipes. Adjust them and try again.');
+          }
+          if (enforceUnique && used.size > 0) tips.push('Disable "unique per week" to allow repeats across the week.');
+          tips.push('Open the weekly planner and fill specific slots manually.');
+          result.suggestions = tips;
         } else {
           result.success = true;
           result.error = null;
