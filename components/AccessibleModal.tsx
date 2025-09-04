@@ -70,9 +70,10 @@ export default function AccessibleModal({
     <View
       style={styles.backdrop}
       importantForAccessibility="yes"
-      accessibilityViewIsModal={true}
       testID={testID ?? 'accessible-modal'}
-      {...(Platform.OS === 'web' ? { role: 'dialog' } as any : {})}
+      {...(Platform.OS === 'web'
+        ? ({ role: 'dialog' } as any)
+        : ({ accessibilityViewIsModal: true } as any))}
     >
       <View style={styles.sheet} testID={(testID ? `${testID}-sheet` : 'accessible-modal-sheet')}>
         <View style={styles.header} testID={(testID ? `${testID}-header` : 'accessible-modal-header')}>
