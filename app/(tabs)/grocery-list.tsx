@@ -302,7 +302,7 @@ export default function GroceryListScreen() {
       {/* Add Item Modal */}
       {isAddingItem && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer} accessible accessibilityRole="dialog" accessibilityLabel="Add grocery item dialog">
+          <View style={styles.modalContainer} accessible accessibilityViewIsModal accessibilityLabel="Add grocery item" accessibilityHint="Enter item details and use Add or Cancel">
             <Text style={styles.modalTitle}>Add Item</Text>
             
             <View style={styles.inputContainer}>
