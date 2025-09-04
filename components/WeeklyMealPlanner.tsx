@@ -738,7 +738,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         testID="weekly-meal-planner-modal"
         accessibilityViewIsModal={true}
       >
-        <View style={styles.modalContentFull} accessible accessibilityLabel="Weekly meal plan dialog">
+        <View style={styles.modalContentFull} accessibilityLabel="Weekly meal plan dialog">
           <View style={styles.modalHeader} accessibilityRole="header">
               <Text style={styles.modalTitle} accessibilityRole="text">Weekly Meal Plan</Text>
               <Pressable 
@@ -809,7 +809,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false} accessible accessibilityLabel="Weekly plan days list">
+            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false} accessibilityLabel="Weekly plan days list">
               {weekDays.map(d => renderDayItem(d))}
             </ScrollView>
 
@@ -922,7 +922,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         testID="swap-modal"
         accessibilityViewIsModal={true}
       >
-        <View style={styles.modalContentFull} accessible accessibilityLabel="Swap meal dialog">
+        <View style={styles.modalContentFull} accessibilityLabel="Swap meal dialog">
           <View style={styles.modalHeader} accessibilityRole="header">
             <Text style={styles.modalTitle} accessibilityRole="text">Swap {swapMealType ? swapMealType.charAt(0).toUpperCase() + swapMealType.slice(1) : ''}</Text>
             <Pressable 
@@ -958,7 +958,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 <Text accessibilityLiveRegion="polite" style={{ marginTop: 8, color: Colors.textSecondary }}>Loading alternatives…</Text>
               </View>
             ) : (
-              <ScrollView contentContainerStyle={styles.gridScrollContent} accessible accessibilityLabel="Swap alternatives grid">
+              <ScrollView contentContainerStyle={styles.gridScrollContent} accessibilityLabel="Swap alternatives grid">
                 <View style={styles.swapGridInner}>
                   {(swapAlternatives.length > 0 ? swapAlternatives : recipes)
                     .filter(r => (swapMealType ? (r.mealType === swapMealType || r.tags.includes(swapMealType)) : true))
@@ -1001,7 +1001,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         accessibilityViewIsModal={true}
       >
         <View style={styles.errorModalOverlay} importantForAccessibility="yes">
-          <View style={styles.errorModal} accessible accessibilityLabel="Meal plan generation issue dialog">
+          <View style={styles.errorModal} accessibilityLabel="Meal plan generation issue dialog">
             <View style={styles.errorModalHeader} accessibilityRole="header">
               <Info size={24} color={Colors.warning} />
               <Text style={styles.errorModalTitle} accessibilityRole="text">Generation Issue</Text>
@@ -1025,7 +1025,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             </Text>
             
             {generationSuggestions && generationSuggestions.length > 0 && (
-              <View style={styles.errorSuggestionsList} accessible accessibilityLabel="Suggestions list">
+              <View style={styles.errorSuggestionsList} accessibilityLabel="Suggestions list">
                 <Text style={styles.errorSuggestionsTitle}>Suggestions:</Text>
                 {generationSuggestions.map((suggestion, index) => (
                   <View key={`error-suggestion-${index}`} style={styles.errorSuggestionItem}>
