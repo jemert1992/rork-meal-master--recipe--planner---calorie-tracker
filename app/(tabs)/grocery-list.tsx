@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, Pressable, Alert, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, FlatList, Pressable, Alert, TextInput, ActivityIndicator, AccessibilityInfo, findNodeHandle, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ShoppingCart, Plus, Trash2, RefreshCw, Check, Search, X } from 'lucide-react-native';
 import { useGroceryStore } from '@/store/groceryStore';
@@ -29,6 +29,11 @@ export default function GroceryListScreen() {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [filteredItems, setFilteredItems] = useState<GroceryItemType[]>([]);
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const [isQtyFocused, setIsQtyFocused] = useState<boolean>(false);
+  const [isUnitFocused, setIsUnitFocused] = useState<boolean>(false);
+  const addButtonRef = useRef<View | null>(null);
+  const nameInputRef = useRef<TextInput | null>(null);
   
   // Filter items based on search query
   useEffect(() => {
@@ -209,13 +214,17 @@ export default function GroceryListScreen() {
       
       <View style={styles.actionsContainer}>
         <Pressable 
-          style={styles.generateButton} 
+          style={({ pressed }) => [
+            styles.generateButton,
+            pressed && styles.focusRing,
+          ]}
           onPress={handleGenerateList}
           disabled={isGenerating}
           accessibilityRole="button"
           accessibilityLabel="Generate grocery list from meal plan"
           accessibilityHint="Aggregates ingredients from your planned meals into a shopping list"
           accessibilityState={{ disabled: isGenerating }}
+          testID="btn-generate-from-mealplan"
         >
           {isGenerating ? (
             <ActivityIndicator size="small" color={Colors.white} />
@@ -229,27 +238,41 @@ export default function GroceryListScreen() {
         
         <View style={styles.buttonGroup}>
           <Pressable 
-            style={styles.actionButton} 
-            onPress={() => setIsAddingItem(true)}
+            ref={addButtonRef}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.focusRing,
+            ]}
+            onPress={() => {
+              setIsAddingItem(true);
+              setTimeout(() => {
+                nameInputRef.current?.focus?.();
+              }, 50);
+            }}
             accessibilityRole="button"
             accessibilityLabel="Add custom grocery item"
+            testID="btn-add-item"
           >
             <Plus size={16} color={Colors.primary} />
           </Pressable>
           
           <Pressable 
-            style={styles.actionButton} 
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.focusRing,
+            ]}
             onPress={handleClearList}
             accessibilityRole="button"
             accessibilityLabel="Clear entire grocery list"
             accessibilityHint="Removes all items from your list"
+            testID="btn-clear-list"
           >
             <Trash2 size={16} color={Colors.primary} />
           </Pressable>
         </View>
       </View>
       
-      <View style={styles.searchContainer} accessible accessibilityRole="search" accessibilityLabel="Search grocery items">
+      <View style={[styles.searchContainer, isSearchFocused && styles.searchFocused]} accessible accessibilityRole="search" accessibilityLabel="Search grocery items">
         <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -259,9 +282,20 @@ export default function GroceryListScreen() {
           placeholderTextColor={Colors.textLight}
           accessibilityLabel="Search input"
           accessibilityHint="Type to filter grocery items"
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+          returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
+          <Pressable 
+            onPress={() => setSearchQuery('')} 
+            accessibilityRole="button" 
+            accessibilityLabel="Clear search"
+            style={({ pressed }) => [
+              pressed ? styles.clearBtnFocused : null,
+            ]}
+            testID="btn-clear-search"
+          >
             <X size={20} color={Colors.textLight} />
           </Pressable>
         )}
@@ -273,7 +307,14 @@ export default function GroceryListScreen() {
             <Text style={styles.statsText}>
               {groceryItems.filter(item => item.checked).length} of {groceryItems.length} items checked
             </Text>
-            <Pressable onPress={handleClearChecked} accessibilityRole="button" accessibilityLabel="Clear checked items" accessibilityHint="Removes all checked items from the list">
+            <Pressable 
+              onPress={handleClearChecked} 
+              accessibilityRole="button" 
+              accessibilityLabel="Clear checked items" 
+              accessibilityHint="Removes all checked items from the list"
+              style={({ pressed }) => [pressed ? styles.textButtonFocused : null]}
+              testID="btn-clear-checked"
+            >
               <Text style={styles.clearCheckedText}>Clear checked</Text>
             </Pressable>
           </View>
@@ -302,17 +343,26 @@ export default function GroceryListScreen() {
       {/* Add Item Modal */}
       {isAddingItem && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer} accessible accessibilityViewIsModal accessibilityLabel="Add grocery item" accessibilityHint="Enter item details and use Add or Cancel">
-            <Text style={styles.modalTitle}>Add Item</Text>
+          <View 
+            style={styles.modalContainer} 
+            accessible 
+            accessibilityViewIsModal={true}
+            accessibilityLabel="Add grocery item"
+            accessibilityHint="Enter item details and use Add or Cancel"
+            testID="modal-add-item"
+          >
+            <Text style={styles.modalTitle} accessibilityRole="header" accessibilityLabel="Add Item">Add Item</Text>
             
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Item Name</Text>
               <TextInput
+                ref={nameInputRef}
                 style={styles.input}
                 placeholder="e.g. Apples"
                 value={newItemName}
                 onChangeText={setNewItemName}
                 autoFocus
+                returnKeyType="next"
               />
             </View>
             
@@ -320,40 +370,76 @@ export default function GroceryListScreen() {
               <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
                 <Text style={styles.inputLabel}>Quantity</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, isQtyFocused && styles.inputFocused]}
                   placeholder="1"
                   value={newItemQuantity}
                   onChangeText={setNewItemQuantity}
                   keyboardType="numeric"
+                  onFocus={() => setIsQtyFocused(true)}
+                  onBlur={() => setIsQtyFocused(false)}
+                  returnKeyType="next"
                 />
               </View>
               
               <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
                 <Text style={styles.inputLabel}>Unit (optional)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, isUnitFocused && styles.inputFocused]}
                   placeholder="e.g. kg, pcs"
                   value={newItemUnit}
                   onChangeText={setNewItemUnit}
+                  onFocus={() => setIsUnitFocused(true)}
+                  onBlur={() => setIsUnitFocused(false)}
+                  returnKeyType="done"
                 />
               </View>
             </View>
             
             <View style={styles.modalButtons}>
               <Pressable 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={() => setIsAddingItem(false)}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.cancelButton,
+                  pressed && styles.focusRing,
+                ]}
+                onPress={() => {
+                  setIsAddingItem(false);
+                  setTimeout(() => {
+                    const node = findNodeHandle(addButtonRef.current);
+                    if (Platform.OS === 'web') {
+                      (addButtonRef.current as any)?.focus?.();
+                    } else if (node) {
+                      AccessibilityInfo.setAccessibilityFocus(node);
+                    }
+                  }, 50);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel add item"
+                testID="btn-cancel-add-item"
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
               
               <Pressable 
-                style={[styles.modalButton, styles.addButton]} 
-                onPress={handleAddItem}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.addButton,
+                  pressed && styles.focusRing,
+                ]}
+                onPress={() => {
+                  handleAddItem();
+                  setTimeout(() => {
+                    const node = findNodeHandle(addButtonRef.current);
+                    if (Platform.OS === 'web') {
+                      (addButtonRef.current as any)?.focus?.();
+                    } else if (node) {
+                      AccessibilityInfo.setAccessibilityFocus(node);
+                    }
+                  }, 50);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Add item"
+                testID="btn-confirm-add-item"
               >
                 <Text style={styles.addButtonText}>Add Item</Text>
               </Pressable>
@@ -524,6 +610,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  focusRing: {
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+  },
+  textButtonFocused: {
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+  },
+  clearBtnFocused: {
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 8,
+    padding: 2,
+  },
+  searchFocused: {
+    borderColor: Colors.primary,
+  },
+  inputFocused: {
+    borderColor: Colors.primary,
+    borderWidth: 1,
   },
   modalContainer: {
     backgroundColor: Colors.white,
