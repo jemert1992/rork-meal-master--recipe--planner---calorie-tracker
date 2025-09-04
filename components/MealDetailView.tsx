@@ -12,18 +12,16 @@ export default function MealDetailView({ meal }: MealDetailViewProps) {
   const hasNutrition = meal.calories || meal.protein || meal.carbs || meal.fat || meal.fiber;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Meal Name */}
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} accessible accessibilityLabel="Meal details">
       <View style={styles.header}>
-        <Text style={styles.mealName}>{meal.name}</Text>
+        <Text style={styles.mealName} accessibilityRole="header">{meal.name}</Text>
         {meal.servings && meal.servings > 1 && (
           <Text style={styles.servings}>Serves {meal.servings}</Text>
         )}
       </View>
 
-      {/* Nutrition Information */}
       {hasNutrition && (
-        <View style={styles.section}>
+        <View style={styles.section} accessible accessibilityLabel="Nutrition per serving">
           <Text style={styles.sectionTitle}>Nutrition (Per Serving)</Text>
           <View style={styles.nutritionGrid}>
             {meal.calories && (
@@ -60,12 +58,11 @@ export default function MealDetailView({ meal }: MealDetailViewProps) {
         </View>
       )}
 
-      {/* Ingredients */}
       {hasIngredients && (
-        <View style={styles.section}>
+        <View style={styles.section} accessible accessibilityLabel="Ingredients" accessibilityRole="list">
           <Text style={styles.sectionTitle}>Ingredients</Text>
-          {meal.ingredients!.map((ingredient, index) => (
-            <View key={ingredient.id} style={styles.ingredientItem}>
+          {meal.ingredients!.map((ingredient) => (
+            <View key={ingredient.id} style={styles.ingredientItem} accessible accessibilityLabel={`${ingredient.quantity} ${ingredient.unit} ${ingredient.name}`}>
               <View style={styles.ingredientHeader}>
                 <Text style={styles.ingredientName}>
                   {ingredient.quantity} {ingredient.unit} {ingredient.name}
@@ -100,15 +97,13 @@ export default function MealDetailView({ meal }: MealDetailViewProps) {
         </View>
       )}
 
-      {/* Notes */}
       {meal.notes && (
-        <View style={styles.section}>
+        <View style={styles.section} accessible accessibilityLabel="Notes">
           <Text style={styles.sectionTitle}>Notes</Text>
           <Text style={styles.notesText}>{meal.notes}</Text>
         </View>
       )}
 
-      {/* Recipe ID Info */}
       {meal.recipeId && (
         <View style={styles.section}>
           <Text style={styles.recipeInfo}>Recipe ID: {meal.recipeId}</Text>

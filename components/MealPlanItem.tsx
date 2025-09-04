@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator, TextInput, Platform, AccessibilityInfo } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator, TextInput, Platform, AccessibilityActionEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info, Minus, Plus } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
@@ -20,7 +20,7 @@ type MealPlanItemProps = {
 export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, hasAlternatives = false }: MealPlanItemProps) {
   const router = useRouter();
   const { recipes } = useRecipeStore();
-  const { getAlternativeRecipes, swapMeal, isLoadingAlternatives, lastGenerationError } = useMealPlanStore();
+  const { getAlternativeRecipes, swapMeal, lastGenerationError } = useMealPlanStore();
   const recipe = meal?.recipeId ? recipes.find(r => r.id === meal.recipeId) : null;
   
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -42,7 +42,6 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
     if (meal?.recipeId) {
       router.push(`/recipe/${meal.recipeId}`);
     } else if (meal) {
-      // Show custom meal details
       setShowMealDetails(true);
     } else {
       onAdd();
@@ -117,12 +116,21 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
     if (!meal) return;
     try {
       console.log('Updating servings', { date, mealType, from: meal?.servings ?? 1, to: next });
-      // Persist via store
       useMealPlanStore.getState().updateMealServings(date, mealType as 'breakfast' | 'lunch' | 'dinner', next);
     } catch (e) {
       console.error('Failed to update servings', e);
     }
   }, [meal?.servings, date, mealType]);
+
+  const onStepperAccessibilityAction = useCallback((event: AccessibilityActionEvent) => {
+    if (!meal) return;
+    if (event.nativeEvent.actionName === 'increment') {
+      onChangeServings(1);
+    }
+    if (event.nativeEvent.actionName === 'decrement') {
+      onChangeServings(-1);
+    }
+  }, [meal, onChangeServings]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -138,11 +146,11 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   }, [showAlternatives]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible accessibilityLabel={`${formatMealType(mealType)} slot`}>
       <View style={styles.headerRow}>
-        <Text style={styles.mealType}>{formatMealType(mealType)}</Text>
+        <Text style={styles.mealType} accessibilityRole="header">{formatMealType(mealType)}</Text>
         {meal && (
-          <View style={styles.headerActions}>
+          <View style={styles.headerActions} accessible accessibilityLabel={`${formatMealType(mealType)} actions`}>
             <Pressable
               style={({ pressed }) => [styles.swapButton, pressed && styles.focusRing]}
               onPress={handleShowAlternatives}
@@ -169,7 +177,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       </View>
       
       {meal ? (
-        <View style={styles.mealContainer}>
+        <View style={styles.mealContainer} accessible accessibilityLabel={`${formatMealType(mealType)} details`}>
           <Pressable 
             style={({ pressed }) => [styles.mealPressable, pressed && styles.focusRing]} 
             onPress={handlePress}
@@ -182,6 +190,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 source={{ uri: recipe.image }} 
                 style={styles.mealImage} 
                 accessibilityLabel={`Image of ${meal.name}`}
+                accessibilityRole="image"
               />
             )}
             <View style={styles.mealContent}>
@@ -189,7 +198,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <Text style={styles.calories}>{getCalories()} calories</Text>
               
               {recipe && (
-                <View style={styles.recipeDetails}>
+                <View style={styles.recipeDetails} accessible accessibilityLabel="Recipe details">
                   <View style={styles.recipeDetail}>
                     <Clock size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{recipe.prepTime}</Text>
@@ -202,7 +211,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
               
               {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
-                <View style={styles.customMealInfo}>
+                <View style={styles.customMealInfo} accessible accessibilityLabel="Custom meal information">
                   <View style={styles.recipeDetail}>
                     <Info size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
@@ -215,9 +224,9 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
               
               {recipe && recipe.tags.length > 0 && (
-                <View style={styles.tagsContainer}>
+                <View style={styles.tagsContainer} accessible accessibilityLabel="Tags list">
                   {recipe.tags.slice(0, 3).map((tag, index) => (
-                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag}>
+                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessible accessibilityLabel={`Tag ${tag}`}>
                       <Text style={styles.tagText}>{tag}</Text>
                     </View>
                   ))}
@@ -227,18 +236,28 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
           </Pressable>
 
           {meal && (
-            <View style={styles.stepper} testID={`servings-stepper-${mealType}`}>
+            <View 
+              style={styles.stepper} 
+              testID={`servings-stepper-${mealType}`}
+              accessible
+              accessibilityRole="adjustable"
+              accessibilityLabel={`${formatMealType(mealType)} servings`}
+              accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+              onAccessibilityAction={onStepperAccessibilityAction}
+              accessibilityValue={{ min: 1, max: 20, now: servings }}
+            >
               <Pressable 
                 onPress={() => onChangeServings(-1)} 
                 style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
                 accessibilityLabel={`Decrease ${mealType} servings`}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: servings <= 1 }}
                 accessibilityHint="Decreases servings by one"
                 testID={`decrease-servings-${mealType}`}
               >
                 <Minus size={16} color={Colors.text} />
               </Pressable>
-              <View style={styles.stepperValue}>
+              <View style={styles.stepperValue} accessibilityRole="text" accessibilityLabel={`Current servings ${servings}`}>
                 <Users size={14} color={Colors.textSecondary} />
                 <Text style={styles.stepperText}>{servings}</Text>
               </View>
@@ -247,6 +266,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
                 accessibilityLabel={`Increase ${mealType} servings`}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: servings >= 20 }}
                 accessibilityHint="Increases servings by one"
                 testID={`increase-servings-${mealType}`}
               >
@@ -261,6 +281,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             hitSlop={8}
             accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
             accessibilityRole="button"
+            accessibilityHint="Removes this meal from the plan"
             testID={`remove-${mealType}`}
           >
             <X size={18} color={Colors.textLight} />
@@ -289,7 +310,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         <View style={styles.modalContainer}>
           <View style={styles.modalContent} accessible accessibilityLabel={`Swap ${formatMealType(mealType)} dialog`}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Swap {formatMealType(mealType)}</Text>
+              <Text style={styles.modalTitle} accessibilityRole="header">Swap {formatMealType(mealType)}</Text>
               <Pressable 
                 ref={closeAltRef}
                 style={({ pressed }) => [styles.closeButton, pressed && styles.focusRing]} 
@@ -302,7 +323,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               </Pressable>
             </View>
 
-            <View style={styles.searchRow}>
+            <View style={styles.searchRow} accessible accessibilityLabel="Search and filter">
               <TextInput
                 value={query}
                 onChangeText={setQuery}
@@ -315,8 +336,8 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <Pressable
                 onPress={() => setOnlySuitable(!onlySuitable)}
                 style={({ pressed }) => [styles.filterChip, onlySuitable ? styles.filterChipActive : null, pressed && styles.focusRing]}
-                accessibilityRole="button"
-                accessibilityLabel="Toggle suitable only"
+                accessibilityRole="switch"
+                accessibilityLabel="Suitable only"
                 accessibilityState={{ checked: onlySuitable }}
                 testID={`swap-filter-suitable-${mealType}`}
               >
@@ -338,60 +359,63 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               </View>
             )}
 
-            <FlatList
-              data={(alternatives.length > 0 ? alternatives : recipes)
-                .filter(r => (r.mealType === mealType) || r.tags.includes(mealType))
-                .filter(r => !onlySuitable || true)
-                .filter(r => r.name.toLowerCase().includes(query.toLowerCase()))}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.alternativeItem}>
-                  {item.image ? (
-                    <Image 
-                      source={{ uri: item.image }} 
-                      style={styles.alternativeImage} 
-                      accessibilityLabel={`Image of ${item.name}`}
-                    />
-                  ) : (
-                    <View style={styles.alternativeImagePlaceholder} />
-                  )}
-                  <View style={styles.alternativeContent}>
-                    <Text style={styles.alternativeName}>{item.name}</Text>
-                    <Text style={styles.alternativeCalories}>{item.calories} calories</Text>
-                    {item.tags.length > 0 && (
-                      <View style={styles.tagsContainer}>
-                        {item.tags.slice(0, 3).map((tag, index) => (
-                          <View key={`${item.id}-tag-${index}`} style={styles.tag}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                  <Pressable 
-                    style={({ pressed }) => [styles.swapActionButton, pressed && styles.focusRing]}
-                    onPress={() => handleSwapRecipe(item.id)}
-                    disabled={swappingRecipe}
-                    accessibilityLabel={`Swap with ${item.name}`}
-                    accessibilityRole="button"
-                    testID={`choose-alt-${mealType}-${item.id}`}
-                  >
-                    {swappingRecipe ? (
-                      <ActivityIndicator size="small" color={Colors.white} />
+            <View accessible accessibilityLabel="Alternatives list">
+              <FlatList
+                data={(alternatives.length > 0 ? alternatives : recipes)
+                  .filter(r => (r.mealType === mealType) || r.tags.includes(mealType))
+                  .filter(r => !onlySuitable || true)
+                  .filter(r => r.name.toLowerCase().includes(query.toLowerCase()))}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <View style={styles.alternativeItem} accessible accessibilityLabel={item.name}>
+                    {item.image ? (
+                      <Image 
+                        source={{ uri: item.image }} 
+                        style={styles.alternativeImage} 
+                        accessibilityLabel={`Image of ${item.name}`}
+                        accessibilityRole="image"
+                      />
                     ) : (
-                      <Check size={18} color={Colors.white} />
+                      <View style={styles.alternativeImagePlaceholder} />
                     )}
-                  </Pressable>
-                </View>
-              )}
-              contentContainerStyle={styles.alternativesList}
-              showsVerticalScrollIndicator={false}
-            />
+                    <View style={styles.alternativeContent}>
+                      <Text style={styles.alternativeName}>{item.name}</Text>
+                      <Text style={styles.alternativeCalories}>{item.calories} calories</Text>
+                      {item.tags.length > 0 && (
+                        <View style={styles.tagsContainer} accessibilityRole="list" accessibilityLabel="Tags list">
+                          {item.tags.slice(0, 3).map((tag, index) => (
+                            <View key={`${item.id}-tag-${index}`} style={styles.tag}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                    <Pressable 
+                      style={({ pressed }) => [styles.swapActionButton, pressed && styles.focusRing]}
+                      onPress={() => handleSwapRecipe(item.id)}
+                      disabled={swappingRecipe}
+                      accessibilityLabel={`Swap with ${item.name}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: swappingRecipe }}
+                      testID={`choose-alt-${mealType}-${item.id}`}
+                    >
+                      {swappingRecipe ? (
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      ) : (
+                        <Check size={18} color={Colors.white} />
+                      )}
+                    </Pressable>
+                  </View>
+                )}
+                contentContainerStyle={styles.alternativesList}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
           </View>
         </View>
       </Modal>
       
-      {/* Custom Meal Details Modal */}
       <Modal
         animationType="slide"
         transparent={false}
@@ -401,7 +425,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       >
         <View style={styles.mealDetailModal}>
           <View style={styles.mealDetailHeader}>
-            <Text style={styles.mealDetailTitle}>Meal Details</Text>
+            <Text style={styles.mealDetailTitle} accessibilityRole="header">Meal Details</Text>
             <Pressable 
               style={({ pressed }) => [styles.closeButton, pressed && styles.focusRing]} 
               onPress={() => setShowMealDetails(false)}

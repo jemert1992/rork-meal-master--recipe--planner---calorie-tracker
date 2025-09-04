@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import Colors from '@/constants/colors';
 
-// Main recipe categories for filtering - reduced to most important ones
 const MAIN_CATEGORIES = [
   'breakfast',
   'lunch',
@@ -25,37 +24,43 @@ export default function CategoryFilter({
   selectedCategory, 
   onSelectCategory 
 }: CategoryFilterProps) {
-  // Filter to only show main categories
   const filteredCategories = MAIN_CATEGORIES.filter(
     category => categories.includes(category)
   );
   
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible accessibilityRole="tablist" accessibilityLabel="Recipe categories">
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {filteredCategories.map((category) => (
-          <Pressable
-            key={category}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category && styles.categoryButtonActive
-            ]}
-            onPress={() => onSelectCategory(category === selectedCategory ? null : category)}
-          >
-            <Text 
+        {filteredCategories.map((category) => {
+          const selected = selectedCategory === category;
+          return (
+            <Pressable
+              key={category}
               style={[
-                styles.categoryText,
-                selectedCategory === category && styles.categoryTextActive
+                styles.categoryButton,
+                selected && styles.categoryButtonActive
               ]}
+              onPress={() => onSelectCategory(selected ? null : category)}
+              accessibilityRole="tab"
+              accessibilityLabel={`${category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}`}
+              accessibilityState={{ selected }}
+              testID={`category-${category}`}
             >
-              {category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
-            </Text>
-          </Pressable>
-        ))}
+              <Text 
+                style={[
+                  styles.categoryText,
+                  selected && styles.categoryTextActive
+                ]}
+              >
+                {category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );

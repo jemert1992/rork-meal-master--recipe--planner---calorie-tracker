@@ -11,30 +11,37 @@ interface GroceryItemProps {
 }
 
 export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemProps) {
+  const checked = !!item.checked;
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}`}>
       <Pressable 
         style={styles.checkboxContainer} 
         onPress={onToggle}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="checkbox"
+        accessibilityLabel={`Mark ${item.name} as ${checked ? 'not purchased' : 'purchased'}`}
+        accessibilityState={{ checked }}
+        testID={`grocery-toggle-${item.id}`}
       >
         <View style={[
           styles.checkbox,
-          item.checked && styles.checkboxChecked
+          checked && styles.checkboxChecked
         ]}>
-          {item.checked && <Check size={16} color={Colors.white} />}
+          {checked && <Check size={16} color={Colors.white} />}
         </View>
       </Pressable>
       
       <View style={styles.itemInfo}>
         <Text style={[
           styles.itemName,
-          item.checked && styles.itemNameChecked
-        ]}>
+          checked && styles.itemNameChecked
+        ]}
+        accessibilityRole="text"
+        >
           {item.name}
         </Text>
         
-        <Text style={styles.itemQuantity}>
+        <Text style={styles.itemQuantity} accessibilityRole="text">
           {item.quantity} {item.unit}
         </Text>
       </View>
@@ -43,6 +50,9 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
         style={styles.removeButton} 
         onPress={onRemove}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${item.name}`}
+        testID={`grocery-remove-${item.id}`}
       >
         <Trash2 size={18} color={Colors.error} />
       </Pressable>

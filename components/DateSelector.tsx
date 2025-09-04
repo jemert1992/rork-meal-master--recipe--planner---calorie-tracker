@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -41,19 +41,19 @@ export default function DateSelector({ selectedDate, onDateChange }: DateSelecto
   };
 
   return (
-    <View style={styles.container}>
-      <Pressable style={styles.arrowButton} onPress={goToPreviousDay}>
+    <View style={styles.container} accessible accessibilityRole="toolbar" accessibilityLabel="Date selector">
+      <Pressable style={styles.arrowButton} onPress={goToPreviousDay} accessibilityRole="button" accessibilityLabel="Previous day">
         <ChevronLeft size={24} color={Colors.text} />
       </Pressable>
       
-      <Pressable onPress={goToToday}>
-        <Text style={styles.dateText}>
+      <Pressable onPress={goToToday} accessibilityRole="button" accessibilityLabel="Go to today">
+        <Text style={styles.dateText} accessibilityRole="text">
           {formatDate(selectedDate)}
           {isToday(selectedDate) && <Text style={styles.todayText}> (Today)</Text>}
         </Text>
       </Pressable>
       
-      <Pressable style={styles.arrowButton} onPress={goToNextDay}>
+      <Pressable style={styles.arrowButton} onPress={goToNextDay} accessibilityRole="button" accessibilityLabel="Next day">
         <ChevronRight size={24} color={Colors.text} />
       </Pressable>
     </View>
