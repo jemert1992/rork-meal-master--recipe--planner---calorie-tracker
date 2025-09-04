@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Database, Cloud, RefreshCw, Upload, Key } from 'lucide-react-native';
+import { ChevronRight, Database, Cloud, RefreshCw, Key } from 'lucide-react-native';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
@@ -84,11 +84,7 @@ export default function ProfileScreen() {
         "To use Edamam API, you need to configure your API credentials in the API Settings screen.",
         [
           {
-            text: "Configure Now",
-            onPress: () => router.push('/api-settings')
-          },
-          {
-            text: "Later",
+            text: "OK",
             style: "cancel"
           }
         ]
@@ -140,9 +136,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleImportRecipes = () => {
-    router.push('/admin/import-recipes');
-  };
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -243,13 +237,7 @@ export default function ProfileScreen() {
             <Text style={styles.actionButtonText}>Refresh Recipe Data</Text>
           </Pressable>
           
-          <Pressable 
-            style={styles.configButton} 
-            onPress={() => router.push('/api-settings')}
-          >
-            <Key size={18} color={Colors.primary} />
-            <Text style={styles.configButtonText}>API Configuration</Text>
-          </Pressable>
+
           
           <View style={styles.statsContainer}>
             <Text style={styles.statsText}>Total Recipes: {recipes.length}</Text>
@@ -263,15 +251,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {useFirestore && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Admin Tools</Text>
-            <Pressable style={styles.adminButton} onPress={handleImportRecipes}>
-              <Upload size={20} color={Colors.white} />
-              <Text style={styles.adminButtonText}>Import Recipes to Firestore</Text>
-            </Pressable>
-          </View>
-        )}
+
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
@@ -409,22 +389,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
   },
-  configButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primaryLight,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  configButtonText: {
-    color: Colors.primary,
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 8,
-  },
+
   statsContainer: {
     padding: 12,
     backgroundColor: Colors.background,
@@ -435,21 +400,7 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginBottom: 4,
   },
-  adminButton: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adminButtonText: {
-    color: Colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
-  },
+
   aboutText: {
     fontSize: 14,
     color: Colors.text,

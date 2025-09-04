@@ -19,7 +19,6 @@ export default function WelcomeScreen() {
   const { 
     showTutorial, 
     startTutorial,
-    stepIndex,
     tutorialCompleted
   } = useTutorialStore();
   const { height: screenHeight } = useWindowDimensions();
@@ -30,16 +29,13 @@ export default function WelcomeScreen() {
   const [mounted, setMounted] = useState<boolean>(false);
   useEffect(() => setMounted(true), []);
 
-  console.log('WelcomeScreen render - showTutorial:', showTutorial);
-  console.log('WelcomeScreen render - stepIndex:', stepIndex);
-  console.log('WelcomeScreen render - isLoggedIn:', isLoggedIn);
-  console.log('WelcomeScreen render - profile.onboardingCompleted:', profile.onboardingCompleted);
+
 
   // Initialize user as logged in if not already, so tutorial can show
   useEffect(() => {
     if (!mounted) return;
     if (!isLoggedIn) {
-      console.log('Initializing user for tutorial');
+
       const { login } = useUserStore.getState();
       login({ 
         name: 'New User',
@@ -58,7 +54,7 @@ export default function WelcomeScreen() {
   useEffect(() => {
     if (!mounted) return;
     if (isUserSetup && !hasRedirectedToTabs) {
-      console.log('User is fully set up, redirecting to tabs');
+
       setHasRedirectedToTabs(true);
       setTimeout(() => {
         router.replace('/(tabs)');
@@ -70,35 +66,22 @@ export default function WelcomeScreen() {
   useEffect(() => {
     if (!mounted) return;
     if (tutorialCompleted && !hasRedirectedToTabs && isLoggedIn) {
-      console.log('Redirecting to tabs after tutorial completion');
+
       setHasRedirectedToTabs(true);
       router.replace('/(tabs)');
     }
   }, [mounted, tutorialCompleted, hasRedirectedToTabs, isLoggedIn, router]);
 
   const handleStartTutorial = useCallback(() => {
-    console.log('handleStartTutorial called from welcome screen');
-    console.log('Current tutorial state before start:', { showTutorial, stepIndex });
-    
-    // Force start tutorial regardless of current state
     startTutorial();
-    
-    // Log the state immediately after calling startTutorial
-    setTimeout(() => {
-      const currentState = useTutorialStore.getState();
-      console.log('Tutorial state after start from welcome:', {
-        showTutorial: currentState.showTutorial,
-        stepIndex: currentState.stepIndex
-      });
-    }, 100);
-  }, [startTutorial, showTutorial, stepIndex]);
+  }, [startTutorial]);
 
   if (!mounted) {
     return null;
   }
 
   if (showTutorial) {
-    console.log('WelcomeScreen: showTutorial true, rendering ModernTutorialOverlay');
+
     return <ModernTutorialOverlay />;
   }
 
