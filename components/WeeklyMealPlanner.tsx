@@ -785,8 +785,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               
               <Text style={styles.weeklyPlanInfo}>
                 {profile.dietType && profile.dietType !== 'any' 
-                  ? `Based on your ${profile.dietType} diet`
-                  : "Based on your preferences"}
+                  ? `Based on your ${profile.dietType} diet • Variety on`
+                  : 'Based on your preferences • Variety on'}
               </Text>
             </View>
             
@@ -818,7 +818,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false} accessibilityLabel="Weekly plan days list">
+            <ScrollView contentContainerStyle={styles.verticalWeekContent} showsVerticalScrollIndicator={false} accessibilityLabel="Weekly plan days list" testID="weekly-plan-scroll">
               {weekDays.map(d => renderDayItem(d))}
             </ScrollView>
 

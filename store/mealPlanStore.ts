@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MealPlan, MealItem, DailyMeals, Recipe, DietType, GenerationResult } from '@/types';
+import { MealPlan, MealItem, DailyMeals, Recipe, DietType, GenerationResult, MealType } from '@/types';
 import { mockMealPlan } from '@/constants/mockData';
 import * as firebaseService from '@/services/firebaseService';
 import { format, parse } from 'date-fns';
@@ -43,7 +43,6 @@ interface MealPlanState {
   clearPoolsCache: () => void;
 }
 
-// Helper function to get user profile without causing circular dependencies
 const getUserProfile = () => {
   try {
     const { useUserStore } = require('@/store/userStore');
@@ -82,6 +81,51 @@ const withTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T | null> => 
     });
   });
 };
+
+function prevDateString(dateStr: string): string {
+  const d = parse(dateStr, 'yyyy-MM-dd', new Date());
+  d.setDate(d.getDate() - 1);
+  return format(d, 'yyyy-MM-dd');
+}
+
+function normalizeText(s: string | undefined): string {
+  return (s ?? '').toLowerCase();
+}
+
+function detectCuisine(tags: string[]): string | null {
+  const cuisines = ['italian','mexican','indian','thai','chinese','japanese','mediterranean','american','french','spanish','greek','korean','viet','vietnamese','middle-eastern'];
+  const t = tags.map((x) => normalizeText(x));
+  for (const c of cuisines) {
+    if (t.some((x) => x.includes(c))) return c;
+  }
+  return null;
+}
+
+function extractMainIngredient(ingredients: string[], tags: string[]): string | null {
+  const proteins = ['chicken','beef','pork','turkey','tofu','tempeh','lentil','bean','salmon','tuna','shrimp','egg','eggs','yogurt','cheese','chickpea','lamb','cod','whitefish'];
+  const t = ingredients.map((x) => normalizeText(x));
+  for (const p of proteins) {
+    if (t.some((x) => x.includes(p))) return p;
+  }
+  const tagProtein = proteins.find((p) => tags.map((x) => normalizeText(x)).some((x) => x.includes(p)));
+  return tagProtein ?? null;
+}
+
+function featuresFor(recipe: Recipe | undefined): { main: string | null; cuisine: string | null } {
+  if (!recipe) return { main: null, cuisine: null };
+  const main = extractMainIngredient(recipe.ingredients ?? [], recipe.tags ?? []);
+  const cuisine = detectCuisine(recipe.tags ?? []);
+  return { main, cuisine };
+}
+
+function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, sameCuisine: boolean, sameDayMainHit: boolean): number {
+  let penalty = 0;
+  if (sameId) penalty += 1000;
+  if (sameMain) penalty += 60;
+  if (sameCuisine) penalty += 30;
+  if (sameDayMainHit) penalty += 20;
+  return Math.abs(calorieDiff) + penalty;
+}
 
 export const useMealPlanStore = create<MealPlanState>()(
   persist(
@@ -535,12 +579,8 @@ export const useMealPlanStore = create<MealPlanState>()(
       clearPoolsCache: () => set({ recipePoolsCache: null }),
       
       /**
-       * generateMealPlan
-       * Guarantees
-       * - No slot remains empty unless absolutely no recipes exist in any source or user cleared it afterward
-       * - Robust fallback order per-slot: Remote -> Local suitable -> Local by type -> Mock by type -> Any available
-       * - Never throws; returns GenerationResult with actionable suggestions
-       * - Parallel remote fetch for speed; UI shows loading via isGenerating/progress
+       * Smart variety heuristic
+       * Prefers changing main ingredient and cuisine on consecutive days for the same meal type and within the same day across meals.
        */
       generateMealPlan: async (date, recipes, specificMealType) => {
         set({ isGenerating: true, generationProgress: 0 });
@@ -555,14 +595,28 @@ export const useMealPlanStore = create<MealPlanState>()(
         const getMockRecipes = (): Recipe[] => {
           try { const { mockRecipes } = require('@/constants/mockData'); return mockRecipes as Recipe[]; } catch { return []; }
         };
-        const pickAny = (mealType: 'breakfast' | 'lunch' | 'dinner', target: number): Recipe | null => {
+        const getRecipeById = (id: string | undefined): Recipe | undefined => {
+          if (!id) return undefined;
+          const all = [...getAllLocalRecipes(), ...getMockRecipes()];
+          return all.find((r) => r.id === id);
+        };
+        const pickAny = (mealType: 'breakfast' | 'lunch' | 'dinner', target: number, d: string, inDayMainSet: Set<string>): Recipe | null => {
           const exclude = Array.from(get().weeklyUsedRecipeIds);
           const all = getAllLocalRecipes();
           const byType = all.filter(r => r.mealType === mealType);
           let pool: Recipe[] = byType.length > 0 ? byType : all;
           if (pool.length === 0) pool = getMockRecipes();
           if (pool.length === 0) return null;
-          const sorted = pool.slice().sort((a, b) => Math.abs((a.calories ?? 0) - target) - Math.abs((b.calories ?? 0) - target));
+          const prevId = get().mealPlan[prevDateString(d)]?.[mealType]?.recipeId;
+          const prevRecipe = getRecipeById(prevId);
+          const prevF = featuresFor(prevRecipe);
+          const sorted = pool.slice().sort((a, b) => {
+            const fa = featuresFor(a);
+            const fb = featuresFor(b);
+            const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMainSet.has(fa.main));
+            const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMainSet.has(fb.main));
+            return aScore - bScore;
+          });
           const candidate = sorted.find(r => !exclude.includes(r.id)) ?? sorted[0];
           return candidate ?? null;
         };
@@ -588,6 +642,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         let breakfast = currentDayPlan.breakfast;
         let lunch = currentDayPlan.lunch;
         let dinner = currentDayPlan.dinner;
+        const inDayMain = new Set<string>();
         const result: GenerationResult = {
           success: true,
           generatedMeals: [],
@@ -613,6 +668,8 @@ export const useMealPlanStore = create<MealPlanState>()(
             set({ generationProgress: 0.5 });
             const apply = (r: Recipe, type: 'breakfast'|'lunch'|'dinner') => {
               const m: MealItem = { recipeId: r.id, name: r.name, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber, servings: 1 };
+              const f = featuresFor(r);
+              if (f.main) inDayMain.add(f.main);
               if (type === 'breakfast') breakfast = m;
               if (type === 'lunch') lunch = m;
               if (type === 'dinner') dinner = m;
@@ -620,12 +677,32 @@ export const useMealPlanStore = create<MealPlanState>()(
               result.generatedMeals.push(type);
             };
             if (remote && remote.length > 0) {
-              apply(remote[0] as Recipe, specificMealType);
+              const prevId = get().mealPlan[prevDateString(date)]?.[specificMealType]?.recipeId;
+              const prevRecipe = remote.find((r) => r.id === prevId);
+              const prevF = featuresFor(prevRecipe);
+              const ranked = remote.slice().sort((a, b) => {
+                const ta = specificMealType === 'breakfast' ? breakfastCalories : specificMealType === 'lunch' ? lunchCalories : dinnerCalories;
+                const fa = featuresFor(a);
+                const fb = featuresFor(b);
+                const aScore = combineScore((a.calories ?? 0) - ta, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
+                const bScore = combineScore((b.calories ?? 0) - ta, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                return aScore - bScore;
+              });
+              apply((ranked[0] as Recipe), specificMealType);
             } else {
               const target = specificMealType === 'breakfast' ? breakfastCalories : specificMealType === 'lunch' ? lunchCalories : dinnerCalories;
               const filtered = recipes.filter(r => r.mealType === specificMealType && get().isRecipeSuitable(r, dietType, allergies, excludedIngredients) && !weeklyUsedRecipeIds.includes(r.id));
               if (filtered.length > 0) {
-                filtered.sort((a, b) => Math.abs((a.calories ?? 0) - target) - Math.abs((b.calories ?? 0) - target));
+                const prevId = get().mealPlan[prevDateString(date)]?.[specificMealType]?.recipeId;
+                const prevRecipe = getRecipeById(prevId);
+                const prevF = featuresFor(prevRecipe);
+                filtered.sort((a, b) => {
+                  const fa = featuresFor(a);
+                  const fb = featuresFor(b);
+                  const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
+                  const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                  return aScore - bScore;
+                });
                 apply(filtered[0], specificMealType);
               } else {
                 result.success = false;
@@ -668,9 +745,21 @@ export const useMealPlanStore = create<MealPlanState>()(
             set({ generationProgress: 0.5 });
             const selectFirst = (arr: (Recipe[] | null), type: 'breakfast'|'lunch'|'dinner', target: number): boolean => {
               const pool = Array.isArray(arr) ? (arr as Recipe[]) : [];
-              const pick = pool.find(r => !get().weeklyUsedRecipeIds.has(r.id)) ?? pool[0];
+              const prevId = get().mealPlan[prevDateString(date)]?.[type]?.recipeId;
+              const prevRecipe = pool.find((r) => r.id === prevId);
+              const prevF = featuresFor(prevRecipe);
+              const ranked = pool.slice().sort((a, b) => {
+                const fa = featuresFor(a);
+                const fb = featuresFor(b);
+                const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
+                const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                return aScore - bScore;
+              });
+              const pick = ranked.find(r => !get().weeklyUsedRecipeIds.has(r.id)) ?? ranked[0];
               if (pick) {
                 const meal: MealItem = { recipeId: pick.id, name: pick.name, calories: pick.calories, protein: pick.protein, carbs: pick.carbs, fat: pick.fat, fiber: pick.fiber, servings: 1 };
+                const f = featuresFor(pick);
+                if (f.main) inDayMain.add(f.main);
                 if (type === 'breakfast') breakfast = meal;
                 if (type === 'lunch') lunch = meal;
                 if (type === 'dinner') dinner = meal;
@@ -678,9 +767,11 @@ export const useMealPlanStore = create<MealPlanState>()(
                 result.generatedMeals.push(type);
                 return true;
               }
-              const any = pickAny(type, target);
+              const any = pickAny(type, target, date, inDayMain);
               if (any) {
                 const meal: MealItem = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+                const f = featuresFor(any);
+                if (f.main) inDayMain.add(f.main);
                 if (type === 'breakfast') breakfast = meal;
                 if (type === 'lunch') lunch = meal;
                 if (type === 'dinner') dinner = meal;
@@ -709,32 +800,34 @@ export const useMealPlanStore = create<MealPlanState>()(
           result.error = 'Failed to generate meal plan. There was an error processing your request.';
           result.suggestions = ['Check your internet connection','Try again later','Try generating individual meals instead'];
           set({ lastGenerationError: result.error, generationSuggestions: result.suggestions });
-          // Fallbacks are handled below via pickAny autofill
         }
         const newDayPlan: DailyMeals = { ...currentDayPlan };
         if (breakfast) { newDayPlan.breakfast = breakfast; }
         if (lunch) { newDayPlan.lunch = lunch; }
         if (dinner) { newDayPlan.dinner = dinner; }
         if (!newDayPlan.breakfast) {
-          const any = pickAny('breakfast', breakfastCalories);
+          const any = pickAny('breakfast', breakfastCalories, date, inDayMain);
           if (any) {
             newDayPlan.breakfast = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+            const f = featuresFor(any); if (f.main) inDayMain.add(f.main);
             get().weeklyUsedRecipeIds.add(any.id);
             result.generatedMeals.push('breakfast-fallback');
           }
         }
         if (!newDayPlan.lunch) {
-          const any = pickAny('lunch', lunchCalories);
+          const any = pickAny('lunch', lunchCalories, date, inDayMain);
           if (any) {
             newDayPlan.lunch = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+            const f = featuresFor(any); if (f.main) inDayMain.add(f.main);
             get().weeklyUsedRecipeIds.add(any.id);
             result.generatedMeals.push('lunch-fallback');
           }
         }
         if (!newDayPlan.dinner) {
-          const any = pickAny('dinner', dinnerCalories);
+          const any = pickAny('dinner', dinnerCalories, date, inDayMain);
           if (any) {
             newDayPlan.dinner = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
+            const f = featuresFor(any); if (f.main) inDayMain.add(f.main);
             get().weeklyUsedRecipeIds.add(any.id);
             result.generatedMeals.push('dinner-fallback');
           }
@@ -750,6 +843,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           } else {
             console.log(`Successfully generated meal plan with ${validation.totalCalories} calories (${validation.calorieDeviation.toFixed(1)}% deviation from goal ${calorieGoal})`);
           }
+          result.suggestions.push('Variety preference applied to avoid repeating main ingredient or cuisine back-to-back.');
         }
         set((state) => ({
           mealPlan: {
@@ -785,6 +879,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
         const currentDayPlan = get().mealPlan[date] || {};
         const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
+        const inDayMain = new Set<string>();
         const result: GenerationResult = {
           success: true,
           generatedMeals: [],
@@ -819,15 +914,32 @@ export const useMealPlanStore = create<MealPlanState>()(
           set({ generationProgress: 0.55 });
           const choose = (pool: (Recipe[] | null), fallbackType: 'breakfast'|'lunch'|'dinner', target: number): MealItem | null => {
             const arr = Array.isArray(pool) ? (pool as Recipe[]) : [];
-            const pick = arr.find(r => !get().weeklyUsedRecipeIds.has(r.id)) ?? arr[0];
-            const from = pick ?? null;
+            const prevId = get().mealPlan[prevDateString(date)]?.[fallbackType]?.recipeId;
+            const prevRecipe = arr.find((r) => r.id === prevId);
+            const prevF = featuresFor(prevRecipe);
+            const ranked = arr.slice().sort((a, b) => {
+              const fa = featuresFor(a);
+              const fb = featuresFor(b);
+              const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
+              const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+              return aScore - bScore;
+            });
+            const from = ranked.find(r => !get().weeklyUsedRecipeIds.has(r.id)) ?? ranked[0] ?? null;
             if (from) {
+              const f = featuresFor(from); if (f.main) inDayMain.add(f.main);
               return { recipeId: from.id, name: from.name, calories: from.calories, protein: from.protein, carbs: from.carbs, fat: from.fat, fiber: from.fiber, servings: 1 };
             }
             const local = recipes.filter(r => r.mealType === fallbackType && get().isRecipeSuitable(r, dietType, allergies, excludedIngredients));
             if (local.length > 0) {
-              local.sort((a, b) => Math.abs((a.calories ?? 0) - target) - Math.abs((b.calories ?? 0) - target));
-              const r = local[0];
+              const rankedLocal = local.slice().sort((a, b) => {
+                const fa = featuresFor(a);
+                const fb = featuresFor(b);
+                const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
+                const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                return aScore - bScore;
+              });
+              const r = rankedLocal[0];
+              const f = featuresFor(r); if (f.main) inDayMain.add(f.main);
               return { recipeId: r.id, name: r.name, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber, servings: 1 };
             }
             return null;
@@ -841,12 +953,13 @@ export const useMealPlanStore = create<MealPlanState>()(
           if (dinner) { newDayPlan.dinner = dinner; get().weeklyUsedRecipeIds.add(dinner.recipeId ?? ''); result.generatedMeals.push('dinner'); }
           if (result.generatedMeals.length === 3) {
             result.success = true;
-            result.suggestions = ['All meals for the day have been successfully generated!'];
+            result.suggestions = ['All meals for the day have been successfully generated!', 'Variety preference applied.'];
           } else if (result.generatedMeals.length > 0) {
             result.success = true;
             result.suggestions = [
               `Generated ${result.generatedMeals.length} out of 3 meals.`,
-              "Some meals couldn't be generated due to dietary restrictions or lack of suitable recipes."
+              "Some meals couldn't be generated due to dietary restrictions or lack of suitable recipes.",
+              'Variety preference applied.'
             ];
           } else {
             result.success = false;
@@ -888,12 +1001,8 @@ export const useMealPlanStore = create<MealPlanState>()(
       },
       
       /**
-       * generateWeeklyMealPlan
-       * Strategy
-       * - Precomputes date range and calorie targets
-       * - Fetches remote pools in parallel with short timeouts; never blocks UI
-       * - Fallbacks per-slot: Remote -> Local suitable -> Local by type -> Mock by type -> Any available
-       * - Guarantees fill if any recipes exist; respects uniquePerWeek when enabled with graceful relaxation
+       * generateWeeklyMealPlan with variety preference
+       * Avoids repeating main ingredient/cuisine on consecutive days per meal type while honoring calorie targets.
        */
       generateWeeklyMealPlan: async (startDate, endDate) => {
         set({ isGenerating: true, generationProgress: 0 });
@@ -1045,7 +1154,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         let filledCount = 0;
         const totalSlots = dates.length * 3;
 
-        const pickFromPools = (primary: Recipe[], fallback: Recipe[], targetCalories: number): Recipe | null => {
+        const pickFromPools = (primary: Recipe[], fallback: Recipe[], targetCalories: number, type: MealType, dateStr: string): Recipe | null => {
           const combine = (arr: Recipe[]) => {
             let candidates = arr;
             if (enforceUnique) {
@@ -1057,18 +1166,27 @@ export const useMealPlanStore = create<MealPlanState>()(
           let candidates = [...combine(primary)];
           if (candidates.length === 0) candidates = [...combine(fallback)];
           if (candidates.length === 0) return null;
-          const sorted = candidates.sort((a, b) => Math.abs((a.calories ?? 0) - targetCalories) - Math.abs((b.calories ?? 0) - targetCalories));
-          return sorted[0] ?? null;
+          const prevId = newMealPlan[prevDateString(dateStr)]?.[type]?.recipeId;
+          const prev = candidates.find((r) => r.id === prevId);
+          const prevF = featuresFor(prev);
+          const ranked = candidates.slice().sort((a, b) => {
+            const fa = featuresFor(a);
+            const fb = featuresFor(b);
+            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false);
+            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false);
+            return aScore - bScore;
+          });
+          return ranked[0] ?? null;
         };
 
         let progressed = 0;
-        const perSlot = totalSlots > 0 ? 0.7 / totalSlots : 0; // 70% of progress allocated to filling slots
+        const perSlot = totalSlots > 0 ? 0.7 / totalSlots : 0;
 
         for (const date of dates) {
           const currentDayPlan = newMealPlan[date] || {} as DailyMeals;
 
           if (!currentDayPlan.breakfast) {
-            let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast'), breakfastCalories);
+            let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast'), breakfastCalories, 'breakfast', date);
             if (!chosen && !enforceUnique && breakfastPool.length > 0) chosen = breakfastPool[0];
             if (chosen) {
               currentDayPlan.breakfast = {
@@ -1089,7 +1207,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           }
 
           if (!currentDayPlan.lunch) {
-            let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch'), lunchCalories);
+            let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch'), lunchCalories, 'lunch', date);
             if (!chosen && !enforceUnique && lunchPool.length > 0) chosen = lunchPool[0];
             if (chosen) {
               currentDayPlan.lunch = {
@@ -1110,7 +1228,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           }
 
           if (!currentDayPlan.dinner) {
-            let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner'), dinnerCalories);
+            let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner'), dinnerCalories, 'dinner', date);
             if (!chosen && !enforceUnique && dinnerPool.length > 0) chosen = dinnerPool[0];
             if (chosen) {
               currentDayPlan.dinner = {
@@ -1141,9 +1259,9 @@ export const useMealPlanStore = create<MealPlanState>()(
           result.success = true;
           result.error = null;
           if (filledCount < totalSlots) {
-            result.suggestions = [`Filled ${filledCount} of ${totalSlots} slots. Some meals used relaxed matching due to limited recipes.`];
+            result.suggestions = [`Filled ${filledCount} of ${totalSlots} slots. Some meals used relaxed matching due to limited recipes.`, 'Variety preference applied.'];
           } else {
-            result.suggestions = ['All week meals filled successfully.'];
+            result.suggestions = ['All week meals filled successfully.', 'Variety preference applied.'];
           }
         }
 
