@@ -513,8 +513,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                     // @ts-expect-error onClick is web-only
                     onClick={() => !isGen && handleMealSlotPress(item.dateString, mealType)}
                     style={[styles.mealSlot, name ? styles.filledMealSlot : styles.emptyMealSlot]}
-                    role="button"
-                    tabIndex={0}
                     aria-label={name ? `${mealType}: ${name}` : `Add ${mealType} for ${item.dayName}`}
                     data-testid={`meal-slot-${item.dateString}-${mealType}`}
                   >
@@ -533,8 +531,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                               <View
                                 // @ts-expect-error onClick is web-only
                                 onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; changeServings(-1); }}
-                                role="button"
-                                tabIndex={0}
                                 aria-label={`Decrease ${mealType} servings`}
                                 style={styles.stepperButton}
                                 data-testid={`week-decrease-servings-${item.dateString}-${mealType}`}
@@ -547,8 +543,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                               <View
                                 // @ts-expect-error onClick is web-only
                                 onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; changeServings(1); }}
-                                role="button"
-                                tabIndex={0}
                                 aria-label={`Increase ${mealType} servings`}
                                 style={styles.stepperButton}
                                 data-testid={`week-increase-servings-${item.dateString}-${mealType}`}
@@ -559,8 +553,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                             <View
                               // @ts-expect-error onClick is web-only
                               onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; openSwap(item.dateString, mealType, recipeId); }}
-                              role="button"
-                              tabIndex={0}
                               aria-label={`Swap ${mealType}`}
                               style={styles.slotSwapButton}
                               data-testid={`swap-${item.dateString}-${mealType}`}
@@ -571,8 +563,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                             <View
                               // @ts-expect-error onClick is web-only
                               onClick={(e) => { try { (e as any).stopPropagation?.(); } catch {}; handleMealSlotPress(item.dateString, mealType); }}
-                              role="button"
-                              tabIndex={0}
                               aria-label={`Edit ${mealType}`}
                               style={styles.slotEditButton}
                               data-testid={`edit-${item.dateString}-${mealType}`}
