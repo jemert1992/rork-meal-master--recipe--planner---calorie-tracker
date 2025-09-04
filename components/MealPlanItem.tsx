@@ -146,7 +146,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   }, [showAlternatives]);
 
   return (
-    <View style={styles.container} accessible accessibilityLabel={`${formatMealType(mealType)} slot`}>
+    <View style={styles.container} accessible accessibilityRole="none" accessibilityLabel={`${formatMealType(mealType)} slot`}>
       <View style={styles.headerRow}>
         <Text style={styles.mealType} accessibilityRole="header">{formatMealType(mealType)}</Text>
         {meal && (
@@ -198,7 +198,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <Text style={styles.calories}>{getCalories()} calories</Text>
               
               {recipe && (
-                <View style={styles.recipeDetails} accessible accessibilityLabel="Recipe details">
+                <View style={styles.recipeDetails} accessible accessibilityRole="summary" accessibilityLabel="Recipe details">
                   <View style={styles.recipeDetail}>
                     <Clock size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{recipe.prepTime}</Text>
@@ -211,7 +211,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
               
               {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
-                <View style={styles.customMealInfo} accessible accessibilityLabel="Custom meal information">
+                <View style={styles.customMealInfo} accessible accessibilityRole="summary" accessibilityLabel="Custom meal information">
                   <View style={styles.recipeDetail}>
                     <Info size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
@@ -224,9 +224,9 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
               
               {recipe && recipe.tags.length > 0 && (
-                <View style={styles.tagsContainer} accessible accessibilityLabel="Tags list">
+                <View style={styles.tagsContainer} accessible accessibilityRole="list" accessibilityLabel="Tags list">
                   {recipe.tags.slice(0, 3).map((tag, index) => (
-                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessible accessibilityLabel={`Tag ${tag}`}>
+                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessible accessibilityRole="text" accessibilityLabel={`Tag ${tag}`}>
                       <Text style={styles.tagText}>{tag}</Text>
                     </View>
                   ))}
@@ -367,7 +367,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   .filter(r => r.name.toLowerCase().includes(query.toLowerCase()))}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                  <View style={styles.alternativeItem} accessible accessibilityLabel={item.name}>
+                  <View style={styles.alternativeItem} accessible accessibilityRole="none" accessibilityLabel={item.name}>
                     {item.image ? (
                       <Image 
                         source={{ uri: item.image }} 

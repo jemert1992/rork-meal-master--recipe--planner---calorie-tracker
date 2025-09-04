@@ -34,6 +34,8 @@ export default function CategoryFilter({
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        accessibilityLabel="Categories list"
+        accessibilityRole="list"
       >
         {filteredCategories.map((category) => {
           const selected = selectedCategory === category;
@@ -47,6 +49,7 @@ export default function CategoryFilter({
               onPress={() => onSelectCategory(selected ? null : category)}
               accessibilityRole="tab"
               accessibilityLabel={`${category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}`}
+              accessibilityHint="Filters recipes by this category"
               accessibilityState={{ selected }}
               testID={`category-${category}`}
             >

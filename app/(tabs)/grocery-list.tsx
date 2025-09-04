@@ -212,6 +212,10 @@ export default function GroceryListScreen() {
           style={styles.generateButton} 
           onPress={handleGenerateList}
           disabled={isGenerating}
+          accessibilityRole="button"
+          accessibilityLabel="Generate grocery list from meal plan"
+          accessibilityHint="Aggregates ingredients from your planned meals into a shopping list"
+          accessibilityState={{ disabled: isGenerating }}
         >
           {isGenerating ? (
             <ActivityIndicator size="small" color={Colors.white} />
@@ -227,6 +231,8 @@ export default function GroceryListScreen() {
           <Pressable 
             style={styles.actionButton} 
             onPress={() => setIsAddingItem(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add custom grocery item"
           >
             <Plus size={16} color={Colors.primary} />
           </Pressable>
@@ -234,13 +240,16 @@ export default function GroceryListScreen() {
           <Pressable 
             style={styles.actionButton} 
             onPress={handleClearList}
+            accessibilityRole="button"
+            accessibilityLabel="Clear entire grocery list"
+            accessibilityHint="Removes all items from your list"
           >
             <Trash2 size={16} color={Colors.primary} />
           </Pressable>
         </View>
       </View>
       
-      <View style={styles.searchContainer}>
+      <View style={styles.searchContainer} accessible accessibilityRole="search" accessibilityLabel="Search grocery items">
         <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -248,9 +257,11 @@ export default function GroceryListScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor={Colors.textLight}
+          accessibilityLabel="Search input"
+          accessibilityHint="Type to filter grocery items"
         />
         {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery('')}>
+          <Pressable onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
             <X size={20} color={Colors.textLight} />
           </Pressable>
         )}
@@ -258,11 +269,11 @@ export default function GroceryListScreen() {
       
       {groceryItems.length > 0 ? (
         <>
-          <View style={styles.statsContainer}>
+          <View style={styles.statsContainer} accessible accessibilityRole="summary" accessibilityLabel="Grocery list status">
             <Text style={styles.statsText}>
               {groceryItems.filter(item => item.checked).length} of {groceryItems.length} items checked
             </Text>
-            <Pressable onPress={handleClearChecked}>
+            <Pressable onPress={handleClearChecked} accessibilityRole="button" accessibilityLabel="Clear checked items" accessibilityHint="Removes all checked items from the list">
               <Text style={styles.clearCheckedText}>Clear checked</Text>
             </Pressable>
           </View>
@@ -274,6 +285,8 @@ export default function GroceryListScreen() {
             keyExtractor={(item) => item}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            accessibilityRole="list"
+            accessibilityLabel="Grocery categories"
           />
         </>
       ) : (
@@ -289,7 +302,7 @@ export default function GroceryListScreen() {
       {/* Add Item Modal */}
       {isAddingItem && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalContainer} accessible accessibilityRole="dialog" accessibilityLabel="Add grocery item dialog">
             <Text style={styles.modalTitle}>Add Item</Text>
             
             <View style={styles.inputContainer}>
@@ -330,6 +343,8 @@ export default function GroceryListScreen() {
               <Pressable 
                 style={[styles.modalButton, styles.cancelButton]} 
                 onPress={() => setIsAddingItem(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel add item"
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
@@ -337,6 +352,8 @@ export default function GroceryListScreen() {
               <Pressable 
                 style={[styles.modalButton, styles.addButton]} 
                 onPress={handleAddItem}
+                accessibilityRole="button"
+                accessibilityLabel="Add item"
               >
                 <Text style={styles.addButtonText}>Add Item</Text>
               </Pressable>

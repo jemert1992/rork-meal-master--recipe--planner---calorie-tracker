@@ -478,6 +478,7 @@ export default function MealPlanScreen() {
             accessibilityRole="button"
             accessibilityLabel="Generate meal plan"
             accessibilityHint="Automatically generates a meal plan for the selected day"
+            accessibilityState={{ disabled: isGenerating || isLoading }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             testID="pick-for-me-button"
           >
@@ -547,6 +548,8 @@ export default function MealPlanScreen() {
         style={styles.content} 
         contentContainerStyle={[styles.contentContainer, { paddingBottom: 160 }]}
         showsVerticalScrollIndicator={false}
+        accessibilityRole="list"
+        accessibilityLabel="Meal plan slots"
       >
         <MealPlanItem
           mealType="breakfast"
@@ -588,7 +591,7 @@ export default function MealPlanScreen() {
                 <X size={24} color={Colors.text} />
               </Pressable>
             </View>
-            <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false} accessibilityRole="list" accessibilityLabel="Recipe suggestions">
               {isLoadingFirestoreRecipes ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={Colors.primary} />

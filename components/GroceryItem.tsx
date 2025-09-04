@@ -13,7 +13,7 @@ interface GroceryItemProps {
 export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemProps) {
   const checked = !!item.checked;
   return (
-    <View style={styles.container} accessible accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}`}>
+    <View style={styles.container} accessible accessibilityRole="none" accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}`}>
       <Pressable 
         style={styles.checkboxContainer} 
         onPress={onToggle}
@@ -37,6 +37,7 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
           checked && styles.itemNameChecked
         ]}
         accessibilityRole="text"
+        accessibilityLabel={`${item.name}${checked ? ', purchased' : ''}`}
         >
           {item.name}
         </Text>
@@ -52,6 +53,7 @@ export default function GroceryItem({ item, onToggle, onRemove }: GroceryItemPro
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         accessibilityRole="button"
         accessibilityLabel={`Remove ${item.name}`}
+        accessibilityHint="Deletes this item from the list"
         testID={`grocery-remove-${item.id}`}
       >
         <Trash2 size={18} color={Colors.error} />
