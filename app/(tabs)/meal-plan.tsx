@@ -546,7 +546,7 @@ export default function MealPlanScreen() {
       <ScrollView 
         ref={mealPlanContentRef}
         style={styles.content} 
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: 160 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 240, flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
         accessibilityRole="list"
         accessibilityLabel="Meal plan slots"
@@ -726,6 +726,7 @@ export default function MealPlanScreen() {
         animationType="fade"
         transparent={true}
         visible={showErrorModal}
+        accessibilityViewIsModal={true}
         onRequestClose={() => {
           setShowErrorModal(false);
           clearGenerationError();
@@ -786,6 +787,7 @@ export default function MealPlanScreen() {
         animationType="fade"
         transparent
         visible={confirmClearVisible}
+        accessibilityViewIsModal={true}
         onRequestClose={() => setConfirmClearVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -818,6 +820,7 @@ export default function MealPlanScreen() {
         animationType="fade"
         transparent
         visible={replaceMealModal.visible}
+        accessibilityViewIsModal={true}
         onRequestClose={() => setReplaceMealModal({ visible: false })}
       >
         <View style={styles.modalOverlay}>
@@ -855,7 +858,7 @@ export default function MealPlanScreen() {
 
       {snackbar.visible && (
         <View
-          accessibilityLiveRegion={Platform.OS === 'web' ? 'polite' : undefined}
+          accessibilityLiveRegion="polite"
           style={[styles.snackbar, snackbar.type === 'success' ? styles.snackbarSuccess : snackbar.type === 'error' ? styles.snackbarError : styles.snackbarInfo]}
         >
           <Text style={styles.snackbarText}>{snackbar.message}</Text>

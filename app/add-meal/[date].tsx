@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, Alert, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,8 +35,8 @@ export default function AddMealScreen() {
       return;
     }
     
-    if (mealType && ['breakfast', 'lunch', 'dinner'].includes(mealType)) {
-      addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', { 
+    if (validMealType) {
+      addMeal(date, validMealType, { 
         recipeId, 
         name: recipeName 
       });
@@ -45,20 +45,41 @@ export default function AddMealScreen() {
   };
   
   const handleAddCustomMeal = (customMeal: MealItem) => {
-    if (mealType && ['breakfast', 'lunch', 'dinner'].includes(mealType)) {
-      addMeal(date, mealType as 'breakfast' | 'lunch' | 'dinner', customMeal);
+    if (validMealType) {
+      addMeal(date, validMealType, customMeal);
     }
     router.back();
   };
 
-  const formattedMealType = mealType ? mealType.charAt(0).toUpperCase() + mealType.slice(1) : "Meal";
-  
-  // Handle undefined mealType
-  if (!mealType) {
+  const validMealType = useMemo(() => (mealType && ['breakfast','lunch','dinner'].includes(mealType) ? (mealType as 'breakfast'|'lunch'|'dinner') : null), [mealType]);
+
+  const formattedMealType = validMealType ? validMealType.charAt(0).toUpperCase() + validMealType.slice(1) : 'Meal';
+
+  if (!validMealType) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.header}>
-          <Text style={styles.title}>Invalid meal type</Text>
+          <View style={styles.headerRow}>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <X size={24} color={Colors.text} />
+            </Pressable>
+            <Text style={styles.title}>Pick meal type</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <Text style={styles.subtitle}>Choose where to add this recipe</Text>
+        </View>
+        <View style={{ paddingHorizontal: 20, gap: 12 }}>
+          {(['breakfast','lunch','dinner'] as const).map((slot) => (
+            <Pressable
+              key={`choose-${slot}`}
+              style={[styles.customMealButton, { borderStyle: 'solid' }]}
+              onPress={() => router.replace(`/add-meal/${date}?mealType=${slot}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`Add to ${slot}`}
+            >
+              <Text style={[styles.customMealButtonText, { fontWeight: '700' }]}>Add to {slot}</Text>
+            </Pressable>
+          ))}
         </View>
       </SafeAreaView>
     );

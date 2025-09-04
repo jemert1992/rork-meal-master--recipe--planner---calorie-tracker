@@ -31,18 +31,10 @@ export default function WelcomeScreen() {
 
 
 
-  // Initialize user as logged in if not already, so tutorial can show
+  // Do not auto-complete onboarding; keep user in onboarding flow until finished
   useEffect(() => {
     if (!mounted) return;
-    if (!isLoggedIn) {
-
-      const { login } = useUserStore.getState();
-      login({ 
-        name: 'New User',
-        onboardingCompleted: true
-      });
-    }
-  }, [mounted, isLoggedIn]);
+  }, [mounted]);
   
   // Memoize user setup status to prevent unnecessary re-renders
   const isUserSetup = useMemo(() => {
@@ -74,7 +66,8 @@ export default function WelcomeScreen() {
 
   const handleStartTutorial = useCallback(() => {
     startTutorial();
-  }, [startTutorial]);
+    router.replace('/onboarding/personal-info');
+  }, [startTutorial, router]);
 
   if (!mounted) {
     return null;
