@@ -361,7 +361,7 @@ export const useMealPlanStore = create<MealPlanState>()(
       
       isRecipeSuitable: (recipe, dietType = 'any', allergies = [], excludedIngredients = []) => {
         if (recipe.calories === undefined || recipe.calories === null) {
-          console.warn(`Recipe "${recipe.name}" (${recipe.id}) is missing calorie data`);
+          console.warn(`Recipe \"${recipe.name}\" (${recipe.id}) is missing calorie data`);
           return false;
         }
         if (dietType !== 'any') {
@@ -378,9 +378,10 @@ export const useMealPlanStore = create<MealPlanState>()(
           };
           const requiredTags = dietTags[dietType];
           if (requiredTags.length > 0) {
+            const tagsArr = Array.isArray(recipe.tags) ? recipe.tags : [];
             const hasMatchingTag = requiredTags.some(tag => 
-              recipe.tags.some(recipeTag => 
-                recipeTag.toLowerCase() === tag.toLowerCase()
+              tagsArr.some(recipeTag => 
+                String(recipeTag).toLowerCase() === tag.toLowerCase()
               )
             );
             if (!hasMatchingTag) {
@@ -390,11 +391,12 @@ export const useMealPlanStore = create<MealPlanState>()(
         }
         const hasExclusions = allergies.length > 0 || excludedIngredients.length > 0;
         if (hasExclusions) {
-          const combinedExclusions = [...allergies, ...excludedIngredients];
-          for (const ingredient of recipe.ingredients) {
-            const lowerIngredient = ingredient.toLowerCase();
+          const combinedExclusions = [...allergies, ...excludedIngredients].filter(Boolean);
+          const ingredientsArr = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+          for (const ingredient of ingredientsArr) {
+            const lowerIngredient = String(ingredient).toLowerCase();
             for (const exclusion of combinedExclusions) {
-              if (lowerIngredient.includes(exclusion.toLowerCase())) {
+              if (lowerIngredient.includes(String(exclusion).toLowerCase())) {
                 return false;
               }
             }
@@ -578,6 +580,27 @@ export const useMealPlanStore = create<MealPlanState>()(
       setUniquePerWeek: (value) => set({ uniquePerWeek: value }),
       clearPoolsCache: () => set({ recipePoolsCache: null }),
       
+      /**
+       * generateMealPlan
+       * Guarantees best-effort filling of the requested date's meal slots.
+       * Behavior:
+       * - When specificMealType is provided: only that slot is generated, others untouched.
+       * - When not provided: attempts breakfast, lunch, dinner in parallel-friendly fashion using batched remote fetches with timeouts.
+       * Sources and fallbacks, in order:
+       * 1) Remote firebaseService.getRecipesForMealPlan with a 2s timeout per request.
+       * 2) Local recipes passed in or stored in recipeStore filtered by suitability.
+       * 3) Mock recipes as last resort.
+       * Variety heuristics:
+       * - Penalizes repeating same main ingredient or cuisine as the previous day for the same meal type.
+       * - Avoids repeating the same main ingredient within the same day across different meals.
+       * Uniqueness:
+       * - Respects weeklyUsedRecipeIds when uniquePerWeek is enabled; excludes already-used IDs where possible and only relaxes when pool is exhausted.
+       * Reliability:
+       * - No slot remains empty if any valid recipe exists in any source; if truly none, returns actionable suggestions and leaves slot empty for manual editing.
+       * - Never throws; captures errors, sets lastGenerationError and suggestions.
+       * Performance:
+       * - Batches remote calls with Promise.all and uses short timeouts to avoid blocking UI.
+       */
       generateMealPlan: async (date, recipes, specificMealType) => {
         set({ isGenerating: true, generationProgress: 0 });
         const getAllLocalRecipes = (): Recipe[] => {

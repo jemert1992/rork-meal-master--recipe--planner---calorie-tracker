@@ -187,15 +187,18 @@ export default function GeneratorTestsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Results</Text>
-        {results.length === 0 ? (
+        {results.length === 0 && (
           <Text style={styles.muted}>No results yet.</Text>
-        ) : (
-          results.map((r, i) => (
-            <View key={`res-${i}`} style={[styles.resultRow, r.passed ? styles.pass : styles.fail]}>
-              <Text style={styles.resultName}>{r.name}</Text>
-              <Text style={styles.resultDetails}>{r.details}</Text>
-            </View>
-          ))
+        )}
+        {results.length > 0 && (
+          <View>
+            {results.map((r, i) => (
+              <View key={`res-${i}`} style={[styles.resultRow, r.passed ? styles.pass : styles.fail]}>
+                <Text style={styles.resultName}>{r.name}</Text>
+                <Text style={styles.resultDetails}>{r.details}</Text>
+              </View>
+            ))}
+          </View>
         )}
       </View>
 
