@@ -520,7 +520,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               excludedIngredients,
               fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
               calorieRange: { min: targetCalories * 0.8, max: targetCalories * 1.2 },
-              excludeIds: weeklyUsedRecipeIds
+              excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             },
             10
           );
@@ -581,25 +581,33 @@ export const useMealPlanStore = create<MealPlanState>()(
       clearPoolsCache: () => set({ recipePoolsCache: null }),
       
       /**
-       * generateMealPlan
-       * Guarantees best-effort filling of the requested date's meal slots.
-       * Behavior:
-       * - When specificMealType is provided: only that slot is generated, others untouched.
-       * - When not provided: attempts breakfast, lunch, dinner in parallel-friendly fashion using batched remote fetches with timeouts.
-       * Sources and fallbacks, in order:
-       * 1) Remote firebaseService.getRecipesForMealPlan with a 2s timeout per request.
-       * 2) Local recipes passed in or stored in recipeStore filtered by suitability.
-       * 3) Mock recipes as last resort.
-       * Variety heuristics:
-       * - Penalizes repeating same main ingredient or cuisine as the previous day for the same meal type.
-       * - Avoids repeating the same main ingredient within the same day across different meals.
-       * Uniqueness:
-       * - Respects weeklyUsedRecipeIds when uniquePerWeek is enabled; excludes already-used IDs where possible and only relaxes when pool is exhausted.
-       * Reliability:
-       * - No slot remains empty if any valid recipe exists in any source; if truly none, returns actionable suggestions and leaves slot empty for manual editing.
-       * - Never throws; captures errors, sets lastGenerationError and suggestions.
-       * Performance:
-       * - Batches remote calls with Promise.all and uses short timeouts to avoid blocking UI.
+       * generateMealPlan(date, recipes, specificMealType?)
+       * Robust daily meal generation with strong guarantees, variety heuristics, and graceful fallbacks.
+       *
+       * Guarantees
+       * - No slot remains empty if any suitable recipe exists (remote, local, or mock). If truly none exist, returns suggestions and leaves the slot for manual editing.
+       * - Never throws; all failures are captured into lastGenerationError + generationSuggestions and a GenerationResult.
+       * - UI stays responsive: remote calls are batched with Promise.all and each has a short timeout via withTimeout.
+       * - Weekly uniqueness respected only when uniquePerWeek is enabled. When disabled, duplicates are allowed to ensure coverage.
+       *
+       * Behavior
+       * - If specificMealType is provided: generates only that slot; other slots remain untouched.
+       * - Otherwise attempts breakfast, lunch, dinner concurrently (remote first), then applies local/mock fallbacks.
+       *
+       * Source order and fallbacks per slot
+       * 1) Remote: firebaseService.getRecipesForMealPlan(type, filters, limit) with a short timeout.
+       * 2) Local: "recipes" argument and/or recipeStore, filtered by suitability + variety and (if enabled) uniqueness.
+       * 3) Mock: constants/mockData filtered similarly.
+       *
+       * Variety heuristic
+       * - Penalize picks that repeat the previous day's main ingredient or cuisine for the same meal type.
+       * - Penalize within-day main-ingredient duplication across meals.
+       * - Prefer calorie proximity to target for each meal type.
+       *
+       * Edge cases handled
+       * - Empty remote responses, network errors, or timeouts seamlessly fall back to local and mock pools.
+       * - Extremely restrictive preferences: returns actionable suggestions (relax preferences, disable weekly uniqueness, add recipes) if nothing fits.
+       * - Calorie data missing on a recipe: such recipes are excluded by suitability by default.
        */
       generateMealPlan: async (date, recipes, specificMealType) => {
         set({ isGenerating: true, generationProgress: 0 });
@@ -628,7 +636,8 @@ export const useMealPlanStore = create<MealPlanState>()(
           return all.find((r) => r.id === id);
         };
         const pickAny = (mealType: 'breakfast' | 'lunch' | 'dinner', target: number, d: string, inDayMainSet: Set<string>): Recipe | null => {
-          const exclude = Array.from(get().weeklyUsedRecipeIds);
+          const enforce = get().uniquePerWeek;
+          const exclude = enforce ? Array.from(get().weeklyUsedRecipeIds) : [];
           const all = getAllLocalRecipes();
           const byType = all.filter(r => r.mealType === mealType);
           let pool: Recipe[] = byType.length > 0 ? byType : all;
@@ -666,6 +675,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
         const currentDayPlan = get().mealPlan[date] || {};
         const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
+        const enforceUnique = get().uniquePerWeek;
         let breakfast = currentDayPlan.breakfast;
         let lunch = currentDayPlan.lunch;
         let dinner = currentDayPlan.dinner;
@@ -690,7 +700,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               excludedIngredients,
               fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
               calorieRange: calorieRangeByType[specificMealType],
-              excludeIds: weeklyUsedRecipeIds
+              excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             }, 5), 2000);
             set({ generationProgress: 0.5 });
             const apply = (r: Recipe, type: 'breakfast'|'lunch'|'dinner') => {
@@ -761,7 +771,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 dietType, allergies, excludedIngredients,
                 fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
                 calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
-                excludeIds: weeklyUsedRecipeIds
+                excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
               }, 5), 2000));
             } else { promises.push(Promise.resolve([])); }
             if (needsLunch) {
@@ -769,7 +779,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 dietType, allergies, excludedIngredients,
                 fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
                 calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
-                excludeIds: weeklyUsedRecipeIds
+                excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
               }, 5), 2000));
             } else { promises.push(Promise.resolve([])); }
             if (needsDinner) {
@@ -777,7 +787,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 dietType, allergies, excludedIngredients,
                 fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
                 calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
-                excludeIds: weeklyUsedRecipeIds
+                excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
               }, 5), 2000));
             } else { promises.push(Promise.resolve([])); }
             const [bk, ln, dn] = await Promise.all(promises);
@@ -794,7 +804,7 @@ export const useMealPlanStore = create<MealPlanState>()(
                 const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
                 return aScore - bScore;
               });
-              const pick = ranked.find(r => !get().weeklyUsedRecipeIds.has(r.id)) ?? ranked[0];
+              const pick = ranked.find(r => (!get().uniquePerWeek || !get().weeklyUsedRecipeIds.has(r.id))) ?? ranked[0];
               if (pick) {
                 const meal: MealItem = { recipeId: pick.id, name: pick.name, calories: pick.calories, protein: pick.protein, carbs: pick.carbs, fat: pick.fat, fiber: pick.fiber, servings: 1 };
                 const f = featuresFor(pick);
@@ -927,6 +937,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
         const currentDayPlan = get().mealPlan[date] || {};
         const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
+        const enforceUnique = get().uniquePerWeek;
         const inDayMain = new Set<string>();
         const result: GenerationResult = {
           success: true,
@@ -944,19 +955,19 @@ export const useMealPlanStore = create<MealPlanState>()(
               dietType, allergies, excludedIngredients,
               fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
               calorieRange: { min: breakfastCalories * 0.8, max: breakfastCalories * 1.2 },
-              excludeIds: weeklyUsedRecipeIds
+              excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             }, 7), 2200),
             withTimeout(firebaseService.getRecipesForMealPlan('lunch', {
               dietType, allergies, excludedIngredients,
               fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
               calorieRange: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
-              excludeIds: weeklyUsedRecipeIds
+              excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             }, 7), 2200),
             withTimeout(firebaseService.getRecipesForMealPlan('dinner', {
               dietType, allergies, excludedIngredients,
               fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
               calorieRange: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 },
-              excludeIds: weeklyUsedRecipeIds
+              excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             }, 7), 2200)
           ]);
           set({ generationProgress: 0.55 });
@@ -1048,6 +1059,21 @@ export const useMealPlanStore = create<MealPlanState>()(
         return result;
       },
       
+      /**
+       * generateWeeklyMealPlan(startDate, endDate)
+       * Fills all breakfast/lunch/dinner slots across the date range inclusively.
+       *
+       * Strategy
+       * - Batch-fetch remote pools per meal type once (with timeout) and reuse across the week.
+       * - Respect weekly uniqueness only when uniquePerWeek is enabled; otherwise allow repeats to maximize coverage.
+       * - For each date/slot, rank candidates by calorie proximity and variety (avoid previous-day same main/cuisine).
+       * - Fall back to local store recipes filtered by suitability, then to mock data.
+       *
+       * Guarantees & Edge Cases
+       * - If any suitable recipes exist in any source, the slot is filled.
+       * - If pools are empty due to restrictive preferences, returns clear suggestions (relax filters, disable uniqueness).
+       * - Never blocks UI; progress is updated incrementally.
+       */
       generateWeeklyMealPlan: async (startDate, endDate) => {
         set({ isGenerating: true, generationProgress: 0 });
         const userProfile = getUserProfile();
@@ -1179,18 +1205,24 @@ export const useMealPlanStore = create<MealPlanState>()(
           set({ recipePoolsCache: { breakfast: breakfastPool, lunch: lunchPool, dinner: dinnerPool, ts: Date.now(), key: poolsKey } });
         }
 
-        const getLocalFallbacks = (mealType: 'breakfast' | 'lunch' | 'dinner'): Recipe[] => {
+        const getLocalFallbacks = (mealType: 'breakfast' | 'lunch' | 'dinner', targetCalories: number): Recipe[] => {
+          const state = get();
+          const within = (cal: number | undefined) => {
+            const c = cal ?? 0;
+            return c >= targetCalories * 0.6 && c <= targetCalories * 1.4;
+          };
+          const filterOnly = (arr: Recipe[]): Recipe[] => arr.filter((r) => r.mealType === mealType && state.isRecipeSuitable(r, dietType, allergies, excludedIngredients) && within(r.calories));
           try {
             const { useRecipeStore } = require('@/store/recipeStore');
             const allRecipes: Recipe[] = (useRecipeStore.getState().recipes as Recipe[]) ?? [];
-            return allRecipes.filter((r) => r.mealType === mealType);
+            const fromStore = filterOnly(allRecipes);
+            if (fromStore.length > 0) return fromStore;
+          } catch {}
+          try {
+            const { mockRecipes } = require('@/constants/mockData');
+            return filterOnly(mockRecipes as Recipe[]);
           } catch {
-            try {
-              const { mockRecipes } = require('@/constants/mockData');
-              return (mockRecipes as Recipe[]).filter((r) => r.mealType === mealType);
-            } catch {
-              return [] as Recipe[];
-            }
+            return [] as Recipe[];
           }
         };
 
@@ -1209,6 +1241,10 @@ export const useMealPlanStore = create<MealPlanState>()(
           };
           let candidates = [...combine(primary)];
           if (candidates.length === 0) candidates = [...combine(fallback)];
+          if (candidates.length === 0) {
+            const locals = getLocalFallbacks(type, targetCalories);
+            if (locals.length > 0) candidates = [...combine(locals)];
+          }
           if (candidates.length === 0) return null;
           const prevId = newMealPlan[prevDateString(dateStr)]?.[type]?.recipeId;
           const prev = candidates.find((r) => r.id === prevId);
@@ -1230,7 +1266,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           const currentDayPlan = newMealPlan[date] || {} as DailyMeals;
 
           if (!currentDayPlan.breakfast) {
-            let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast'), breakfastCalories, 'breakfast', date);
+            let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
             if (!chosen && !enforceUnique && breakfastPool.length > 0) chosen = breakfastPool[0];
             if (chosen) {
               currentDayPlan.breakfast = {
@@ -1251,7 +1287,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           }
 
           if (!currentDayPlan.lunch) {
-            let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch'), lunchCalories, 'lunch', date);
+            let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch', lunchCalories), lunchCalories, 'lunch', date);
             if (!chosen && !enforceUnique && lunchPool.length > 0) chosen = lunchPool[0];
             if (chosen) {
               currentDayPlan.lunch = {
@@ -1272,7 +1308,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           }
 
           if (!currentDayPlan.dinner) {
-            let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner'), dinnerCalories, 'dinner', date);
+            let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner', dinnerCalories), dinnerCalories, 'dinner', date);
             if (!chosen && !enforceUnique && dinnerPool.length > 0) chosen = dinnerPool[0];
             if (chosen) {
               currentDayPlan.dinner = {
