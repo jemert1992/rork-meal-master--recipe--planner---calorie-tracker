@@ -35,6 +35,7 @@ import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
 import Colors from '@/constants/colors';
+import { nativeOnly } from '@/utils/platformProps';
 import { captureRef } from 'react-native-view-shot';
 
 type WeeklyMealPlannerProps = {
@@ -1013,7 +1014,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         }}
         testID="generation-error-modal"
       >
-        <View style={styles.errorModalOverlay} importantForAccessibility="yes">
+        <View style={styles.errorModalOverlay} {...nativeOnly({ importantForAccessibility: 'yes' as const })}>
           <View style={styles.errorModal} accessibilityLabel="Meal plan help dialog">
             <View style={styles.errorModalHeader} accessibilityRole="header">
               <Info size={24} color={Colors.warning} />
