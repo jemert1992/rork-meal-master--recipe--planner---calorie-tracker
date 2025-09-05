@@ -364,7 +364,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   .filter(r => (r.mealType === mealType) || r.tags.includes(mealType))
                   .filter(r => !onlySuitable || true)
                   .filter(r => r.name.toLowerCase().includes(query.toLowerCase()))}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item, index) => (item?.id && item.id.length > 0 ? item.id : `${item?.name ?? 'recipe'}-${index}`)}
                 renderItem={({ item }) => (
                   <View style={styles.alternativeItem} accessibilityRole="none" accessibilityLabel={item.name}>
                     {item.image ? (

@@ -613,9 +613,9 @@ export default function MealPlanScreen() {
                 </View>
               ) : mealSuggestions.length > 0 ? (
                 <View style={styles.gridInner}>
-                  {mealSuggestions.map((recipe) => (
+                  {mealSuggestions.map((recipe, index) => (
                     <Pressable
-                      key={`grid-${recipe.id}`}
+                      key={`grid-${recipe.id && recipe.id.length > 0 ? recipe.id : (recipe.name || 'recipe')}-${index}`}
                       style={styles.gridCard}
                       accessibilityRole="button"
                       accessibilityLabel={`Add ${recipe.name} to your plan`}

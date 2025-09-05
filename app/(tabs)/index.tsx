@@ -482,7 +482,7 @@ export default function RecipesScreen() {
         <FlatList
           ref={flatListRef}
           data={displayedRecipes}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => (item?.id && item.id.length > 0 ? item.id : `${item?.name ?? 'recipe'}-${index}`)}
           renderItem={({ item }) => <RecipeCard recipe={item} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
