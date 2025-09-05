@@ -340,10 +340,9 @@ export default function MealPlanScreen() {
       clearTimeout(snackbarTimerRef.current);
     }
     setSnackbar({ visible: true, message, type });
-    try { // announce for accessibility
-      // @ts-ignore
-      const { AccessibilityInfo } = require('react-native');
-      AccessibilityInfo?.announceForAccessibility?.(message);
+    try {
+      const RN = require('react-native');
+      RN?.AccessibilityInfo?.announceForAccessibility?.(message);
     } catch {}
     snackbarTimerRef.current = setTimeout(() => {
       setSnackbar(prev => ({ ...prev, visible: false }));
