@@ -738,7 +738,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
         testID="weekly-meal-planner-modal"
-        accessibilityViewIsModal={true}
       >
         <View style={styles.modalContentFull} accessibilityLabel="Weekly meal plan dialog">
           <View style={styles.modalHeader} accessibilityRole="header">
@@ -929,7 +928,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
         visible={swapVisible}
         onRequestClose={() => setSwapVisible(false)}
         testID="swap-modal"
-        accessibilityViewIsModal={true}
       >
         <View style={styles.modalContentFull} accessibilityLabel="Swap meal dialog">
           <View style={styles.modalHeader} accessibilityRole="header">
@@ -1007,7 +1005,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           clearGenerationError();
         }}
         testID="generation-error-modal"
-        accessibilityViewIsModal={true}
       >
         <View style={styles.errorModalOverlay} importantForAccessibility="yes">
           <View style={styles.errorModal} accessibilityLabel="Meal plan help dialog">
