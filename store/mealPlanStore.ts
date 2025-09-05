@@ -511,6 +511,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           } as const;
           const targetCalories = Math.round(calorieGoal * mealSplit[mealType]);
           const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
+          const enforceUnique = get().uniquePerWeek;
           const alternatives = await firebaseService.getAlternativeRecipes(
             mealType,
             currentRecipeId,
