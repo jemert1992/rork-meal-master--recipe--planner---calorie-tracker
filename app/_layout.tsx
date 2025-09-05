@@ -150,14 +150,6 @@ function RootLayoutNav() {
               }} 
             />
             <Stack.Screen 
-              name="profile/edit" 
-              options={{ 
-                title: "Edit Profile",
-                presentation: "modal",
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
               name="help/index" 
               options={{ 
                 title: "Help & Support",
