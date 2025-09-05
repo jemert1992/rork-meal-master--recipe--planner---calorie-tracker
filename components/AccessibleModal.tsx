@@ -121,8 +121,6 @@ export default function AccessibleModal({
       transparent
       animationType="fade"
       presentationStyle="overFullScreen"
-      accessible
-      accessibilityViewIsModal
     >
       <View style={{ flex: 1 }}>
         {content}
