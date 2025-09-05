@@ -6,6 +6,7 @@ import { useRecipeStore } from '@/store/recipeStore';
 import * as firebaseService from '@/services/firebaseService';
 import { Recipe } from '@/types';
 import WeeklyMealPlanner from '@/components/WeeklyMealPlanner';
+import { generateGroceryList } from '@/utils/generateGroceryList';
 
 function cloneRecipes(arr: Recipe[]): Recipe[] {
   return arr.map(r => ({ ...r, ingredients: [...(r.ingredients ?? [])], instructions: [...(r.instructions ?? [])], tags: [...(r.tags ?? [])] }));
@@ -255,6 +256,36 @@ export default function GeneratorTestsScreen() {
       const day10 = useMealPlanStore.getState().mealPlan[date10];
       const affectOnlyLunch = Boolean(day10?.breakfast?.recipeId === bk.id && day10?.lunch && day10?.dinner === undefined);
       addResult('Specific meal generation only fills requested slot', affectOnlyLunch, day10?.lunch ? 'lunch filled' : 'lunch missing');
+
+      // 11) Servings 1..20 scaling + grocery aggregation
+      resetStores();
+      const locals = cloneRecipes(makeLocalRecipes());
+      useRecipeStore.setState({ recipes: locals } as any, true);
+      const ln = locals[1];
+      const testDate = '2025-03-02';
+      useMealPlanStore.getState().addMeal(testDate, 'lunch', { recipeId: ln.id, name: ln.name, calories: ln.calories, protein: ln.protein, carbs: ln.carbs, fat: ln.fat, fiber: ln.fiber, servings: 1 });
+      const servingsToTry = [1, 2, 5, 20];
+      let allScaledOk = true;
+      for (const s of servingsToTry) {
+        useMealPlanStore.getState().updateMealServings(testDate, 'lunch', s);
+        const mp = useMealPlanStore.getState().mealPlan;
+        const list = generateGroceryList(mp, useRecipeStore.getState().recipes);
+        const chickenItem = list.find(it => it.category === 'Meat' && it.recipeIds.includes(ln.id));
+        const expected = 150 * Math.max(1, Math.min(20, Math.round(s)));
+        if (!chickenItem || Math.abs(chickenItem.quantity - expected) > 0.01 || chickenItem.unit !== 'g') {
+          allScaledOk = false;
+        }
+      }
+      addResult('Servings scale grocery quantities 1..20', allScaledOk, allScaledOk ? 'scaled correctly' : 'scaling mismatch');
+
+      // 12) Aggregation: duplicate ingredients across meals combine
+      // Add a custom meal with extra chicken to same day
+      useMealPlanStore.getState().addMeal(testDate, 'dinner', { name: 'Custom Protein', servings: 2, ingredients: [{ id: 'c1', name: 'chicken', quantity: 150, unit: 'g' }] } as any);
+      const listAfter = generateGroceryList(useMealPlanStore.getState().mealPlan, useRecipeStore.getState().recipes);
+      const chickenAfter = listAfter.find(it => it.category === 'Meat' && (it.recipeIds.includes(ln.id) || it.name.toLowerCase().startsWith('chicken')));
+      const expectedAfter = 150 * 20 /* lunch clamped at 20 above */ + 150 * 2;
+      const aggOk = !!chickenAfter && Math.abs((chickenAfter.quantity ?? 0) - expectedAfter) <= 0.01;
+      addResult('Duplicate ingredients aggregate in grocery list', aggOk, aggOk ? `total=${expectedAfter} g` : 'aggregation mismatch');
 
     } catch (e) {
       append(`Fatal test runner error: ${String(e)}`);
