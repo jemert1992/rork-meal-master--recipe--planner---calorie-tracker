@@ -647,10 +647,16 @@ export const useMealPlanStore = create<MealPlanState>()(
         const pickAny = (mealType: 'breakfast' | 'lunch' | 'dinner', target: number, d: string, inDayMainSet: Set<string>): Recipe | null => {
           const enforce = get().uniquePerWeek;
           const exclude = enforce ? Array.from(get().weeklyUsedRecipeIds) : [];
+          const profile = getUserProfile();
+          const allergies = Array.isArray(profile.allergies) ? profile.allergies : [];
+          const excludedIngredients = Array.isArray(profile.excludedIngredients) ? profile.excludedIngredients : [];
           const all = getAllLocalRecipes();
           const byType = all.filter(r => r.mealType === mealType);
           let pool: Recipe[] = byType.length > 0 ? byType : all;
           if (pool.length === 0) pool = getMockRecipes();
+          if (pool.length === 0) return null;
+          // Last-resort fallback must remain allergy-safe. Ignore dietType and uniqueness if needed, but never allergies/exclusions.
+          pool = pool.filter(r => get().isRecipeSuitable(r, 'any', allergies, excludedIngredients));
           if (pool.length === 0) return null;
           const prevId = get().mealPlan[prevDateString(d)]?.[mealType]?.recipeId;
           const prevRecipe = getRecipeById(prevId);
@@ -762,12 +768,17 @@ export const useMealPlanStore = create<MealPlanState>()(
                 if (diag.total === 0) {
                   tips.push(`No ${specificMealType} recipes exist locally. Add recipes or enable API sources.`);
                 } else if (diag.afterFull === 0) {
-                  tips.push('Adjust dietary preferences or exclusions (some items block all recipes).');
+                  tips.push('Your current filters remove all recipes for this meal.');
+                  if (diag.afterDiet > 0 && diag.afterAllergies === 0) {
+                    tips.push('Every available recipe conflicts with your allergies/exclusions. Review exclusions in Profile.');
+                  } else {
+                    tips.push('Adjust dietary preferences (diet type) or relax exclusions.');
+                  }
                 }
                 if (uniq && get().weeklyUsedRecipeIds.size > 0) {
                   tips.push('Disable "unique per week" to allow repeats when options are limited.');
                 }
-                tips.push(`Edit this ${specificMealType} slot manually.`);
+                tips.push(`Tap this ${specificMealType} slot to pick a meal manually.`);
                 result.suggestions = tips;
                 set({ lastGenerationError: result.error, generationSuggestions: result.suggestions });
               }
