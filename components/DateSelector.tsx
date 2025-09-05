@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { format } from 'date-fns';
 
 type DateSelectorProps = {
   selectedDate: Date;
@@ -10,11 +11,7 @@ type DateSelectorProps = {
 
 export default function DateSelector({ selectedDate, onDateChange }: DateSelectorProps) {
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+    return format(date, 'yyyy-MM-dd');
   };
 
   const isToday = (date: Date) => {

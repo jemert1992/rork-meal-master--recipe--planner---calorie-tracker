@@ -472,7 +472,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           </View>
           <View style={styles.dayInfo}>
             <Text style={styles.dayName}>{item.dayName}</Text>
-            <Text style={styles.dayDate}>{format(item.date, 'MMMM d, yyyy')}</Text>
+            <Text style={styles.dayDate}>{format(item.date, 'yyyy-MM-dd')}</Text>
           </View>
           {profile.autoGenerateMeals && (
             <Pressable
@@ -803,7 +803,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </Pressable>
               
               <Text style={styles.weekRangeText}>
-                {format(weekDays[0].date, 'MMM d')} - {format(weekDays[6].date, 'MMM d, yyyy')}
+                {format(weekDays[0].date, 'yyyy-MM-dd')} - {format(weekDays[6].date, 'yyyy-MM-dd')}
               </Text>
               
               <Pressable 
@@ -876,7 +876,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 <View style={styles.captureHeader}>
                   <Text style={styles.captureTitle}>My #Zestora Week 🍎</Text>
                   <Text style={styles.captureSubtitle}>
-                    {format(weekDays[0].date, 'MMM d')} - {format(weekDays[6].date, 'MMM d, yyyy')}
+                    {format(weekDays[0].date, 'yyyy-MM-dd')} - {format(weekDays[6].date, 'yyyy-MM-dd')}
                   </Text>
                 </View>
                 
@@ -887,7 +887,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                     <View key={day.dateString} style={styles.captureDayRow}>
                       <View style={styles.captureDayHeader}>
                         <Text style={styles.captureDayName}>{day.dayName}</Text>
-                        <Text style={styles.captureDayDate}>{day.dayNumber} {day.month}</Text>
+                        <Text style={styles.captureDayDate}>{format(day.date, 'yyyy-MM-dd')}</Text>
                       </View>
                       
                       <View style={styles.captureMealsColumn}>
