@@ -41,28 +41,34 @@ const recipesCollection = collection(db, 'recipes');
 
 // Helper function to convert Firestore data to Recipe type
 export const convertFirestoreDataToRecipe = (docId: string, data: DocumentData): Recipe => {
+  const steps = Array.isArray(data.steps) ? data.steps.filter((s: unknown) => typeof s === 'string' && s.trim().length > 0) as string[] : [];
+  const ingStrings: string[] = Array.isArray(data.ingredients)
+    ? (data.ingredients as RecipeIngredient[]).map((ing) => `${ing.quantity ?? ''} ${ing.unit ?? ''} ${ing.name ?? ''}`.trim()).filter((s) => s.length > 0)
+    : [];
+  const { strings, parsed } = (require('@/utils/ingredientParser') as typeof import('@/utils/ingredientParser')).normalizeIngredientList(ingStrings);
+  const tagsObj = data.tags || {};
+  const tagStrings: string[] = Object.values(tagsObj).filter((tag: unknown): tag is string => typeof tag === 'string').map((t) => t.toLowerCase());
   return {
-    id: docId,
-    name: data.name,
-    image: data.image_url || '',
-    prepTime: `${data.tags.prep_time} min`,
-    cookTime: data.cook_time ? `${data.cook_time} min` : '0 min',
-    servings: data.tags.servings || 1,
-    calories: data.nutrition.calories,
-    protein: data.nutrition.protein,
-    carbs: data.nutrition.carbs,
-    fat: data.nutrition.fat,
-    fiber: data.nutrition.fiber,
-    ingredients: data.ingredients.map((ing: RecipeIngredient) => 
-      `${ing.quantity} ${ing.unit} ${ing.name}`.trim()
-    ),
-    instructions: data.steps,
-    tags: Object.values(data.tags).filter((tag: unknown) => typeof tag === 'string') as string[],
-    mealType: data.tags.meal_type,
-    complexity: data.tags.complexity,
-    dietaryPreferences: Array.isArray(data.tags.diet) ? data.tags.diet : [data.tags.diet].filter(Boolean),
-    fitnessGoals: Array.isArray(data.tags.goal) ? data.tags.goal : [data.tags.goal].filter(Boolean),
-    source: data.source || 'Zestora'
+    id: String(docId),
+    name: String(data.name ?? 'Untitled Recipe'),
+    image: typeof data.image_url === 'string' && data.image_url.length > 0 ? data.image_url : undefined,
+    prepTime: `${Number(tagsObj.prep_time ?? 15)} min`,
+    cookTime: typeof data.cook_time === 'number' ? `${data.cook_time} min` : undefined,
+    servings: Number(tagsObj.servings ?? 2),
+    calories: Number(data.nutrition?.calories ?? 300),
+    protein: Number(data.nutrition?.protein ?? 15),
+    carbs: Number(data.nutrition?.carbs ?? 30),
+    fat: Number(data.nutrition?.fat ?? 10),
+    fiber: Number(data.nutrition?.fiber ?? 3),
+    ingredients: strings.length > 0 ? strings : ['Ingredients unavailable'],
+    parsedIngredients: parsed,
+    instructions: steps.length > 0 ? steps : (strings.length > 0 ? strings.map((s) => `Use ${s}`) : ['Prepare and serve']),
+    tags: tagStrings,
+    mealType: tagsObj.meal_type,
+    complexity: tagsObj.complexity,
+    dietaryPreferences: Array.isArray(tagsObj.diet) ? tagsObj.diet : (tagsObj.diet ? [tagsObj.diet] : undefined),
+    fitnessGoals: Array.isArray(tagsObj.goal) ? tagsObj.goal : (tagsObj.goal ? [tagsObj.goal] : undefined),
+    source: typeof data.source === 'string' ? data.source : 'Zestora'
   };
 };
 

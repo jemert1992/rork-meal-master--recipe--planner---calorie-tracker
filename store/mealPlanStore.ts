@@ -5,6 +5,7 @@ import { MealPlan, MealItem, DailyMeals, Recipe, DietType, GenerationResult, Mea
 import { mockMealPlan } from '@/constants/mockData';
 import * as firebaseService from '@/services/firebaseService';
 import { format, parse } from 'date-fns';
+import { sanitizeRecipe, isRecipeDataValid } from '@/utils/recipeIntegrity';
 
 interface MealPlanState {
   mealPlan: MealPlan;
@@ -422,8 +423,9 @@ export const useMealPlanStore = create<MealPlanState>()(
             console.warn(`Recipe ${newRecipeId} is already used in the meal plan`);
             return false;
           }
-          const newRecipe = await firebaseService.getRecipeFromFirestore(newRecipeId);
-          if (!newRecipe) {
+          const newRecipeRaw = await firebaseService.getRecipeFromFirestore(newRecipeId);
+          const newRecipe = newRecipeRaw ? sanitizeRecipe(newRecipeRaw) : null;
+          if (!newRecipe || !isRecipeDataValid(newRecipe)) {
             console.warn(`Could not find recipe with ID ${newRecipeId}`);
             set({
               lastGenerationError: 'Could not find the selected recipe. It may have been deleted or is temporarily unavailable.',
@@ -695,7 +697,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               lunch: { min: lunchCalories * 0.8, max: lunchCalories * 1.2 },
               dinner: { min: dinnerCalories * 0.8, max: dinnerCalories * 1.2 }
             } as const;
-            const remote = await withTimeout(firebaseService.getRecipesForMealPlan(specificMealType, {
+            let remote = await withTimeout(firebaseService.getRecipesForMealPlan(specificMealType, {
               dietType,
               allergies,
               excludedIngredients,
@@ -703,6 +705,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               calorieRange: calorieRangeByType[specificMealType],
               excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             }, 5), 2000);
+            if (remote) {
+              remote = remote.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r));
+            }
             set({ generationProgress: 0.5 });
             const apply = (r: Recipe, type: 'breakfast'|'lunch'|'dinner') => {
               const m: MealItem = { recipeId: r.id, name: r.name, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber, servings: 1 };
@@ -791,7 +796,10 @@ export const useMealPlanStore = create<MealPlanState>()(
                 excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
               }, 5), 2000));
             } else { promises.push(Promise.resolve([])); }
-            const [bk, ln, dn] = await Promise.all(promises);
+            let [bk, ln, dn] = await Promise.all(promises);
+            bk = Array.isArray(bk) ? bk.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : bk;
+            ln = Array.isArray(ln) ? ln.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : ln;
+            dn = Array.isArray(dn) ? dn.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : dn;
             set({ generationProgress: 0.5 });
             const selectFirst = (arr: (Recipe[] | null), type: 'breakfast'|'lunch'|'dinner', target: number): boolean => {
               const pool = Array.isArray(arr) ? (arr as Recipe[]) : [];
@@ -951,7 +959,7 @@ export const useMealPlanStore = create<MealPlanState>()(
             get().clearDay(date);
           }
           set({ generationProgress: 0.1 });
-          const [bk, ln, dn] = await Promise.all([
+          let [bk, ln, dn] = await Promise.all([
             withTimeout(firebaseService.getRecipesForMealPlan('breakfast', {
               dietType, allergies, excludedIngredients,
               fitnessGoal: fitnessGoals.length > 0 ? fitnessGoals[0] : undefined,
@@ -971,6 +979,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               excludeIds: enforceUnique ? weeklyUsedRecipeIds : []
             }, 7), 2200)
           ]);
+          bk = Array.isArray(bk) ? bk.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : bk;
+          ln = Array.isArray(ln) ? ln.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : ln;
+          dn = Array.isArray(dn) ? dn.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : dn;
           set({ generationProgress: 0.55 });
           const choose = (pool: (Recipe[] | null), fallbackType: 'breakfast'|'lunch'|'dinner', target: number): MealItem | null => {
             const arr = Array.isArray(pool) ? (pool as Recipe[]) : [];
@@ -1151,7 +1162,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           dinnerPool = cache.dinner;
         } else {
           const excludeIds = enforceUnique ? Array.from(used) : [];
-          const [bk, ln, dn] = await Promise.all([
+          const [bkRaw, lnRaw, dnRaw] = await Promise.all([
             withTimeout(firebaseService.getRecipesForMealPlan('breakfast', {
               dietType,
               allergies,
@@ -1177,6 +1188,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               excludeIds
             }, Math.max(9, dates.length * 3)), 2500)
           ]);
+          const bk = Array.isArray(bkRaw) ? bkRaw.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : bkRaw;
+          const ln = Array.isArray(lnRaw) ? lnRaw.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : lnRaw;
+          const dn = Array.isArray(dnRaw) ? dnRaw.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : dnRaw;
           breakfastPool = Array.isArray(bk) ? (bk as Recipe[]) : [];
           lunchPool = Array.isArray(ln) ? (ln as Recipe[]) : [];
           dinnerPool = Array.isArray(dn) ? (dn as Recipe[]) : [];

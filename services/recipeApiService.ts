@@ -36,7 +36,7 @@ function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'di
  * - Guarantees numeric nutrition fields are numbers (falls back to estimates when missing)
  * - Derives complexity and preference tags when possible
  */
-function validateRecipe(recipe: any): Recipe {
+export function validateRecipe(recipe: any): Recipe {
   const coerceString = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback);
   const coerceNumber = (v: unknown, fallback: number): number => (typeof v === 'number' && !isNaN(v) ? v : fallback);
   const coerceStringArray = (arr: unknown): string[] =>
