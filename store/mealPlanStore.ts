@@ -586,10 +586,10 @@ export const useMealPlanStore = create<MealPlanState>()(
        * Robust daily meal generation with strong guarantees, variety heuristics, and graceful fallbacks.
        *
        * Guarantees
-       * - No slot remains empty if any suitable recipe exists (remote, local, or mock). If truly none exist, returns suggestions and leaves the slot for manual editing.
+       * - No slot remains empty if any suitable recipe exists (remote, local, or mock). If no suitable recipe exists, a last-resort relaxed pick is applied (ignores uniqueness and non-allergy diet tags). If truly none exist anywhere, returns suggestions and leaves the slot for manual editing.
        * - Never throws; all failures are captured into lastGenerationError + generationSuggestions and a GenerationResult.
        * - UI stays responsive: remote calls are batched with Promise.all and each has a short timeout via withTimeout.
-       * - Weekly uniqueness respected only when uniquePerWeek is enabled. When disabled, duplicates are allowed to ensure coverage.
+       * - Weekly uniqueness respected when uniquePerWeek is enabled; as a last resort to avoid empty slots, duplicates may be used.
        *
        * Behavior
        * - If specificMealType is provided: generates only that slot; other slots remain untouched.
@@ -1072,6 +1072,7 @@ export const useMealPlanStore = create<MealPlanState>()(
        *
        * Guarantees & Edge Cases
        * - If any suitable recipes exist in any source, the slot is filled.
+       * - If even suitable pools are empty, a last-resort relaxed selection is applied (ignores uniqueness and non-allergy diet tags) to avoid empty slots.
        * - If pools are empty due to restrictive preferences, returns clear suggestions (relax filters, disable uniqueness).
        * - Never blocks UI; progress is updated incrementally.
        */
@@ -1246,6 +1247,18 @@ export const useMealPlanStore = create<MealPlanState>()(
             const locals = getLocalFallbacks(type, targetCalories);
             if (locals.length > 0) candidates = [...combine(locals)];
           }
+          // If still empty, relax uniqueness and diet constraints as a last resort to avoid empty slots
+          if (candidates.length === 0) {
+            const relax = (arr: Recipe[]) => arr.filter((r) => r.mealType === type || r.mealType === undefined || r.mealType === null);
+            const relaxedPrimary = relax(primary);
+            const relaxedFallback = relax(fallback);
+            candidates = relaxedPrimary.length > 0 ? relaxedPrimary : relaxedFallback;
+          }
+          // If still empty, try cross-type from any available source (primary + fallback combined)
+          if (candidates.length === 0) {
+            const anySource = [...primary, ...fallback];
+            if (anySource.length > 0) candidates = anySource;
+          }
           if (candidates.length === 0) return null;
           const prevId = newMealPlan[prevDateString(dateStr)]?.[type]?.recipeId;
           const prev = candidates.find((r) => r.id === prevId);
@@ -1268,7 +1281,7 @@ export const useMealPlanStore = create<MealPlanState>()(
 
           if (!currentDayPlan.breakfast) {
             let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
-            if (!chosen && !enforceUnique && breakfastPool.length > 0) chosen = breakfastPool[0];
+            if (!chosen && breakfastPool.length > 0) chosen = breakfastPool[0];
             if (chosen) {
               currentDayPlan.breakfast = {
                 recipeId: chosen.id,
@@ -1289,7 +1302,7 @@ export const useMealPlanStore = create<MealPlanState>()(
 
           if (!currentDayPlan.lunch) {
             let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch', lunchCalories), lunchCalories, 'lunch', date);
-            if (!chosen && !enforceUnique && lunchPool.length > 0) chosen = lunchPool[0];
+            if (!chosen && lunchPool.length > 0) chosen = lunchPool[0];
             if (chosen) {
               currentDayPlan.lunch = {
                 recipeId: chosen.id,
@@ -1310,7 +1323,7 @@ export const useMealPlanStore = create<MealPlanState>()(
 
           if (!currentDayPlan.dinner) {
             let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner', dinnerCalories), dinnerCalories, 'dinner', date);
-            if (!chosen && !enforceUnique && dinnerPool.length > 0) chosen = dinnerPool[0];
+            if (!chosen && dinnerPool.length > 0) chosen = dinnerPool[0];
             if (chosen) {
               currentDayPlan.dinner = {
                 recipeId: chosen.id,
