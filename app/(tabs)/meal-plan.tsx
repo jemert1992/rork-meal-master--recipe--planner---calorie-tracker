@@ -731,7 +731,7 @@ export default function MealPlanScreen() {
         animationType="fade"
         transparent={true}
         visible={showErrorModal}
-        accessibilityViewIsModal={true}
+        {...(Platform.OS !== 'web' ? ({ accessibilityViewIsModal: true } as const) : ({} as const))}
         onRequestClose={() => {
           setShowErrorModal(false);
           clearGenerationError();
@@ -836,7 +836,7 @@ export default function MealPlanScreen() {
         animationType="fade"
         transparent
         visible={confirmClearVisible}
-        accessibilityViewIsModal={true}
+        {...(Platform.OS !== 'web' ? ({ accessibilityViewIsModal: true } as const) : ({} as const))}
         onRequestClose={() => setConfirmClearVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -869,7 +869,7 @@ export default function MealPlanScreen() {
         animationType="fade"
         transparent
         visible={replaceMealModal.visible}
-        accessibilityViewIsModal={true}
+        {...(Platform.OS !== 'web' ? ({ accessibilityViewIsModal: true } as const) : ({} as const))}
         onRequestClose={() => setReplaceMealModal({ visible: false })}
       >
         <View style={styles.modalOverlay}>

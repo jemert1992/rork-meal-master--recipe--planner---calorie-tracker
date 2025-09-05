@@ -305,7 +305,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         visible={showAlternatives}
         onRequestClose={() => setShowAlternatives(false)}
         testID={`swap-alt-modal-${mealType}`}
-        accessibilityViewIsModal={true}
+        {...(Platform.OS !== 'web' ? ({ accessibilityViewIsModal: true } as const) : ({} as const))}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent} accessible accessibilityLabel={`Swap ${formatMealType(mealType)} dialog`}>
