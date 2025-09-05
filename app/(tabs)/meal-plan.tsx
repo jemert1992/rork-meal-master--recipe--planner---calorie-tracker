@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, ActivityIndicator, Modal, Platform, AccessibilityInfo } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Pressable, ActivityIndicator, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter, Info, X } from 'lucide-react-native';
+import { Trash2, RefreshCw, ChevronUp, AlertCircle, Info, X } from 'lucide-react-native';
 import { useMealPlanStore } from '@/store/mealPlanStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useUserStore } from '@/store/userStore';
@@ -14,6 +14,7 @@ import { DailyMeals, Recipe, RecipeFilters } from '@/types';
 import * as firebaseService from '@/services/firebaseService';
 
 import { useTutorialRef } from '@/hooks/useTutorialRef';
+import { AccessibilityUtils } from '@/utils/accessibility';
 
 import { format, addDays } from 'date-fns';
 
@@ -341,7 +342,7 @@ export default function MealPlanScreen() {
     }
     setSnackbar({ visible: true, message, type });
     try {
-      AccessibilityInfo?.announceForAccessibility?.(message);
+      AccessibilityUtils.announceForAccessibility(message);
     } catch {}
     snackbarTimerRef.current = setTimeout(() => {
       setSnackbar(prev => ({ ...prev, visible: false }));
