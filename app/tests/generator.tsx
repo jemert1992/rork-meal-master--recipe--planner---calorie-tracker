@@ -72,6 +72,28 @@ export default function GeneratorTestsScreen() {
     return base;
   }, []);
 
+  const makeManyLocalRecipes = useCallback((countPerType: number): Recipe[] => {
+    const arr: Recipe[] = [];
+    for (let i = 0; i < countPerType; i++) {
+      arr.push({
+        id: `bulk-bk-${i}`, name: `Bulk Breakfast ${i}`, image: undefined, prepTime: '5 min', cookTime: '0 min', servings: 1,
+        calories: 350 + (i % 60), protein: 20, carbs: 40, fat: 10, fiber: 5,
+        ingredients: ['eggs', 'toast'], instructions: ['mix','cook'], tags: ['breakfast'], mealType: 'breakfast', complexity: 'simple',
+      });
+      arr.push({
+        id: `bulk-ln-${i}`, name: `Bulk Lunch ${i}`, image: undefined, prepTime: '10 min', cookTime: '10 min', servings: 1,
+        calories: 550 + (i % 60), protein: 30, carbs: 50, fat: 15, fiber: 6,
+        ingredients: ['chicken', 'rice'], instructions: ['prep','cook'], tags: ['lunch'], mealType: 'lunch', complexity: 'simple',
+      });
+      arr.push({
+        id: `bulk-dn-${i}`, name: `Bulk Dinner ${i}`, image: undefined, prepTime: '15 min', cookTime: '15 min', servings: 1,
+        calories: 650 + (i % 60), protein: 35, carbs: 55, fat: 18, fiber: 7,
+        ingredients: ['salmon', 'quinoa'], instructions: ['prep','cook'], tags: ['dinner'], mealType: 'dinner', complexity: 'simple',
+      });
+    }
+    return arr;
+  }, []);
+
   const patchFirebase = useCallback((mode: 'success' | 'fail' | 'empty') => {
     const impl = async (mt: 'breakfast' | 'lunch' | 'dinner') => {
       if (mode === 'fail') throw new Error('Simulated API failure');
@@ -163,12 +185,63 @@ export default function GeneratorTestsScreen() {
       const cleared = !useMealPlanStore.getState().lastGenerationError;
       addResult('Error state set then recoverable', (!r6.success && hadError) && cleared, r6.error ?? 'no-error');
 
+      // 7) Weekly uniqueness ON with ample pool -> no repeats within the week
+      resetStores();
+      mealPlanStore.setUniquePerWeek(true);
+      useRecipeStore.setState({ recipes: cloneRecipes(makeManyLocalRecipes(10)) } as any, true);
+      patchFirebase('empty');
+      const wk2 = await mealPlanStore.generateWeeklyMealPlan('2025-02-03', '2025-02-09');
+      const mpW2 = useMealPlanStore.getState().mealPlan;
+      const ids = new Set<string>();
+      let duplicateFound = false;
+      Object.keys(mpW2).forEach(date => {
+        if (date >= '2025-02-03' && date <= '2025-02-09') {
+          const dmp = mpW2[date];
+          ['breakfast','lunch','dinner'].forEach((k) => {
+            const recId = (dmp as any)[k]?.recipeId as string | undefined;
+            if (recId) {
+              if (ids.has(recId)) duplicateFound = true; else ids.add(recId);
+            }
+          });
+        }
+      });
+      addResult('Weekly uniqueness respected with ample pool', wk2.success && !duplicateFound, `uniqueIds=${ids.size}`);
+
+      // 8) Weekly uniqueness ON with tiny pool -> still fills by relaxing uniqueness (repeats allowed), no blocking error
+      resetStores();
+      mealPlanStore.setUniquePerWeek(true);
+      useRecipeStore.setState({ recipes: cloneRecipes(makeLocalRecipes()) } as any, true);
+      patchFirebase('empty');
+      const wk3 = await mealPlanStore.generateWeeklyMealPlan('2025-02-10', '2025-02-12');
+      const mpW3 = useMealPlanStore.getState().mealPlan;
+      let filledSlots = 0; let repCount = 0; const seen = new Set<string>();
+      ['2025-02-10','2025-02-11','2025-02-12'].forEach(d => {
+        const dd = mpW3[d];
+        if (dd?.breakfast) { filledSlots++; if (seen.has(dd.breakfast.recipeId ?? '')) repCount++; seen.add(dd.breakfast.recipeId ?? ''); }
+        if (dd?.lunch) { filledSlots++; if (seen.has(dd.lunch.recipeId ?? '')) repCount++; seen.add(dd.lunch.recipeId ?? ''); }
+        if (dd?.dinner) { filledSlots++; if (seen.has(dd.dinner.recipeId ?? '')) repCount++; seen.add(dd.dinner.recipeId ?? ''); }
+      });
+      const noModal = useMealPlanStore.getState().lastGenerationError === null;
+      addResult('Tiny pool still fills and avoids error modal', wk3.success && filledSlots === 9 && noModal, `repeats=${repCount}`);
+
+      // 9) Fallback to previously used when pool exhausted mid-week
+      resetStores();
+      mealPlanStore.setUniquePerWeek(true);
+      useRecipeStore.setState({ recipes: cloneRecipes(makeLocalRecipes()) } as any, true);
+      patchFirebase('empty');
+      await mealPlanStore.generateWeeklyMealPlan('2025-02-13', '2025-02-13');
+      const before = useMealPlanStore.getState().mealPlan['2025-02-13'];
+      const r9 = await mealPlanStore.generateWeeklyMealPlan('2025-02-14', '2025-02-14');
+      const after = useMealPlanStore.getState().mealPlan['2025-02-14'];
+      const repeatedBreakfast = before?.breakfast?.recipeId && after?.breakfast?.recipeId && before.breakfast.recipeId === after.breakfast.recipeId;
+      addResult('Repeats allowed when needed to avoid empty slot', Boolean(r9.success && repeatedBreakfast), repeatedBreakfast ? 'repeated breakfast OK' : 'no repeat');
+
     } catch (e) {
       append(`Fatal test runner error: ${String(e)}`);
     } finally {
       setRunning(false);
     }
-  }, [append, patchFirebase, resetStores, running, recipeStore, makeLocalRecipes, mealPlanStore]);
+  }, [append, patchFirebase, resetStores, running, recipeStore, makeLocalRecipes, mealPlanStore, makeManyLocalRecipes]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

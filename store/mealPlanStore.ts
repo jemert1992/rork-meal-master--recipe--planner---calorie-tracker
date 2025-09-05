@@ -1234,7 +1234,7 @@ export const useMealPlanStore = create<MealPlanState>()(
 
         const pickFromPools = (primary: Recipe[], fallback: Recipe[], targetCalories: number, type: MealType, dateStr: string): Recipe | null => {
           const combine = (arr: Recipe[]) => {
-            let candidates = arr;
+            let candidates = arr.filter((r) => r && typeof r.id === 'string');
             if (enforceUnique) {
               const filtered = candidates.filter((r) => !used.has(r.id));
               candidates = filtered.length > 0 ? filtered : candidates;
@@ -1247,16 +1247,14 @@ export const useMealPlanStore = create<MealPlanState>()(
             const locals = getLocalFallbacks(type, targetCalories);
             if (locals.length > 0) candidates = [...combine(locals)];
           }
-          // If still empty, relax uniqueness and diet constraints as a last resort to avoid empty slots
+          // If still empty, relax uniqueness but keep meal type
           if (candidates.length === 0) {
-            const relax = (arr: Recipe[]) => arr.filter((r) => r.mealType === type || r.mealType === undefined || r.mealType === null);
-            const relaxedPrimary = relax(primary);
-            const relaxedFallback = relax(fallback);
-            candidates = relaxedPrimary.length > 0 ? relaxedPrimary : relaxedFallback;
+            const sameType = [...primary, ...fallback].filter((r) => r.mealType === type);
+            if (sameType.length > 0) candidates = sameType; // allow repeats to avoid empty slot
           }
-          // If still empty, try cross-type from any available source (primary + fallback combined)
+          // If still empty, relax type constraint then uniqueness completely
           if (candidates.length === 0) {
-            const anySource = [...primary, ...fallback];
+            const anySource = [...primary, ...fallback, ...getLocalFallbacks(type, targetCalories)];
             if (anySource.length > 0) candidates = anySource;
           }
           if (candidates.length === 0) return null;
@@ -1296,6 +1294,21 @@ export const useMealPlanStore = create<MealPlanState>()(
               used.add(chosen.id);
               result.generatedMeals.push(`${date}-breakfast`);
               filledCount++;
+            } else if (breakfastPool.length + getLocalFallbacks('breakfast', breakfastCalories).length > 0) {
+              const any = [...breakfastPool, ...getLocalFallbacks('breakfast', breakfastCalories)][0];
+              currentDayPlan.breakfast = {
+                recipeId: any.id,
+                name: any.name,
+                calories: any.calories,
+                protein: any.protein,
+                carbs: any.carbs,
+                fat: any.fat,
+                fiber: any.fiber,
+                servings: 1,
+              };
+              used.add(any.id);
+              result.generatedMeals.push(`${date}-breakfast-relaxed`);
+              filledCount++;
             }
             progressed += perSlot; set({ generationProgress: Math.min(0.3 + progressed, 0.95) });
           }
@@ -1317,6 +1330,21 @@ export const useMealPlanStore = create<MealPlanState>()(
               used.add(chosen.id);
               result.generatedMeals.push(`${date}-lunch`);
               filledCount++;
+            } else if (lunchPool.length + getLocalFallbacks('lunch', lunchCalories).length > 0) {
+              const any = [...lunchPool, ...getLocalFallbacks('lunch', lunchCalories)][0];
+              currentDayPlan.lunch = {
+                recipeId: any.id,
+                name: any.name,
+                calories: any.calories,
+                protein: any.protein,
+                carbs: any.carbs,
+                fat: any.fat,
+                fiber: any.fiber,
+                servings: 1,
+              };
+              used.add(any.id);
+              result.generatedMeals.push(`${date}-lunch-relaxed`);
+              filledCount++;
             }
             progressed += perSlot; set({ generationProgress: Math.min(0.3 + progressed, 0.95) });
           }
@@ -1337,6 +1365,21 @@ export const useMealPlanStore = create<MealPlanState>()(
               };
               used.add(chosen.id);
               result.generatedMeals.push(`${date}-dinner`);
+              filledCount++;
+            } else if (dinnerPool.length + getLocalFallbacks('dinner', dinnerCalories).length > 0) {
+              const any = [...dinnerPool, ...getLocalFallbacks('dinner', dinnerCalories)][0];
+              currentDayPlan.dinner = {
+                recipeId: any.id,
+                name: any.name,
+                calories: any.calories,
+                protein: any.protein,
+                carbs: any.carbs,
+                fat: any.fat,
+                fiber: any.fiber,
+                servings: 1,
+              };
+              used.add(any.id);
+              result.generatedMeals.push(`${date}-dinner-relaxed`);
               filledCount++;
             }
             progressed += perSlot; set({ generationProgress: Math.min(0.3 + progressed, 0.95) });
