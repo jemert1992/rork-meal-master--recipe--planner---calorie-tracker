@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, ActivityIndicator, Modal, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Pressable, ActivityIndicator, Modal, Platform, AccessibilityInfo } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Filter, Info, X } from 'lucide-react-native';
@@ -341,8 +341,7 @@ export default function MealPlanScreen() {
     }
     setSnackbar({ visible: true, message, type });
     try {
-      const RN = require('react-native');
-      RN?.AccessibilityInfo?.announceForAccessibility?.(message);
+      AccessibilityInfo?.announceForAccessibility?.(message);
     } catch {}
     snackbarTimerRef.current = setTimeout(() => {
       setSnackbar(prev => ({ ...prev, visible: false }));
