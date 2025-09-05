@@ -990,7 +990,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
 
       {/* Snackbar */}
       {snack.visible && (
-        <View style={styles.snackbar} accessibilityLiveRegion="polite">
+        <View style={styles.snackbar} accessibilityLiveRegion="polite" testID="weekly-snackbar">
           <Text style={styles.snackbarText}>{snack.message}</Text>
         </View>
       )}
@@ -1010,7 +1010,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
           <View style={styles.errorModal} accessibilityLabel="Meal plan help dialog">
             <View style={styles.errorModalHeader} accessibilityRole="header">
               <Info size={24} color={Colors.warning} />
-              <Text style={styles.errorModalTitle} accessibilityRole="text">{lastGenerationError ? "Couldn't generate plan" : 'Meal plan help'}</Text>
+              <Text style={styles.errorModalTitle} accessibilityRole="text">{lastGenerationError ? 'No recipes matched your filters' : 'Meal plan help'}</Text>
               <Pressable 
                 ref={errorCloseButtonRef}
                 onPress={() => {
@@ -1028,15 +1028,30 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
             
             <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={{ paddingBottom: 8 }} accessibilityLiveRegion="polite">
               <Text style={styles.errorModalMessage}>
-                {lastGenerationError ?? 'We hit a snag while generating the plan.'}
+                {lastGenerationError ?? "We couldn't find suitable recipes to fill every slot this week."}
               </Text>
-              {generationSuggestions && generationSuggestions.length > 0 && (
+              {generationSuggestions && generationSuggestions.length > 0 ? (
                 <View style={styles.errorSuggestionsList} accessibilityLabel="Suggestions list">
-                  <Text style={styles.errorSuggestionsTitle}>How to fix it:</Text>
+                  <Text style={styles.errorSuggestionsTitle}>Try this:</Text>
                   {generationSuggestions.map((suggestion, index) => (
                     <View key={`error-suggestion-${index}`} style={styles.errorSuggestionItem}>
                       <View style={styles.errorBulletPoint} />
                       <Text style={styles.errorSuggestionText}>{suggestion}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.errorSuggestionsList} accessibilityLabel="Suggestions list">
+                  <Text style={styles.errorSuggestionsTitle}>Try this:</Text>
+                  {[
+                    'Relax dietary filters or exclusions temporarily',
+                    'Allow repeats for this week in Settings',
+                    'Add more recipes or import from web',
+                    'Open the weekly planner to pick manually'
+                  ].map((s, i) => (
+                    <View key={`fallback-suggestion-${i}`} style={styles.errorSuggestionItem}>
+                      <View style={styles.errorBulletPoint} />
+                      <Text style={styles.errorSuggestionText}>{s}</Text>
                     </View>
                   ))}
                 </View>
@@ -1048,7 +1063,6 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 style={[styles.errorModalButton, { flex: 1 }]}
                 onPress={async () => {
                   setShowErrorModal(false);
-                  // regenerate current visible week
                   const _days = getWeekDays(currentWeekIndex);
                   updateWeeklyUsedRecipeIds(_days[0].dateString, _days[6].dateString);
                   await handleGenerateWeeklyMealPlan();

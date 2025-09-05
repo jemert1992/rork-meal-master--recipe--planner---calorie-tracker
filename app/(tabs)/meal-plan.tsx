@@ -73,6 +73,7 @@ export default function MealPlanScreen() {
   useEffect(() => {
     if (lastGenerationError) {
       setShowErrorModal(true);
+      try { (Platform as any)?.OS && console.log('Gen error:', lastGenerationError); } catch {}
     }
   }, [lastGenerationError]);
 
@@ -339,6 +340,11 @@ export default function MealPlanScreen() {
       clearTimeout(snackbarTimerRef.current);
     }
     setSnackbar({ visible: true, message, type });
+    try { // announce for accessibility
+      // @ts-ignore
+      const { AccessibilityInfo } = require('react-native');
+      AccessibilityInfo?.announceForAccessibility?.(message);
+    } catch {}
     snackbarTimerRef.current = setTimeout(() => {
       setSnackbar(prev => ({ ...prev, visible: false }));
     }, 2400);
@@ -733,10 +739,10 @@ export default function MealPlanScreen() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.errorModal}>
+          <View style={styles.errorModal} accessibilityLabel="Generation help dialog">
             <View style={styles.errorModalHeader}>
               <Info size={24} color={Colors.warning} />
-              <Text style={styles.errorModalTitle}>{lastGenerationError ? "Couldn't generate today's plan" : 'Meal plan help'}</Text>
+              <Text style={styles.errorModalTitle}>{lastGenerationError ? 'No recipes matched your filters' : 'Meal plan help'}</Text>
               <Pressable 
                 onPress={() => {
                   setShowErrorModal(false);
@@ -754,15 +760,30 @@ export default function MealPlanScreen() {
             
             <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={{ paddingBottom: 8 }} accessibilityLiveRegion="polite">
               <Text style={styles.errorModalMessage}>
-                {lastGenerationError ?? 'We hit a snag while generating meals for this day.'}
+                {lastGenerationError ?? 'We couldn\'t find suitable recipes to fill every slot today.'}
               </Text>
-              {generationSuggestions && generationSuggestions.length > 0 && (
+              {generationSuggestions && generationSuggestions.length > 0 ? (
                 <View style={styles.suggestionsList}>
-                  <Text style={styles.suggestionsTitle}>How to fix it:</Text>
+                  <Text style={styles.suggestionsTitle}>Try this:</Text>
                   {generationSuggestions.map((suggestion, index) => (
                     <View key={`suggestion-${index}`} style={styles.suggestionItem}>
                       <View style={styles.bulletPoint} />
                       <Text style={styles.suggestionText}>{suggestion}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.suggestionsList}>
+                  <Text style={styles.suggestionsTitle}>Try this:</Text>
+                  {[
+                    'Relax dietary filters or exclusions temporarily',
+                    'Allow repeats for this week in Settings',
+                    'Add more recipes or import from web',
+                    'Tap Browse Suggestions to pick manually'
+                  ].map((s, i) => (
+                    <View key={`fallback-suggestion-${i}`} style={styles.suggestionItem}>
+                      <View style={styles.bulletPoint} />
+                      <Text style={styles.suggestionText}>{s}</Text>
                     </View>
                   ))}
                 </View>
@@ -889,6 +910,7 @@ export default function MealPlanScreen() {
         <View
           accessibilityLiveRegion="polite"
           style={[styles.snackbar, snackbar.type === 'success' ? styles.snackbarSuccess : snackbar.type === 'error' ? styles.snackbarError : styles.snackbarInfo]}
+          testID="snackbar"
         >
           <Text style={styles.snackbarText}>{snackbar.message}</Text>
         </View>
