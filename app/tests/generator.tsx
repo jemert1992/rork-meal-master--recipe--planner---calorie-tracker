@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
 import Colors from '@/constants/colors';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -8,7 +8,7 @@ import { Recipe } from '@/types';
 import WeeklyMealPlanner from '@/components/WeeklyMealPlanner';
 
 function cloneRecipes(arr: Recipe[]): Recipe[] {
-  return arr.map(r => ({ ...r, ingredients: [...r.ingredients], instructions: [...r.instructions], tags: [...r.tags] }));
+  return arr.map(r => ({ ...r, ingredients: [...(r.ingredients ?? [])], instructions: [...(r.instructions ?? [])], tags: [...(r.tags ?? [])] }));
 }
 
 export default function GeneratorTestsScreen() {
@@ -34,6 +34,8 @@ export default function GeneratorTestsScreen() {
       generationSuggestions: [],
       uniquePerWeek: false,
       recipePoolsCache: null,
+      isGenerating: false,
+      generationProgress: 0,
     } as any, true);
     useRecipeStore.setState({
       recipes: [],
@@ -46,6 +48,10 @@ export default function GeneratorTestsScreen() {
       pagination: { lastDoc: null, hasMore: true, loading: false },
       apiSources: { useMealDB: false, useSpoonacular: false, useEdamam: false, useFirebase: false },
     } as any, true);
+    try {
+      const { useUserStore } = require('@/store/userStore');
+      useUserStore.setState({ profile: { dietType: 'any', allergies: [], excludedIngredients: [], calorieGoal: 2000, fitnessGoals: [] } } as any, true);
+    } catch {}
   }, []);
 
   const makeLocalRecipes = useCallback((): Recipe[] => {
@@ -54,19 +60,19 @@ export default function GeneratorTestsScreen() {
         id: 'loc-bk-1', name: 'Greek Yogurt Parfait', image: undefined, prepTime: '10 min', cookTime: '0 min', servings: 1,
         calories: 380, protein: 28, carbs: 40, fat: 9, fiber: 4,
         ingredients: ['1 cup greek yogurt', '1/2 cup berries', '1 tbsp honey', '1/4 cup granola'],
-        instructions: ['Layer ingredients', 'Serve'], tags: ['breakfast','simple'], mealType: 'breakfast', complexity: 'simple',
+        instructions: ['Layer ingredients', 'Serve'], tags: ['breakfast','simple','mediterranean'], mealType: 'breakfast', complexity: 'simple',
       },
       {
         id: 'loc-ln-1', name: 'Chicken Salad Bowl', image: undefined, prepTime: '15 min', cookTime: '0 min', servings: 1,
         calories: 520, protein: 42, carbs: 35, fat: 18, fiber: 6,
         ingredients: ['150 g chicken', '2 cup greens', '1 tbsp olive oil', '1/2 cup rice'],
-        instructions: ['Assemble bowl'], tags: ['lunch','high-protein'], mealType: 'lunch', complexity: 'simple',
+        instructions: ['Assemble bowl'], tags: ['lunch','high-protein','american'], mealType: 'lunch', complexity: 'simple',
       },
       {
         id: 'loc-dn-1', name: 'Salmon with Quinoa', image: undefined, prepTime: '20 min', cookTime: '15 min', servings: 1,
         calories: 650, protein: 45, carbs: 50, fat: 22, fiber: 5,
         ingredients: ['150 g salmon', '3/4 cup quinoa', '1 cup broccoli'],
-        instructions: ['Cook and plate'], tags: ['dinner','high-protein'], mealType: 'dinner', complexity: 'simple',
+        instructions: ['Cook and plate'], tags: ['dinner','high-protein','japanese'], mealType: 'dinner', complexity: 'simple',
       }
     ];
     return base;
@@ -78,17 +84,17 @@ export default function GeneratorTestsScreen() {
       arr.push({
         id: `bulk-bk-${i}`, name: `Bulk Breakfast ${i}`, image: undefined, prepTime: '5 min', cookTime: '0 min', servings: 1,
         calories: 350 + (i % 60), protein: 20, carbs: 40, fat: 10, fiber: 5,
-        ingredients: ['eggs', 'toast'], instructions: ['mix','cook'], tags: ['breakfast'], mealType: 'breakfast', complexity: 'simple',
+        ingredients: ['eggs', 'toast'], instructions: ['mix','cook'], tags: ['breakfast','american'], mealType: 'breakfast', complexity: 'simple',
       });
       arr.push({
         id: `bulk-ln-${i}`, name: `Bulk Lunch ${i}`, image: undefined, prepTime: '10 min', cookTime: '10 min', servings: 1,
         calories: 550 + (i % 60), protein: 30, carbs: 50, fat: 15, fiber: 6,
-        ingredients: ['chicken', 'rice'], instructions: ['prep','cook'], tags: ['lunch'], mealType: 'lunch', complexity: 'simple',
+        ingredients: ['chicken', 'rice'], instructions: ['prep','cook'], tags: ['lunch','mexican'], mealType: 'lunch', complexity: 'simple',
       });
       arr.push({
         id: `bulk-dn-${i}`, name: `Bulk Dinner ${i}`, image: undefined, prepTime: '15 min', cookTime: '15 min', servings: 1,
         calories: 650 + (i % 60), protein: 35, carbs: 55, fat: 18, fiber: 7,
-        ingredients: ['salmon', 'quinoa'], instructions: ['prep','cook'], tags: ['dinner'], mealType: 'dinner', complexity: 'simple',
+        ingredients: ['salmon', 'quinoa'], instructions: ['prep','cook'], tags: ['dinner','japanese'], mealType: 'dinner', complexity: 'simple',
       });
     }
     return arr;
@@ -103,7 +109,7 @@ export default function GeneratorTestsScreen() {
       return [pick];
     };
     (firebaseService as any).getRecipesForMealPlan = async (mealType: 'breakfast' | 'lunch' | 'dinner') => impl(mealType);
-    (firebaseService as any).getAlternativeRecipes = async (_mt: any, _id: string) => [];
+    (firebaseService as any).getAlternativeRecipes = async () => [] as Recipe[];
   }, [makeLocalRecipes]);
 
   const runSuite = useCallback(async () => {
@@ -136,16 +142,16 @@ export default function GeneratorTestsScreen() {
       const r2 = await mealPlanStore.generateAllMealsForDay('2025-01-02', useRecipeStore.getState().recipes);
       const mp2 = useMealPlanStore.getState().mealPlan['2025-01-02'];
       const filled2 = !!(mp2?.breakfast && mp2?.lunch && mp2?.dinner);
-      addResult('API failure falls back to local', r2.success && filled2, r2.suggestions.join(', '));
+      addResult('API failure falls back to local', r2.success && filled2, (r2.suggestions ?? []).join(', '));
 
-      // 3) Empty pool across sources -> ensure last-resort behavior or clear error
+      // 3) Empty pool across sources -> graceful degradation (may be unavoidable error)
       resetStores();
       useRecipeStore.setState({ recipes: [] } as any, true);
       patchFirebase('empty');
       const r3 = await mealPlanStore.generateAllMealsForDay('2025-01-03', []);
       const mp3 = useMealPlanStore.getState().mealPlan['2025-01-03'];
-      const filled3 = !!(mp3?.breakfast || mp3?.lunch || mp3?.dinner);
-      addResult('Empty pool yields graceful result', r3.success ? filled3 : true, r3.error ?? 'no-error');
+      const someFilled = !!(mp3?.breakfast || mp3?.lunch || mp3?.dinner);
+      addResult('Empty pool yields graceful result', r3.success ? someFilled : true, r3.error ?? 'no-error');
 
       // 4) Serving scaling clamps and updates
       const date4 = '2025-01-04';
@@ -175,7 +181,7 @@ export default function GeneratorTestsScreen() {
       });
       addResult('Weekly generation fills many slots', wk.success && filled > 0, `filled=${filled}/${total}`);
 
-      // 6) UI recovery: error modal only when unavoidable
+      // 6) UI recovery: error modal only when unavoidable + state clears
       resetStores();
       useRecipeStore.setState({ recipes: [] } as any, true);
       patchFirebase('empty');
@@ -183,7 +189,8 @@ export default function GeneratorTestsScreen() {
       const hadError = !!useMealPlanStore.getState().lastGenerationError;
       useMealPlanStore.getState().clearGenerationError();
       const cleared = !useMealPlanStore.getState().lastGenerationError;
-      addResult('Error state set then recoverable', (!r6.success && hadError) && cleared, r6.error ?? 'no-error');
+      const notGenerating = useMealPlanStore.getState().isGenerating === false;
+      addResult('Error state set then recoverable', (!r6.success && hadError) && cleared && notGenerating, r6.error ?? 'no-error');
 
       // 7) Weekly uniqueness ON with ample pool -> no repeats within the week
       resetStores();
@@ -197,8 +204,8 @@ export default function GeneratorTestsScreen() {
       Object.keys(mpW2).forEach(date => {
         if (date >= '2025-02-03' && date <= '2025-02-09') {
           const dmp = mpW2[date];
-          ['breakfast','lunch','dinner'].forEach((k) => {
-            const recId = (dmp as any)[k]?.recipeId as string | undefined;
+          (['breakfast','lunch','dinner'] as const).forEach((k) => {
+            const recId = dmp?.[k]?.recipeId;
             if (recId) {
               if (ids.has(recId)) duplicateFound = true; else ids.add(recId);
             }
@@ -215,16 +222,16 @@ export default function GeneratorTestsScreen() {
       const wk3 = await mealPlanStore.generateWeeklyMealPlan('2025-02-10', '2025-02-12');
       const mpW3 = useMealPlanStore.getState().mealPlan;
       let filledSlots = 0; let repCount = 0; const seen = new Set<string>();
-      ['2025-02-10','2025-02-11','2025-02-12'].forEach(d => {
-        const dd = mpW3[d];
-        if (dd?.breakfast) { filledSlots++; if (seen.has(dd.breakfast.recipeId ?? '')) repCount++; seen.add(dd.breakfast.recipeId ?? ''); }
-        if (dd?.lunch) { filledSlots++; if (seen.has(dd.lunch.recipeId ?? '')) repCount++; seen.add(dd.lunch.recipeId ?? ''); }
-        if (dd?.dinner) { filledSlots++; if (seen.has(dd.dinner.recipeId ?? '')) repCount++; seen.add(dd.dinner.recipeId ?? ''); }
+      ['2025-02-10','2025-02-11','2025-02-12'].forEach(d2 => {
+        const dd = mpW3[d2];
+        if (dd?.breakfast) { filledSlots++; if (dd.breakfast.recipeId && seen.has(dd.breakfast.recipeId)) repCount++; if (dd.breakfast.recipeId) seen.add(dd.breakfast.recipeId); }
+        if (dd?.lunch) { filledSlots++; if (dd.lunch.recipeId && seen.has(dd.lunch.recipeId)) repCount++; if (dd.lunch.recipeId) seen.add(dd.lunch.recipeId); }
+        if (dd?.dinner) { filledSlots++; if (dd.dinner.recipeId && seen.has(dd.dinner.recipeId)) repCount++; if (dd.dinner.recipeId) seen.add(dd.dinner.recipeId); }
       });
       const noModal = useMealPlanStore.getState().lastGenerationError === null;
       addResult('Tiny pool still fills and avoids error modal', wk3.success && filledSlots === 9 && noModal, `repeats=${repCount}`);
 
-      // 9) Fallback to previously used when pool exhausted mid-week
+      // 9) Fallback to previously used when pool exhausted mid-week (allow repeat to avoid empty)
       resetStores();
       mealPlanStore.setUniquePerWeek(true);
       useRecipeStore.setState({ recipes: cloneRecipes(makeLocalRecipes()) } as any, true);
@@ -233,8 +240,21 @@ export default function GeneratorTestsScreen() {
       const before = useMealPlanStore.getState().mealPlan['2025-02-13'];
       const r9 = await mealPlanStore.generateWeeklyMealPlan('2025-02-14', '2025-02-14');
       const after = useMealPlanStore.getState().mealPlan['2025-02-14'];
-      const repeatedBreakfast = before?.breakfast?.recipeId && after?.breakfast?.recipeId && before.breakfast.recipeId === after.breakfast.recipeId;
+      const repeatedBreakfast = Boolean(before?.breakfast?.recipeId && after?.breakfast?.recipeId && before.breakfast.recipeId === after.breakfast.recipeId);
       addResult('Repeats allowed when needed to avoid empty slot', Boolean(r9.success && repeatedBreakfast), repeatedBreakfast ? 'repeated breakfast OK' : 'no repeat');
+
+      // 10) Specific-meal generation only affects that slot
+      resetStores();
+      useRecipeStore.setState({ recipes: cloneRecipes(makeLocalRecipes()) } as any, true);
+      patchFirebase('success');
+      const date10 = '2025-03-01';
+      // Pre-set breakfast
+      const bk = makeLocalRecipes()[0];
+      useMealPlanStore.getState().addMeal(date10, 'breakfast', { recipeId: bk.id, name: bk.name, calories: bk.calories, protein: bk.protein, carbs: bk.carbs, fat: bk.fat, fiber: bk.fiber, servings: 1 });
+      await mealPlanStore.generateMealPlan(date10, useRecipeStore.getState().recipes, 'lunch');
+      const day10 = useMealPlanStore.getState().mealPlan[date10];
+      const affectOnlyLunch = Boolean(day10?.breakfast?.recipeId === bk.id && day10?.lunch && day10?.dinner === undefined);
+      addResult('Specific meal generation only fills requested slot', affectOnlyLunch, day10?.lunch ? 'lunch filled' : 'lunch missing');
 
     } catch (e) {
       append(`Fatal test runner error: ${String(e)}`);
