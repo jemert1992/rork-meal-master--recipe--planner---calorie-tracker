@@ -787,6 +787,13 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   ? `Based on your ${profile.dietType} diet • Variety on`
                   : 'Based on your preferences • Variety on'}
               </Text>
+              <Text
+                style={styles.weeklyPlanVarietyHint}
+                accessibilityLabel="Variety rule explanation"
+                testID="variety-hint"
+              >
+                We avoid repeating the same main ingredient or cuisine back-to-back and balance meals within the day.
+              </Text>
             </View>
             
             <View style={styles.weekNavigationContainer}>
@@ -1233,6 +1240,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textLight,
     textAlign: 'center',
+  },
+  weeklyPlanVarietyHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
   },
   progressTrack: {
     height: 6,

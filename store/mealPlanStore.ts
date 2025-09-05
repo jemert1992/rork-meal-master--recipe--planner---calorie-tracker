@@ -602,10 +602,16 @@ export const useMealPlanStore = create<MealPlanState>()(
        * 2) Local: "recipes" argument and/or recipeStore, filtered by suitability + variety and (if enabled) uniqueness.
        * 3) Mock: constants/mockData filtered similarly.
        *
-       * Variety heuristic
-       * - Penalize picks that repeat the previous day's main ingredient or cuisine for the same meal type.
-       * - Penalize within-day main-ingredient duplication across meals.
-       * - Prefer calorie proximity to target for each meal type.
+       * Variety heuristic ("prefer variety")
+       * - Tracks 3 axes: meal type, main ingredient, and cuisine.
+       * - Main ingredient and cuisine are extracted from recipe.ingredients/tags; previous-day features for the same meal type are compared.
+       * - Intra-day variety: also avoids repeating the same main ingredient across breakfast/lunch/dinner of the same day.
+       * - Scoring: score = |calorieDiff| + penalty where penalties are applied for similarity.
+       *   • sameId: +1000 (hard avoid duplicates)
+       *   • same main ingredient as previous day (same meal type): +60
+       *   • same cuisine as previous day (same meal type): +30
+       *   • same main ingredient already used earlier in the same day: +20
+       * - Lowest score wins, balancing calorie target proximity with variety.
        *
        * Edge cases handled
        * - Empty remote responses, network errors, or timeouts seamlessly fall back to local and mock pools.
