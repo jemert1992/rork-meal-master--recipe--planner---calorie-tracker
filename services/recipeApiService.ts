@@ -141,14 +141,18 @@ export const loadInitialRecipesFromAllSources = async (
     if (sources.useFirebase) tasks.push(Promise.resolve([]));
 
     const settled = await Promise.allSettled(tasks);
-    const recipes: Recipe[] = settled.flatMap((r) => (r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [])).filter(Boolean) as Recipe[];
+    const rawRecipes: Recipe[] = settled
+      .flatMap((r) => (r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : []))
+      .filter(Boolean) as Recipe[];
 
-    if (recipes.length === 0) {
+    if (rawRecipes.length === 0) {
       console.warn('No recipes loaded from APIs, using mock data');
       return mockRecipes.map(validateRecipe);
     }
 
-    return recipes.map(validateRecipe);
+    const deduped = [...new Map(rawRecipes.map((r) => [r.id, r])).values()];
+
+    return deduped.map(validateRecipe);
   } catch (error) {
     console.error('Error loading recipes from APIs:', error);
     return mockRecipes.map(validateRecipe);
@@ -271,21 +275,17 @@ const loadRecipesFromMealDB = async (limit: number = 20): Promise<Recipe[]> => {
   try {
     // MealDB doesn't have a "get random recipes" endpoint with a limit
     // So we'll fetch a few random recipes individually
-    const recipes: Recipe[] = [];
-    const fetchPromises = [];
-    
-    for (let i = 0; i < Math.min(limit, 10); i++) {
-      fetchPromises.push(fetchRandomMealDBRecipe());
-    }
-    
-    const results = await Promise.allSettled(fetchPromises);
-    results.forEach(result => {
-      if (result.status === 'fulfilled' && result.value) {
-        recipes.push(result.value);
-      }
-    });
-    
-    return recipes;
+    const results: Array<PromiseSettledResult<Recipe | null>> = await Promise.allSettled(
+      Array.from({ length: Math.min(limit, 10) }, () => fetchRandomMealDBRecipe())
+    );
+
+    const collected = results
+      .filter((r): r is PromiseFulfilledResult<Recipe | null> => r.status === 'fulfilled')
+      .map((r) => r.value)
+      .filter((v): v is Recipe => Boolean(v));
+
+    const deduped = [...new Map(collected.map((r) => [r.id, r])).values()];
+    return deduped;
   } catch (error) {
     console.error('Error loading recipes from MealDB:', error);
     throw new Error('Failed to load recipes from MealDB');

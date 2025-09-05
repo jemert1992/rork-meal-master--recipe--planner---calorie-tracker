@@ -30,6 +30,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
   const router = useRouter();
   const { isFavorite, toggleFavorite } = useRecipeStore();
   const favorite = isFavorite(recipe.id);
+  const isWeb = (Platform as any).OS === 'web';
 
   const handlePress = () => {
     router.push(`/recipe/${recipe.id}`);
@@ -42,7 +43,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
 
   if (compact) {
     return (
-      Platform.OS === 'web' ? (
+      isWeb ? (
         <View
           style={styles.compactContainer}
           // @ts-expect-error onClick is web-only
@@ -109,7 +110,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
   }
 
   return (
-    Platform.OS === 'web' ? (
+    isWeb ? (
       <View
         style={styles.container}
         // @ts-expect-error onClick is web-only
@@ -118,7 +119,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
         data-testid={`recipe-card-${recipe.id}`}
       >
         <Image source={{ uri: recipe.image }} style={styles.image} accessibilityRole="image" accessibilityLabel={`Image of ${recipe.name}`} />
-        {Platform.OS === 'web' ? (
+        {isWeb ? (
           <Pressable
             style={styles.favoriteButton}
             onPress={handleFavoritePress}
@@ -131,7 +132,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
               size={24}
               color={favorite ? Colors.error : Colors.textSecondary}
               fill={favorite ? Colors.error : 'transparent'}
-              accessible={false}
+              {...(!isWeb ? ({ accessible: false as const } as const) : ({} as const))}
             />
           </Pressable>
         ) : null}
@@ -149,12 +150,12 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Clock size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
+              <Clock size={16} color={Colors.primary} style={styles.metaIcon} {...(Platform.OS !== 'web' ? ({ accessible: false as const } as const) : ({} as const))} />
               <Text style={styles.metaText}>{recipe.prepTime}</Text>
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Users size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
+              <Users size={16} color={Colors.primary} style={styles.metaIcon} {...(Platform.OS !== 'web' ? ({ accessible: false as const } as const) : ({} as const))} />
               <Text style={styles.metaText}>{recipe.servings}</Text>
             </View>
           </View>
@@ -201,7 +202,7 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             size={24} 
             color={favorite ? Colors.error : Colors.textSecondary} 
             fill={favorite ? Colors.error : 'transparent'} 
-            accessible={false}
+            {...(Platform.OS !== 'web' ? ({ accessible: false as const } as const) : ({} as const))}
           />
         </Pressable>
         {recipe.mealType && (
@@ -218,12 +219,12 @@ export default function RecipeCard({ recipe, compact = false }: RecipeCardProps)
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Clock size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
+              <Clock size={16} color={Colors.primary} style={styles.metaIcon} {...(Platform.OS !== 'web' ? ({ accessible: false as const } as const) : ({} as const))} />
               <Text style={styles.metaText}>{recipe.prepTime}</Text>
             </View>
             <View style={styles.metaDivider} />
             <View style={styles.metaItem}>
-              <Users size={16} color={Colors.primary} style={styles.metaIcon} accessible={false} />
+              <Users size={16} color={Colors.primary} style={styles.metaIcon} {...(Platform.OS !== 'web' ? ({ accessible: false as const } as const) : ({} as const))} />
               <Text style={styles.metaText}>{recipe.servings}</Text>
             </View>
           </View>

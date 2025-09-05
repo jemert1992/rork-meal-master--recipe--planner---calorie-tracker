@@ -171,11 +171,12 @@ export default function RecipesScreen() {
   // GUARD: Update displayed recipes only when search results or filters change
   useEffect(() => {
     const updateDisplayedRecipes = async () => {
+      const dedupe = (arr: Recipe[]): Recipe[] => [...new Map(arr.map(r => [r.id, r])).values()];
       if (searchQuery.trim().length >= 2) {
-        setDisplayedRecipes(searchResults);
+        setDisplayedRecipes(dedupe(searchResults));
       } else {
         const filteredRecipes = await filterRecipes(filters);
-        setDisplayedRecipes(filteredRecipes);
+        setDisplayedRecipes(dedupe(filteredRecipes));
       }
     };
     
@@ -482,7 +483,7 @@ export default function RecipesScreen() {
         <FlatList
           ref={flatListRef}
           data={displayedRecipes}
-          keyExtractor={(item, index) => (item?.id && item.id.length > 0 ? item.id : `${item?.name ?? 'recipe'}-${index}`)}
+          keyExtractor={(item, index) => (item?.id && item.id.length > 0 ? String(item.id) : `${item?.name ?? 'recipe'}-${index}`)}
           renderItem={({ item }) => <RecipeCard recipe={item} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
