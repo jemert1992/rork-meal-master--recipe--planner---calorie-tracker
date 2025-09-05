@@ -146,11 +146,11 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
   }, [showAlternatives]);
 
   return (
-    <View style={styles.container} accessible accessibilityRole="none" accessibilityLabel={`${formatMealType(mealType)} slot`}>
+    <View style={styles.container} accessibilityRole="none" accessibilityLabel={`${formatMealType(mealType)} slot`}>
       <View style={styles.headerRow}>
         <Text style={styles.mealType} accessibilityRole="header">{formatMealType(mealType)}</Text>
         {meal && (
-          <View style={styles.headerActions} accessible accessibilityLabel={`${formatMealType(mealType)} actions`}>
+          <View style={styles.headerActions} accessibilityLabel={`${formatMealType(mealType)} actions`}>
             <Pressable
               style={({ pressed }) => [styles.swapButton, pressed && styles.focusRing]}
               onPress={handleShowAlternatives}
@@ -177,7 +177,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       </View>
       
       {meal ? (
-        <View style={styles.mealContainer} accessible accessibilityLabel={`${formatMealType(mealType)} details`}>
+        <View style={styles.mealContainer} accessibilityLabel={`${formatMealType(mealType)} details`}>
           <Pressable 
             style={({ pressed }) => [styles.mealPressable, pressed && styles.focusRing]} 
             onPress={handlePress}
@@ -198,7 +198,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <Text style={styles.calories}>{getCalories()} calories</Text>
               
               {recipe && (
-                <View style={styles.recipeDetails} accessible accessibilityRole="summary" accessibilityLabel="Recipe details">
+                <View style={styles.recipeDetails} accessibilityRole="summary" accessibilityLabel="Recipe details">
                   <View style={styles.recipeDetail}>
                     <Clock size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{recipe.prepTime}</Text>
@@ -211,7 +211,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
               
               {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
-                <View style={styles.customMealInfo} accessible accessibilityRole="summary" accessibilityLabel="Custom meal information">
+                <View style={styles.customMealInfo} accessibilityRole="summary" accessibilityLabel="Custom meal information">
                   <View style={styles.recipeDetail}>
                     <Info size={12} color={Colors.textLight} />
                     <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
@@ -224,9 +224,9 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               )}
               
               {recipe && recipe.tags.length > 0 && (
-                <View style={styles.tagsContainer} accessible accessibilityRole="list" accessibilityLabel="Tags list">
+                <View style={styles.tagsContainer} accessibilityRole="list" accessibilityLabel="Tags list">
                   {recipe.tags.slice(0, 3).map((tag, index) => (
-                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessible accessibilityRole="text" accessibilityLabel={`Tag ${tag}`}>
+                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessibilityRole="text" accessibilityLabel={`Tag ${tag}`}>
                       <Text style={styles.tagText}>{tag}</Text>
                     </View>
                   ))}
@@ -239,7 +239,6 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
             <View 
               style={styles.stepper} 
               testID={`servings-stepper-${mealType}`}
-              accessible
               accessibilityRole="adjustable"
               accessibilityLabel={`${formatMealType(mealType)} servings`}
               accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
@@ -308,7 +307,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
         {...(Platform.OS !== 'web' ? ({ accessibilityViewIsModal: true } as const) : ({} as const))}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent} accessible accessibilityLabel={`Swap ${formatMealType(mealType)} dialog`}>
+          <View style={styles.modalContent} accessibilityLabel={`Swap ${formatMealType(mealType)} dialog`}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} accessibilityRole="header">Swap {formatMealType(mealType)}</Text>
               <Pressable 
@@ -323,7 +322,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               </Pressable>
             </View>
 
-            <View style={styles.searchRow} accessible accessibilityLabel="Search and filter">
+            <View style={styles.searchRow} accessibilityLabel="Search and filter">
               <TextInput
                 value={query}
                 onChangeText={setQuery}
@@ -359,7 +358,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               </View>
             )}
 
-            <View accessible accessibilityLabel="Alternatives list">
+            <View accessibilityLabel="Alternatives list">
               <FlatList
                 data={(alternatives.length > 0 ? alternatives : recipes)
                   .filter(r => (r.mealType === mealType) || r.tags.includes(mealType))
@@ -367,7 +366,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   .filter(r => r.name.toLowerCase().includes(query.toLowerCase()))}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                  <View style={styles.alternativeItem} accessible accessibilityRole="none" accessibilityLabel={item.name}>
+                  <View style={styles.alternativeItem} accessibilityRole="none" accessibilityLabel={item.name}>
                     {item.image ? (
                       <Image 
                         source={{ uri: item.image }} 
