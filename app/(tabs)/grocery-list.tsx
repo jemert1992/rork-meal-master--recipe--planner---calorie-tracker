@@ -272,7 +272,7 @@ export default function GroceryListScreen() {
         </View>
       </View>
       
-      <View style={[styles.searchContainer, isSearchFocused && styles.searchFocused]} accessible accessibilityRole="search" accessibilityLabel="Search grocery items">
+      <View style={[styles.searchContainer, isSearchFocused && styles.searchFocused]} accessibilityRole="search" accessibilityLabel="Search grocery items">
         <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -303,7 +303,7 @@ export default function GroceryListScreen() {
       
       {groceryItems.length > 0 ? (
         <>
-          <View style={styles.statsContainer} accessible accessibilityRole="summary" accessibilityLabel="Grocery list status">
+          <View style={styles.statsContainer} accessibilityRole="summary" accessibilityLabel="Grocery list status">
             <Text style={styles.statsText}>
               {groceryItems.filter(item => item.checked).length} of {groceryItems.length} items checked
             </Text>
@@ -345,8 +345,6 @@ export default function GroceryListScreen() {
         <View style={styles.modalOverlay}>
           <View 
             style={styles.modalContainer} 
-            accessible 
-            accessibilityViewIsModal={true}
             accessibilityLabel="Add grocery item"
             accessibilityHint="Enter item details and use Add or Cancel"
             testID="modal-add-item"

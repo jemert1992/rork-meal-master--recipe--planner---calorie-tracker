@@ -38,7 +38,7 @@ export default function DateSelector({ selectedDate, onDateChange }: DateSelecto
   };
 
   return (
-    <View style={styles.container} accessible accessibilityRole="toolbar" accessibilityLabel="Date selector">
+    <View style={styles.container} accessibilityRole="toolbar" accessibilityLabel="Date selector">
       <Pressable style={styles.arrowButton} onPress={goToPreviousDay} accessibilityRole="button" accessibilityLabel="Previous day" accessibilityHint="Moves to the previous day">
         <ChevronLeft size={24} color={Colors.text} />
       </Pressable>

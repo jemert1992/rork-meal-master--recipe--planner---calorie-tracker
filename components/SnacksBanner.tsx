@@ -128,7 +128,7 @@ const SnacksBanner = () => {
             <Text style={styles.bannerTitle}>Did you know we have snacks too?</Text>
             <Text style={styles.bannerSubtitle}>Discover nutritious between-meal options</Text>
           </View>
-          <ChevronRight size={20} color={Colors.primary} accessible={false} />
+          <ChevronRight size={20} color={Colors.primary} />
         </View>
       </Pressable>
 
@@ -148,7 +148,7 @@ const SnacksBanner = () => {
                 accessibilityLabel="Close snacks modal"
                 accessibilityRole="button"
               >
-                <X size={24} color={Colors.text} accessible={false} />
+                <X size={24} color={Colors.text} />
               </Pressable>
             </View>
             

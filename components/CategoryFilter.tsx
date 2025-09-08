@@ -29,7 +29,7 @@ export default function CategoryFilter({
   );
   
   return (
-    <View style={styles.container} accessible accessibilityRole="tablist" accessibilityLabel="Recipe categories">
+    <View style={styles.container} accessibilityRole="tablist" accessibilityLabel="Recipe categories">
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
