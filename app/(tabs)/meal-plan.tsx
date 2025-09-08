@@ -527,7 +527,7 @@ export default function MealPlanScreen() {
       <ScrollView 
         ref={mealPlanContentRef}
         style={styles.content} 
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: 120 }]}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         accessibilityRole="list"
         accessibilityLabel="Meal plan slots"
@@ -925,19 +925,19 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
     backgroundColor: Colors.surface,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 6,
+    marginBottom: 2,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: 15,
     color: Colors.textSecondary,
     marginBottom: 0,
     fontWeight: '400',
@@ -947,9 +947,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'stretch',
     paddingHorizontal: 24,
-    gap: 8,
-    marginBottom: 20,
-    marginTop: 8,
+    gap: 6,
+    marginBottom: 12,
+    marginTop: 4,
   },
   nutritionSummary: {
     flex: 0,
@@ -969,15 +969,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: 4,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 14,
-    marginLeft: 12,
+    marginLeft: 8,
   },
   generateButton: {
     backgroundColor: Colors.primary,
@@ -1000,8 +1000,8 @@ const styles = StyleSheet.create({
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
-    paddingVertical: 10,
+    marginLeft: 8,
+    paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: 10,
   },
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
   },
   nutritionBarContainer: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   warningContainer: {
     flexDirection: 'row',
@@ -1035,10 +1035,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
   },
   contentContainer: {
-    paddingBottom: 120,
+    paddingBottom: 60,
   },
   sectionTitle: {
     fontSize: 20,
@@ -1122,7 +1122,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.warning,
   },
   bottomPadding: {
-    height: 40,
+    height: 8,
   },
   modalHeaderRow: {
     flexDirection: 'row',
