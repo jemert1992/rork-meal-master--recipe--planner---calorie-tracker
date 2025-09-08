@@ -356,8 +356,7 @@ export const getMealById = async (id: string): Promise<Recipe | null> => {
     if (!data.meals || data.meals.length === 0) return null;
     return convertMealToRecipe(data.meals[0]);
   } catch (error) {
-    console.error('Error getting meal by ID:', error);
-    // Fallback: try to find in mock by numeric end or return a mock
+    console.warn('[MealDB] Network failed when getting meal by ID, using fallback', { id, error });
     const fallback = mockRecipes[Number(id.replace(/\D/g, '')) % mockRecipes.length] ?? mockRecipes[0];
     return { ...fallback, id: `mock-${id}` };
   }
@@ -372,7 +371,7 @@ export const getMealsByFirstLetter = async (letter: string): Promise<Recipe[]> =
     if (!data.meals) return [];
     return data.meals.map(convertMealToRecipe);
   } catch (error) {
-    console.error('Error getting meals by letter:', error);
+    console.warn('[MealDB] Network failed when getting meals by letter, using fallback', { letter, error });
     return getMockFallback(10).filter((r) => r.name.toLowerCase().startsWith(letter.toLowerCase()));
   }
 };
@@ -412,8 +411,7 @@ export const getMealsByCategory = async (category: string): Promise<Recipe[]> =>
     );
     return results.filter((r): r is Recipe => r !== null);
   } catch (error) {
-    console.error('Error getting meals by category:', error);
-    // Fallback: slice mock recipes roughly matching mealType idea
+    console.warn('[MealDB] Network failed when getting meals by category, using fallback', { category, error });
     const lower = category.toLowerCase();
     const filtered = mockRecipes.filter((r) => r.tags?.some((t) => t.toLowerCase() === lower) || r.mealType?.toLowerCase() === lower);
     return (filtered.length ? filtered : mockRecipes).map((r, idx) => ({ ...r, id: `mock-${category}-${idx}` })).slice(0, 10);
@@ -453,7 +451,7 @@ export const getRandomMeals = async (count: number = 10): Promise<Recipe[]> => {
 
     return recipes;
   } catch (error) {
-    console.error('Error getting random meals:', error);
+    console.warn('[MealDB] Network failed when getting random meals, using fallback', error);
     return getMockFallback(count);
   }
 };
@@ -489,7 +487,7 @@ export const loadInitialRecipes = async (count: number = 20): Promise<Recipe[]> 
     }
     return trimmed;
   } catch (error) {
-    console.error('Error loading initial recipes:', error);
+    console.warn('[MealDB] Network failed when loading initial recipes, using fallback', error);
     return getMockFallback(count);
   }
 };
