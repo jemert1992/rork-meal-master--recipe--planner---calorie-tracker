@@ -274,19 +274,63 @@ export const getRecipeByIdFromSource = async (id: string): Promise<Recipe | null
 // Helper function to load recipes from MealDB
 const loadRecipesFromMealDB = async (limit: number = 20): Promise<Recipe[]> => {
   try {
-    // MealDB doesn't have a "get random recipes" endpoint with a limit
-    // So we'll fetch a few random recipes individually
-    const results: Array<PromiseSettledResult<Recipe | null>> = await Promise.allSettled(
-      Array.from({ length: Math.min(limit, 10) }, () => fetchRandomMealDBRecipe())
-    );
+    const collected: Recipe[] = [];
+    const seen = new Set<string>();
 
-    const collected = results
-      .filter((r): r is PromiseFulfilledResult<Recipe | null> => r.status === 'fulfilled')
-      .map((r) => r.value)
-      .filter((v): v is Recipe => Boolean(v));
+    // Fetch categories and iterate to maximize unique recipes
+    const categoriesRes = await fetch(`${MEALDB_API_URL}/list.php?c=list`);
+    const categoriesJson = await categoriesRes.json().catch(() => ({ meals: [] }));
+    const categories: string[] = Array.isArray(categoriesJson.meals)
+      ? categoriesJson.meals.map((m: any) => String(m.strCategory)).filter(Boolean)
+      : [];
 
-    const deduped = [...new Map(collected.map((r) => [r.id, r])).values()];
-    return deduped;
+    // Shuffle categories for variety
+    for (let i = categories.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [categories[i], categories[j]] = [categories[j], categories[i]];
+    }
+
+    for (const cat of categories) {
+      if (collected.length >= limit) break;
+      try {
+        const listRes = await fetch(`${MEALDB_API_URL}/filter.php?c=${encodeURIComponent(cat)}`);
+        if (!listRes.ok) continue;
+        const listJson = await listRes.json();
+        const meals = Array.isArray(listJson.meals) ? listJson.meals : [];
+
+        // Shuffle and iterate ids
+        for (let i = meals.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [meals[i], meals[j]] = [meals[j], meals[i]];
+        }
+
+        for (const m of meals) {
+          if (collected.length >= limit) break;
+          const id = String(m.idMeal);
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const detailed = await getRecipeFromMealDBById(id).catch(() => null);
+          if (detailed) {
+            collected.push(detailed);
+          }
+        }
+      } catch (e) {
+        console.log('MealDB category iteration error', e);
+      }
+    }
+
+    // Fallback to random if still below limit
+    while (collected.length < limit) {
+      const r = await fetchRandomMealDBRecipe();
+      if (!r) break;
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        collected.push(r);
+      }
+      if (collected.length >= limit) break;
+    }
+
+    return collected.slice(0, limit);
   } catch (error) {
     console.error('Error loading recipes from MealDB:', error);
     throw new Error('Failed to load recipes from MealDB');
@@ -610,17 +654,41 @@ const loadRecipesFromSpoonacular = async (limit: number = 20): Promise<Recipe[]>
       console.warn('Spoonacular API key missing. Set EXPO_PUBLIC_SPOONACULAR_API_KEY to enable.');
       return [];
     }
-    const response = await fetch(
-      `${SPOONACULAR_API_URL}/recipes/random?number=${limit}&apiKey=${SPOONACULAR_API_KEY}`
-    );
-    if (!response.ok) {
-      throw new Error(`Spoonacular API error: ${response.status} ${response.statusText}`);
+
+    const collected: Recipe[] = [];
+    const seen = new Set<string>();
+    let remaining = Math.max(0, limit);
+
+    // Spoonacular random supports up to 100 per request for many plans; chunk requests
+    const batch = async (count: number) => {
+      const c = Math.max(1, Math.min(100, count));
+      const url = `${SPOONACULAR_API_URL}/recipes/random?number=${c}&apiKey=${SPOONACULAR_API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Spoonacular API error: ${res.status} ${res.statusText}`);
+      const data = await res.json();
+      const arr: any[] = Array.isArray(data.recipes) ? data.recipes : [];
+      for (const raw of arr) {
+        const converted = convertSpoonacularToRecipe(raw);
+        if (!seen.has(converted.id)) {
+          seen.add(converted.id);
+          collected.push(converted);
+        }
+      }
+    };
+
+    // Try a first big batch
+    if (remaining > 0) {
+      try { await batch(remaining); } catch (e) { console.log('Spoonacular batch error, will try smaller chunks', e); }
     }
-    const data = await response.json();
-    if (!data.recipes || data.recipes.length === 0) {
-      return [];
+
+    // If still short, try multiple smaller batches for diversity
+    const fallbackTries = 5;
+    for (let i = 0; i < fallbackTries && collected.length < limit; i++) {
+      const toGet = Math.min(50, limit - collected.length);
+      try { await batch(toGet); } catch (e) { console.log('Spoonacular small batch error', e); break; }
     }
-    return data.recipes.map((recipe: any) => convertSpoonacularToRecipe(recipe));
+
+    return collected.slice(0, limit);
   } catch (error) {
     console.error('Error loading recipes from Spoonacular:', error);
     return [];
