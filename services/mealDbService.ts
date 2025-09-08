@@ -1,7 +1,35 @@
 import { Recipe } from '@/types';
+import { Platform } from 'react-native';
 
 // TheMealDB API base URL
 const API_BASE_URL = 'https://www.themealdb.com/api/json/v1/1';
+
+async function fetchWithRetry<T>(url: string, attempts: number = 2, timeoutMs: number = 12000): Promise<T> {
+  let lastError: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+      const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+      const res = await fetch(url, Platform.OS === 'web' ? { signal: controller?.signal, cache: 'no-cache' } as RequestInit : (controller ? { signal: controller.signal } as RequestInit : undefined));
+      if (timeout) clearTimeout(timeout);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return (await res.json()) as T;
+    } catch (err) {
+      lastError = err;
+      if (i === attempts - 1) break;
+      await new Promise(r => setTimeout(r, 300 + i * 300));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Unknown network error');
+}
+
+function normalizeMealDbId(id: string): string {
+  if (id.startsWith('mealdb-')) return id.replace('mealdb-', '');
+  // Sometimes our app IDs may include prefixes like "mealdb_" or accidental spaces
+  return id.replace(/^mealdb[_:\-]/, '').trim();
+}
 
 // TheMealDB meal type
 type MealDBMeal = {
@@ -238,11 +266,8 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
  */
 export const searchMealsByName = async (query: string): Promise<Recipe[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/search.php?s=${encodeURIComponent(query)}`);
-    const data: MealDBResponse = await response.json();
-    
+    const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/search.php?s=${encodeURIComponent(query)}`);
     if (!data.meals) return [];
-    
     return data.meals.map(convertMealToRecipe);
   } catch (error) {
     console.error('Error searching meals:', error);
@@ -255,11 +280,9 @@ export const searchMealsByName = async (query: string): Promise<Recipe[]> => {
  */
 export const getMealById = async (id: string): Promise<Recipe | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/lookup.php?i=${id}`);
-    const data: MealDBResponse = await response.json();
-    
+    const normId = normalizeMealDbId(id);
+    const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/lookup.php?i=${encodeURIComponent(normId)}`);
     if (!data.meals || data.meals.length === 0) return null;
-    
     return convertMealToRecipe(data.meals[0]);
   } catch (error) {
     console.error('Error getting meal by ID:', error);
@@ -272,11 +295,8 @@ export const getMealById = async (id: string): Promise<Recipe | null> => {
  */
 export const getMealsByFirstLetter = async (letter: string): Promise<Recipe[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/search.php?f=${letter.charAt(0)}`);
-    const data: MealDBResponse = await response.json();
-    
+    const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/search.php?f=${encodeURIComponent(letter.charAt(0))}`);
     if (!data.meals) return [];
-    
     return data.meals.map(convertMealToRecipe);
   } catch (error) {
     console.error('Error getting meals by letter:', error);
@@ -289,11 +309,8 @@ export const getMealsByFirstLetter = async (letter: string): Promise<Recipe[]> =
  */
 export const getMealCategories = async (): Promise<string[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/categories.php`);
-    const data: MealDBCategoriesResponse = await response.json();
-    
+    const data = await fetchWithRetry<MealDBCategoriesResponse>(`${API_BASE_URL}/categories.php`);
     if (!data.categories) return [];
-    
     return data.categories.map(category => category.strCategory);
   } catch (error) {
     console.error('Error getting meal categories:', error);
@@ -306,23 +323,22 @@ export const getMealCategories = async (): Promise<string[]> => {
  */
 export const getMealsByCategory = async (category: string): Promise<Recipe[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/filter.php?c=${encodeURIComponent(category)}`);
-    const data: MealDBResponse = await response.json();
-    
+    const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/filter.php?c=${encodeURIComponent(category)}`);
     if (!data.meals) return [];
-    
-    // The filter endpoint only returns basic meal info, so we need to fetch full details for each meal
-    const recipes: Recipe[] = [];
-    
-    // Limit to 10 meals to avoid too many requests
+
     const mealsToFetch = data.meals.slice(0, 10);
-    
-    for (const meal of mealsToFetch) {
-      const recipe = await getMealById(meal.idMeal);
-      if (recipe) recipes.push(recipe);
-    }
-    
-    return recipes;
+    const results = await Promise.all(
+      mealsToFetch.map(async (meal) => {
+        try {
+          return await getMealById(meal.idMeal);
+        } catch (e) {
+          console.warn('Failed to get meal details', meal.idMeal, e);
+          return null;
+        }
+      })
+    );
+    return results.filter((r): r is Recipe => r !== null);
+
   } catch (error) {
     console.error('Error getting meals by category:', error);
     return [];
@@ -340,9 +356,7 @@ export const getRandomMeals = async (count: number = 10): Promise<Recipe[]> => {
     // We can only fetch one random meal at a time from the API
     // So we'll make multiple requests to get the desired count
     for (let i = 0; i < count; i++) {
-      const response = await fetch(`${API_BASE_URL}/random.php`);
-      const data: MealDBResponse = await response.json();
-      
+      const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/random.php`);
       if (data.meals && data.meals.length > 0) {
         const meal = data.meals[0];
         
