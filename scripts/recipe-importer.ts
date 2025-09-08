@@ -135,44 +135,62 @@ async function loadFromFile(inputPath: string, format: 'json' | 'csv'): Promise<
 }
 
 async function loadFromSpoonacular(count: number): Promise<Recipe[]> {
-  const key = process.env.SPOONACULAR_API_KEY;
+  const key = process.env.SPOONACULAR_API_KEY || process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY;
   if (!key) {
-    console.warn('SPOONACULAR_API_KEY not set; skipping Spoonacular import.');
+    console.warn('SPOONACULAR_API_KEY / EXPO_PUBLIC_SPOONACULAR_API_KEY not set; skipping Spoonacular import.');
     return [];
   }
-  const url = `https://api.spoonacular.com/recipes/random?number=${Math.min(count, 100)}&apiKey=${encodeURIComponent(key)}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.warn('Spoonacular request failed', res.status, res.statusText);
-    return [];
+  const batchSize = 100;
+  const total = Math.max(1, count);
+  const batches = Math.ceil(total / batchSize);
+  const all: Recipe[] = [];
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  for (let i = 0; i < batches; i++) {
+    const remaining = total - all.length;
+    const take = Math.min(batchSize, remaining);
+    const url = `https://api.spoonacular.com/recipes/random?number=${take}&apiKey=${encodeURIComponent(key)}`;
+    console.log(`[Spoonacular] Fetching batch ${i + 1}/${batches} -> ${take} recipes`, url);
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn('[Spoonacular] request failed', res.status, res.statusText);
+      break;
+    }
+    const data: any = await res.json();
+    const batch: Recipe[] = (data.recipes ?? []).map((raw: any) => normalizeBase({
+      id: `spoon-${raw.id}`,
+      name: raw.title,
+      image: raw.image,
+      prepTime: raw.preparationMinutes ? `${raw.preparationMinutes} min` : '15 min',
+      cookTime: raw.cookingMinutes ? `${raw.cookingMinutes} min` : undefined,
+      servings: raw.servings ?? 2,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+      ingredients: (raw.extendedIngredients ?? []).map((i: any) => {
+        const amt = i.measures?.us?.amount || i.amount || '';
+        const unit = i.measures?.us?.unitShort || i.unit || '';
+        const nm = i.originalName || i.name || '';
+        if (amt && unit) return `${amt} ${unit} ${nm}`;
+        if (amt) return `${amt} ${nm}`;
+        return nm;
+      }),
+      instructions: raw.analyzedInstructions?.[0]?.steps?.map((s: any) => s.step) ?? (raw.instructions ? String(raw.instructions).split(/\r?\n|\./).map((s: string) => s.trim()).filter(Boolean) : []),
+      tags: [
+        ...(raw.cuisines ?? []).map((x: string) => x.toLowerCase()),
+        ...(raw.dishTypes ?? []).map((x: string) => x.toLowerCase()),
+        ...(raw.diets ?? []).map((x: string) => x.toLowerCase()),
+      ],
+      mealType: undefined,
+      source: 'Spoonacular'
+    }));
+    all.push(...batch);
+    if (all.length >= total) break;
+    await sleep(1100);
   }
-  const data: any = await res.json();
-  const recipes = (data.recipes ?? []).map((raw: any) => normalizeBase({
-    id: `spoon-${raw.id}`,
-    name: raw.title,
-    image: raw.image,
-    prepTime: raw.preparationMinutes ? `${raw.preparationMinutes} min` : '15 min',
-    cookTime: raw.cookingMinutes ? `${raw.cookingMinutes} min` : undefined,
-    servings: raw.servings ?? 2,
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0,
-    fiber: 0,
-    ingredients: (raw.extendedIngredients ?? []).map((i: any) => {
-      const amt = i.measures?.us?.amount || i.amount || ''; const unit = i.measures?.us?.unitShort || i.unit || ''; const nm = i.originalName || i.name || '';
-      if (amt && unit) return `${amt} ${unit} ${nm}`; if (amt) return `${amt} ${nm}`; return nm;
-    }),
-    instructions: raw.analyzedInstructions?.[0]?.steps?.map((s: any) => s.step) ?? (raw.instructions ? String(raw.instructions).split(/\r?\n|\./).map((s: string) => s.trim()).filter(Boolean) : []),
-    tags: [
-      ...(raw.cuisines ?? []).map((x: string) => x.toLowerCase()),
-      ...(raw.dishTypes ?? []).map((x: string) => x.toLowerCase()),
-      ...(raw.diets ?? []).map((x: string) => x.toLowerCase()),
-    ],
-    mealType: undefined,
-    source: 'Spoonacular'
-  }));
-  return recipes;
+  return all.slice(0, total);
 }
 
 async function loadFromEdamam(query: string, count: number): Promise<Recipe[]> {
