@@ -69,17 +69,12 @@ export default function AccessibleModal({
   const content = (
     <View
       style={styles.backdrop}
-      {...(Platform.OS !== 'web' ? ({ importantForAccessibility: 'yes' } as any) : ({} as any))}
       testID={testID ?? 'accessible-modal'}
-      {...(Platform.OS === 'web'
-        ? ({ accessibilityRole: 'dialog' } as any)
-        : ({ accessibilityViewIsModal: true } as any))}
     >
       <View style={styles.sheet} testID={(testID ? `${testID}-sheet` : 'accessible-modal-sheet')}>
         <View style={styles.header} testID={(testID ? `${testID}-header` : 'accessible-modal-header')}>
           <Text
             ref={titleRef}
-            {...(Platform.OS !== 'web' ? ({ accessibilityRole: 'header' } as const) : ({} as const))}
             style={styles.title}
             numberOfLines={2}
             maxFontSizeMultiplier={1.3}
@@ -101,7 +96,6 @@ export default function AccessibleModal({
         </View>
         <View
           style={styles.body}
-          {...(Platform.OS !== 'web' ? ({ accessibilityRole: 'summary' } as const) : ({} as const))}
           testID={(testID ? `${testID}-body` : 'accessible-modal-body')}
         >
           {children}
