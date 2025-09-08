@@ -233,59 +233,59 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   ))}
                 </View>
               )}
-
-              <View style={styles.controlRow}>
-                <View 
-                  style={styles.stepper} 
-                  testID={`servings-stepper-${mealType}`}
-                  accessibilityRole="adjustable"
-                  accessibilityLabel={`${formatMealType(mealType)} servings`}
-                  accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-                  onAccessibilityAction={onStepperAccessibilityAction}
-                  accessibilityValue={{ min: 1, max: 20, now: servings }}
-                >
-                  <Pressable 
-                    onPress={() => onChangeServings(-1)} 
-                    style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
-                    accessibilityLabel={`Decrease ${mealType} servings`}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: servings <= 1 }}
-                    accessibilityHint="Decreases servings by one"
-                    testID={`decrease-servings-${mealType}`}
-                  >
-                    <Minus size={16} color={Colors.text} />
-                  </Pressable>
-                  <View style={styles.stepperValue} accessibilityRole="text" accessibilityLabel={`Current servings ${servings}`}>
-                    <Users size={14} color={Colors.textSecondary} />
-                    <Text style={styles.stepperText}>{servings}</Text>
-                  </View>
-                  <Pressable 
-                    onPress={() => onChangeServings(1)} 
-                    style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
-                    accessibilityLabel={`Increase ${mealType} servings`}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: servings >= 20 }}
-                    accessibilityHint="Increases servings by one"
-                    testID={`increase-servings-${mealType}`}
-                  >
-                    <Plus size={16} color={Colors.text} />
-                  </Pressable>
-                </View>
-
-                <Pressable 
-                  style={({ pressed }) => [styles.iconButton, pressed && styles.focusRing]} 
-                  onPress={onRemove} 
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
-                  accessibilityRole="button"
-                  accessibilityHint="Removes this meal from the plan"
-                  testID={`remove-${mealType}`}
-                >
-                  <X size={18} color={Colors.textLight} />
-                </Pressable>
-              </View>
             </View>
           </Pressable>
+
+          <View style={styles.controlRow}>
+            <View 
+              style={styles.stepper} 
+              testID={`servings-stepper-${mealType}`}
+              accessibilityRole="adjustable"
+              accessibilityLabel={`${formatMealType(mealType)} servings`}
+              accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+              onAccessibilityAction={onStepperAccessibilityAction}
+              accessibilityValue={{ min: 1, max: 20, now: servings }}
+            >
+              <Pressable 
+                onPress={() => onChangeServings(-1)} 
+                style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
+                accessibilityLabel={`Decrease ${mealType} servings`}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: servings <= 1 }}
+                accessibilityHint="Decreases servings by one"
+                testID={`decrease-servings-${mealType}`}
+              >
+                <Minus size={16} color={Colors.text} />
+              </Pressable>
+              <View style={styles.stepperValue} accessibilityRole="text" accessibilityLabel={`Current servings ${servings}`}>
+                <Users size={14} color={Colors.textSecondary} />
+                <Text style={styles.stepperText}>{servings}</Text>
+              </View>
+              <Pressable 
+                onPress={() => onChangeServings(1)} 
+                style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
+                accessibilityLabel={`Increase ${mealType} servings`}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: servings >= 20 }}
+                accessibilityHint="Increases servings by one"
+                testID={`increase-servings-${mealType}`}
+              >
+                <Plus size={16} color={Colors.text} />
+              </Pressable>
+            </View>
+
+            <Pressable 
+              style={({ pressed }) => [styles.iconButton, pressed && styles.focusRing]} 
+              onPress={onRemove} 
+              hitSlop={8}
+              accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
+              accessibilityRole="button"
+              accessibilityHint="Removes this meal from the plan"
+              testID={`remove-${mealType}`}
+            >
+              <X size={18} color={Colors.textLight} />
+            </Pressable>
+          </View>
 
           {false && meal && (
             <View 
@@ -869,9 +869,9 @@ const styles = StyleSheet.create({
   },
   controlRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    paddingHorizontal: 8,
+    gap: 8,
   },
   iconButton: {
     height: 36,
