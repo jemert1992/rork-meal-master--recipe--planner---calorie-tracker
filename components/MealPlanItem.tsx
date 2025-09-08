@@ -191,6 +191,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                 style={styles.mealImage} 
                 accessibilityLabel={`Image of ${meal.name}`}
                 accessibilityRole="image"
+                resizeMode="cover"
               />
             )}
             <View style={styles.mealContent}>
@@ -232,10 +233,61 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                   ))}
                 </View>
               )}
+
+              <View style={styles.controlRow}>
+                <View 
+                  style={styles.stepper} 
+                  testID={`servings-stepper-${mealType}`}
+                  accessibilityRole="adjustable"
+                  accessibilityLabel={`${formatMealType(mealType)} servings`}
+                  accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+                  onAccessibilityAction={onStepperAccessibilityAction}
+                  accessibilityValue={{ min: 1, max: 20, now: servings }}
+                >
+                  <Pressable 
+                    onPress={() => onChangeServings(-1)} 
+                    style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
+                    accessibilityLabel={`Decrease ${mealType} servings`}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: servings <= 1 }}
+                    accessibilityHint="Decreases servings by one"
+                    testID={`decrease-servings-${mealType}`}
+                  >
+                    <Minus size={16} color={Colors.text} />
+                  </Pressable>
+                  <View style={styles.stepperValue} accessibilityRole="text" accessibilityLabel={`Current servings ${servings}`}>
+                    <Users size={14} color={Colors.textSecondary} />
+                    <Text style={styles.stepperText}>{servings}</Text>
+                  </View>
+                  <Pressable 
+                    onPress={() => onChangeServings(1)} 
+                    style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
+                    accessibilityLabel={`Increase ${mealType} servings`}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: servings >= 20 }}
+                    accessibilityHint="Increases servings by one"
+                    testID={`increase-servings-${mealType}`}
+                  >
+                    <Plus size={16} color={Colors.text} />
+                  </Pressable>
+                </View>
+
+                <Pressable 
+                  style={({ pressed }) => [styles.iconButton, pressed && styles.focusRing]} 
+                  onPress={onRemove} 
+                  hitSlop={8}
+                  accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
+                  accessibilityRole="button"
+                  accessibilityHint="Removes this meal from the plan"
+                  testID={`remove-${mealType}`}
+                >
+                  <X size={18} color={Colors.textLight} />
+                </Pressable>
+              </View>
             </View>
           </Pressable>
 
-          {meal && (
+          {false && meal && (
             <View 
               style={styles.stepper} 
               testID={`servings-stepper-${mealType}`}
@@ -275,7 +327,7 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
           )}
 
           <Pressable 
-            style={({ pressed }) => [styles.removeButton, pressed && styles.focusRing]} 
+            style={({ pressed }) => [styles.removeButton, pressed && styles.focusRing, { display: 'none' }]} 
             onPress={onRemove} 
             hitSlop={8}
             accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
@@ -511,12 +563,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   mealImage: {
-    width: 90,
-    aspectRatio: 1,
+    width: 120,
+    height: 120,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   mealContent: {
     flex: 1,
-    padding: 16,
+    padding: 14,
+    justifyContent: 'center',
   },
   mealName: {
     fontSize: 17,
@@ -568,13 +623,12 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
-    height: 38,
-    marginRight: 8,
+    height: 36,
     backgroundColor: Colors.backgroundLight,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+    paddingRight: 2,
   },
   stepperButton: {
     paddingHorizontal: 10,
@@ -812,5 +866,22 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary,
     shadowOpacity: 0.2,
     shadowRadius: 6,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  iconButton: {
+    height: 36,
+    width: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
 });
