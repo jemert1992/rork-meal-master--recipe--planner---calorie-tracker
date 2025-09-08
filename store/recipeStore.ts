@@ -165,7 +165,7 @@ export const useRecipeStore = create<RecipeState>()(
       apiSources: {
         useMealDB: true,
         useSpoonacular: true,
-        useEdamam: true,
+        useEdamam: false,
         useFirebase: false,
       },
       
@@ -394,7 +394,7 @@ export const useRecipeStore = create<RecipeState>()(
                 }
               }));
               
-              const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(100, {
+              const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(500, {
                 useMealDB: true,
                 useSpoonacular: false,
                 useEdamam: false,
@@ -473,7 +473,7 @@ export const useRecipeStore = create<RecipeState>()(
                 get().cacheRecipesOffline(100);
               }
             } else {
-              const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(100, apiSources);
+              const apiRecipes = await recipeApiService.loadInitialRecipesFromAllSources(500, apiSources);
               
               if (apiRecipes.length > 0) {
                 const validatedRecipes = apiRecipes.map(validateRecipe);
