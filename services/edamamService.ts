@@ -4,20 +4,26 @@ import { normalizeIngredientList } from '@/utils/ingredientParser';
 
 // Edamam Recipe Search API configuration
 const EDAMAM_API_URL = 'https://api.edamam.com/api/recipes/v2';
-// These will be overridden by values from AsyncStorage if available
-let EDAMAM_APP_ID = 'YOUR_EDAMAM_APP_ID';
-let EDAMAM_APP_KEY = 'YOUR_EDAMAM_APP_KEY';
+// Prefer Expo public env vars, fallback to AsyncStorage
+const ENV_APP_ID = (process.env.EXPO_PUBLIC_EDAMAM_APP_ID ?? '').trim();
+const ENV_APP_KEY = (process.env.EXPO_PUBLIC_EDAMAM_APP_KEY ?? '').trim();
 
-// Initialize API credentials from AsyncStorage
+let EDAMAM_APP_ID = ENV_APP_ID || 'YOUR_EDAMAM_APP_ID';
+let EDAMAM_APP_KEY = ENV_APP_KEY || 'YOUR_EDAMAM_APP_KEY';
+
+// Initialize API credentials from AsyncStorage (env takes precedence)
 const initializeCredentials = async () => {
   try {
-    const appId = await AsyncStorage.getItem('edamam_app_id');
-    const appKey = await AsyncStorage.getItem('edamam_app_key');
-    
-    if (appId) EDAMAM_APP_ID = appId;
-    if (appKey) EDAMAM_APP_KEY = appKey;
-    
-    return { appId: !!appId, appKey: !!appKey };
+    const storedAppId = await AsyncStorage.getItem('edamam_app_id');
+    const storedAppKey = await AsyncStorage.getItem('edamam_app_key');
+
+    if (ENV_APP_ID) EDAMAM_APP_ID = ENV_APP_ID; else if (storedAppId) EDAMAM_APP_ID = storedAppId;
+    if (ENV_APP_KEY) EDAMAM_APP_KEY = ENV_APP_KEY; else if (storedAppKey) EDAMAM_APP_KEY = storedAppKey;
+
+    return {
+      appId: EDAMAM_APP_ID !== 'YOUR_EDAMAM_APP_ID' && EDAMAM_APP_ID.length > 0,
+      appKey: EDAMAM_APP_KEY !== 'YOUR_EDAMAM_APP_KEY' && EDAMAM_APP_KEY.length > 0,
+    };
   } catch (error) {
     console.error('Error loading Edamam credentials:', error);
     return { appId: false, appKey: false };
