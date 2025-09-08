@@ -6,7 +6,8 @@ import { normalizeIngredientList } from '@/utils/ingredientParser';
 // API configuration
 const MEALDB_API_URL = 'https://www.themealdb.com/api/json/v1/1';
 const SPOONACULAR_API_URL = 'https://api.spoonacular.com';
-const SPOONACULAR_API_KEY = process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY ?? '';
+const SPOONACULAR_API_KEY =
+  (process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY ?? process.env.EXPO_PUBLIC_SPOON ?? process.env.EXPO_PUBLIC_SPOONACULAR ?? '').trim();
 
 // Interface for API sources configuration
 interface ApiSourcesConfig {
