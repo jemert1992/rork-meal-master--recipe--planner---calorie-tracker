@@ -6,7 +6,7 @@ import { normalizeIngredientList } from '@/utils/ingredientParser';
 // API configuration
 const MEALDB_API_URL = 'https://www.themealdb.com/api/json/v1/1';
 const SPOONACULAR_API_URL = 'https://api.spoonacular.com';
-const SPOONACULAR_API_KEY = '802ab87547244544b1e9a9dc02f63a2b'; // Updated with the provided API key
+const SPOONACULAR_API_KEY = process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY ?? '';
 
 // Interface for API sources configuration
 interface ApiSourcesConfig {
@@ -605,57 +605,52 @@ const convertMealDBToRecipe = (meal: any): Recipe => {
 // Helper function to load recipes from Spoonacular
 const loadRecipesFromSpoonacular = async (limit: number = 20): Promise<Recipe[]> => {
   try {
-    // Spoonacular has a "get random recipes" endpoint with a limit
+    if (!SPOONACULAR_API_KEY) {
+      console.warn('Spoonacular API key missing. Set EXPO_PUBLIC_SPOONACULAR_API_KEY to enable.');
+      return [];
+    }
     const response = await fetch(
       `${SPOONACULAR_API_URL}/recipes/random?number=${limit}&apiKey=${SPOONACULAR_API_KEY}`
     );
-    
     if (!response.ok) {
       throw new Error(`Spoonacular API error: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json();
-    
     if (!data.recipes || data.recipes.length === 0) {
       return [];
     }
-    
     return data.recipes.map((recipe: any) => convertSpoonacularToRecipe(recipe));
   } catch (error) {
     console.error('Error loading recipes from Spoonacular:', error);
-    throw new Error('Failed to load recipes from Spoonacular');
+    return [];
   }
 };
 
 // Helper function to search recipes from Spoonacular
 const searchRecipesFromSpoonacular = async (query: string, limit: number = 20): Promise<Recipe[]> => {
   try {
-    // First, search for recipes by query
+    if (!SPOONACULAR_API_KEY) {
+      console.warn('Spoonacular API key missing. Set EXPO_PUBLIC_SPOONACULAR_API_KEY to enable.');
+      return [];
+    }
     const searchResponse = await fetch(
       `${SPOONACULAR_API_URL}/recipes/complexSearch?query=${encodeURIComponent(query)}&number=${limit}&apiKey=${SPOONACULAR_API_KEY}`
     );
-    
     if (!searchResponse.ok) {
       throw new Error(`Spoonacular API error: ${searchResponse.status} ${searchResponse.statusText}`);
     }
-    
     const searchData = await searchResponse.json();
-    
     if (!searchData.results || searchData.results.length === 0) {
       return [];
     }
-    
-    // Then, get detailed information for each recipe
     const recipePromises = searchData.results.map(async (result: any) => {
       try {
         const detailResponse = await fetch(
           `${SPOONACULAR_API_URL}/recipes/${result.id}/information?includeNutrition=true&apiKey=${SPOONACULAR_API_KEY}`
         );
-        
         if (!detailResponse.ok) {
           throw new Error(`Spoonacular API error: ${detailResponse.status} ${detailResponse.statusText}`);
         }
-        
         const detailData = await detailResponse.json();
         return convertSpoonacularToRecipe(detailData);
       } catch (error) {
@@ -663,7 +658,6 @@ const searchRecipesFromSpoonacular = async (query: string, limit: number = 20): 
         return null;
       }
     });
-    
     const recipes = await Promise.allSettled(recipePromises);
     return recipes
       .filter((result): result is PromiseFulfilledResult<Recipe> => 
@@ -672,26 +666,28 @@ const searchRecipesFromSpoonacular = async (query: string, limit: number = 20): 
       .map(result => result.value);
   } catch (error) {
     console.error('Error searching recipes from Spoonacular:', error);
-    throw new Error('Failed to search recipes from Spoonacular');
+    return [];
   }
 };
 
 // Helper function to get a recipe by ID from Spoonacular
 const getRecipeFromSpoonacularById = async (id: string): Promise<Recipe | null> => {
   try {
+    if (!SPOONACULAR_API_KEY) {
+      console.warn('Spoonacular API key missing. Set EXPO_PUBLIC_SPOONACULAR_API_KEY to enable.');
+      return null;
+    }
     const response = await fetch(
       `${SPOONACULAR_API_URL}/recipes/${id}/information?includeNutrition=true&apiKey=${SPOONACULAR_API_KEY}`
     );
-    
     if (!response.ok) {
       throw new Error(`Spoonacular API error: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json();
     return convertSpoonacularToRecipe(data);
   } catch (error) {
     console.error('Error getting recipe from Spoonacular by ID:', error);
-    throw new Error('Failed to get recipe from Spoonacular');
+    return null;
   }
 };
 
