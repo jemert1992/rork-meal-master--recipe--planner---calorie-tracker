@@ -178,63 +178,64 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
       
       {meal ? (
         <View style={styles.mealContainer} accessibilityLabel={`${formatMealType(mealType)} details`}>
-          <Pressable 
-            style={({ pressed }) => [styles.mealPressable, pressed && styles.focusRing]} 
-            onPress={handlePress}
-            accessibilityLabel={`${formatMealType(mealType)}: ${meal.name}`}
-            accessibilityHint={`${getCalories()} calories. Tap to view details.`}
-            accessibilityRole="button"
-          >
-            {recipe && recipe.image && (
-              <Image 
-                source={{ uri: recipe.image }} 
-                style={styles.mealImage} 
-                accessibilityLabel={`Image of ${meal.name}`}
-                accessibilityRole="image"
-                resizeMode="cover"
-              />
-            )}
-            <View style={styles.mealContent}>
-              <Text style={styles.mealName}>{meal.name}</Text>
-              <Text style={styles.calories}>{getCalories()} calories</Text>
-              
-              {recipe && (
-                <View style={styles.recipeDetails} accessibilityRole="summary" accessibilityLabel="Recipe details">
-                  <View style={styles.recipeDetail}>
-                    <Clock size={12} color={Colors.textLight} />
-                    <Text style={styles.detailText}>{recipe.prepTime}</Text>
-                  </View>
-                  <View style={styles.recipeDetail}>
-                    <Users size={12} color={Colors.textLight} />
-                    <Text style={styles.detailText}>x {servings}</Text>
-                  </View>
-                </View>
+          <View style={styles.topRow}>
+            <Pressable 
+              style={({ pressed }) => [styles.mealPressable, pressed && styles.focusRing]} 
+              onPress={handlePress}
+              accessibilityLabel={`${formatMealType(mealType)}: ${meal.name}`}
+              accessibilityHint={`${getCalories()} calories. Tap to view details.`}
+              accessibilityRole="button"
+            >
+              {recipe && recipe.image ? (
+                <Image 
+                  source={{ uri: recipe.image }} 
+                  style={styles.mealImage} 
+                  accessibilityLabel={`Image of ${meal.name}`}
+                  accessibilityRole="image"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.mealImagePlaceholder} />
               )}
-              
-              {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
-                <View style={styles.customMealInfo} accessibilityRole="summary" accessibilityLabel="Custom meal information">
-                  <View style={styles.recipeDetail}>
-                    <Info size={12} color={Colors.textLight} />
-                    <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
-                  </View>
-                  <View style={styles.recipeDetail}>
-                    <Users size={12} color={Colors.textLight} />
-                    <Text style={styles.detailText}>x {servings}</Text>
-                  </View>
-                </View>
-              )}
-              
-              {recipe && recipe.tags.length > 0 && (
-                <View style={styles.tagsContainer} accessibilityRole="list" accessibilityLabel="Tags list">
-                  {recipe.tags.slice(0, 3).map((tag, index) => (
-                    <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessibilityRole="text" accessibilityLabel={`Tag ${tag}`}>
-                      <Text style={styles.tagText}>{tag}</Text>
+              <View style={styles.mealContent}>
+                <Text style={styles.mealName} numberOfLines={2}>{meal.name}</Text>
+                <Text style={styles.calories}>{getCalories()} calories</Text>
+                {recipe && (
+                  <View style={styles.recipeDetails} accessibilityRole="summary" accessibilityLabel="Recipe details">
+                    <View style={styles.recipeDetail}>
+                      <Clock size={12} color={Colors.textLight} />
+                      <Text style={styles.detailText}>{recipe.prepTime}</Text>
                     </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </Pressable>
+                    <View style={styles.recipeDetail}>
+                      <Users size={12} color={Colors.textLight} />
+                      <Text style={styles.detailText}>x {servings}</Text>
+                    </View>
+                  </View>
+                )}
+                {!recipe && meal.ingredients && meal.ingredients.length > 0 && (
+                  <View style={styles.customMealInfo} accessibilityRole="summary" accessibilityLabel="Custom meal information">
+                    <View style={styles.recipeDetail}>
+                      <Info size={12} color={Colors.textLight} />
+                      <Text style={styles.detailText}>{meal.ingredients.length} ingredients</Text>
+                    </View>
+                    <View style={styles.recipeDetail}>
+                      <Users size={12} color={Colors.textLight} />
+                      <Text style={styles.detailText}>x {servings}</Text>
+                    </View>
+                  </View>
+                )}
+                {recipe && recipe.tags.length > 0 && (
+                  <View style={styles.tagsContainer} accessibilityRole="list" accessibilityLabel="Tags list">
+                    {recipe.tags.slice(0, 3).map((tag, index) => (
+                      <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessibilityRole="text" accessibilityLabel={`Tag ${tag}`}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          </View>
 
           <View style={styles.controlRow}>
             <View 
@@ -286,57 +287,6 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
               <X size={18} color={Colors.textLight} />
             </Pressable>
           </View>
-
-          {false && meal && (
-            <View 
-              style={styles.stepper} 
-              testID={`servings-stepper-${mealType}`}
-              accessibilityRole="adjustable"
-              accessibilityLabel={`${formatMealType(mealType)} servings`}
-              accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-              onAccessibilityAction={onStepperAccessibilityAction}
-              accessibilityValue={{ min: 1, max: 20, now: servings }}
-            >
-              <Pressable 
-                onPress={() => onChangeServings(-1)} 
-                style={({ pressed }) => [styles.stepperButton, styles.stepperLeft, pressed && styles.focusRing]}
-                accessibilityLabel={`Decrease ${mealType} servings`}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: servings <= 1 }}
-                accessibilityHint="Decreases servings by one"
-                testID={`decrease-servings-${mealType}`}
-              >
-                <Minus size={16} color={Colors.text} />
-              </Pressable>
-              <View style={styles.stepperValue} accessibilityRole="text" accessibilityLabel={`Current servings ${servings}`}>
-                <Users size={14} color={Colors.textSecondary} />
-                <Text style={styles.stepperText}>{servings}</Text>
-              </View>
-              <Pressable 
-                onPress={() => onChangeServings(1)} 
-                style={({ pressed }) => [styles.stepperButton, styles.stepperRight, pressed && styles.focusRing]}
-                accessibilityLabel={`Increase ${mealType} servings`}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: servings >= 20 }}
-                accessibilityHint="Increases servings by one"
-                testID={`increase-servings-${mealType}`}
-              >
-                <Plus size={16} color={Colors.text} />
-              </Pressable>
-            </View>
-          )}
-
-          <Pressable 
-            style={({ pressed }) => [styles.removeButton, pressed && styles.focusRing, { display: 'none' }]} 
-            onPress={onRemove} 
-            hitSlop={8}
-            accessibilityLabel={`Remove ${meal?.name ?? mealType} from ${mealType}`}
-            accessibilityRole="button"
-            accessibilityHint="Removes this meal from the plan"
-            testID={`remove-${mealType}`}
-          >
-            <X size={18} color={Colors.textLight} />
-          </Pressable>
         </View>
       ) : (
         <Pressable 
@@ -545,8 +495,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   mealContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
@@ -558,6 +506,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   mealPressable: {
     flex: 1,
     flexDirection: 'row',
@@ -567,6 +519,13 @@ const styles = StyleSheet.create({
     height: 120,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
+  },
+  mealImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+    backgroundColor: Colors.backgroundLight,
   },
   mealContent: {
     flex: 1,
@@ -870,7 +829,11 @@ const styles = StyleSheet.create({
   controlRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
     gap: 8,
   },
   iconButton: {
@@ -882,6 +845,5 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
 });
