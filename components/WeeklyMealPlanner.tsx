@@ -61,7 +61,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
     generationProgress
   } = useMealPlanStore();
   const { recipes } = useRecipeStore();
-  const { profile } = useUserStore();
+  const { profile, updateProfile } = useUserStore();
   
   const [modalVisible, setModalVisible] = useState(false);
   const modalCloseButtonRef = useRef<any>(null);
@@ -783,6 +783,27 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 </View>
               )}
               
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.strictNoDuplicates ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ strictNoDuplicates: !(profile.strictNoDuplicates ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle strict no duplicates"
+                >
+                  <Check size={14} color={(profile.strictNoDuplicates ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.strictNoDuplicates ?? false) && { color: Colors.white }]}>No duplicates</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.requireDailyPlantBased ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ requireDailyPlantBased: !(profile.requireDailyPlantBased ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle daily plant-based requirement"
+                >
+                  <Check size={14} color={(profile.requireDailyPlantBased ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.requireDailyPlantBased ?? false) && { color: Colors.white }]}>Plant-based daily</Text>
+                </Pressable>
+              </View>
+              
               <Text style={styles.weeklyPlanInfo}>
                 {profile.dietType && profile.dietType !== 'any' 
                   ? `Based on your ${profile.dietType} diet • Variety on`
@@ -795,6 +816,20 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               >
                 We avoid repeating the same main ingredient or cuisine back-to-back and balance meals within the day.
               </Text>
+
+              {(generationSuggestions?.some?.((s: string) => s.includes('Some repeats may occur—')) ?? false) && (
+                <View style={styles.noticeBanner} accessibilityLabel="Repeats notice">
+                  <AlertCircle size={16} color={Colors.warning} />
+                  <Text style={styles.noticeBannerText}>Some repeats may occur—add more recipes for greater variety.</Text>
+                </View>
+              )}
+
+              {generationSuggestions?.find?.((s: string) => s.startsWith('Diversity summary')) && (
+                <View style={styles.summaryBanner} accessibilityLabel="Diversity summary">
+                  <Sparkles size={16} color={Colors.primary} />
+                  <Text style={styles.summaryBannerText}>{generationSuggestions.find((s: string) => s.startsWith('Diversity summary'))}</Text>
+                </View>
+              )}
             </View>
             
             <View style={styles.weekNavigationContainer}>
@@ -1242,6 +1277,26 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
   },
+  togglePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
+    gap: 6,
+  },
+  togglePillActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  togglePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.text,
+  },
   weeklyPlanVarietyHint: {
     fontSize: 12,
     color: Colors.textSecondary,
@@ -1258,6 +1313,38 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 6,
     backgroundColor: Colors.primary,
+  },
+  noticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: Colors.warningLight ?? '#FFF8E1',
+    borderWidth: 1,
+    borderColor: Colors.warning ?? '#FFC107',
+    marginTop: 8,
+  },
+  noticeBannerText: {
+    fontSize: 12,
+    color: Colors.warning ?? '#FFC107',
+    flex: 1,
+  },
+  summaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: Colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    marginTop: 8,
+  },
+  summaryBannerText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    flex: 1,
   },
   weekNavigationContainer: {
     flexDirection: 'row',

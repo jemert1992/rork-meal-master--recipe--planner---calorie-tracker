@@ -176,6 +176,10 @@ export type UserProfile = {
   dietType?: DietType;
   allergies?: string[];
   excludedIngredients?: string[];
+  preferredCuisines?: string[];
+  excludedCuisines?: string[];
+  strictNoDuplicates?: boolean;
+  requireDailyPlantBased?: boolean;
   fitnessGoals?: FitnessGoal[];
   calorieGoal?: number;
   proteinGoal?: number;
