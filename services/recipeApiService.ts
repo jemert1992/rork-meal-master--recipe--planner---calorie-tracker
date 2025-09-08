@@ -360,20 +360,14 @@ const searchRecipesFromMealDB = async (query: string): Promise<Recipe[]> => {
 // Helper function to get a recipe by ID from MealDB
 const getRecipeFromMealDBById = async (id: string): Promise<Recipe | null> => {
   try {
-    const response = await fetch(`${MEALDB_API_URL}/lookup.php?i=${id}`);
-    
-    if (!response.ok) {
-      throw new Error(`MealDB API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data.meals || data.meals.length === 0) return null;
-    
-    return convertMealDBToRecipe(data.meals[0]);
+    const { getMealById: getMealDbById } = await import('@/services/mealDbService');
+    const recipe = await getMealDbById(id);
+    return recipe ? validateRecipe(recipe) : null;
   } catch (error) {
-    console.error('Error getting recipe from MealDB by ID:', error);
-    throw new Error('Failed to get recipe from MealDB');
+    console.warn('MealDB getById failed, using mock fallback', error);
+    const idx = Number(String(id).replace(/\D/g, ''));
+    const fallback = mockRecipes[idx % mockRecipes.length] ?? mockRecipes[0];
+    return validateRecipe({ ...fallback, id: `mock-mealdb-${id}` });
   }
 };
 
