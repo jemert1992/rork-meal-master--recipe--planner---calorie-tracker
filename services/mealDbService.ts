@@ -1,5 +1,6 @@
 import { Recipe } from '@/types';
 import { Platform } from 'react-native';
+import { mockRecipes } from '@/constants/mockData';
 
 // TheMealDB API base URL
 const API_BASE_URL = 'https://www.themealdb.com/api/json/v1/1';
@@ -10,16 +11,22 @@ async function fetchWithRetry<T>(url: string, attempts: number = 2, timeoutMs: n
     try {
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
       const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
-      const res = await fetch(url, Platform.OS === 'web' ? { signal: controller?.signal, cache: 'no-cache' } as RequestInit : (controller ? { signal: controller.signal } as RequestInit : undefined));
+      const res = await fetch(
+        url,
+        Platform.OS === 'web'
+          ? ({ signal: controller?.signal, cache: 'no-cache' } as RequestInit)
+          : (controller ? ({ signal: controller.signal } as RequestInit) : undefined)
+      );
       if (timeout) clearTimeout(timeout);
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
       return (await res.json()) as T;
     } catch (err) {
+      console.warn('[MealDB] fetch attempt failed', { url, attempt: i + 1, err });
       lastError = err;
       if (i === attempts - 1) break;
-      await new Promise(r => setTimeout(r, 300 + i * 300));
+      await new Promise((r) => setTimeout(r, 300 + i * 300));
     }
   }
   throw lastError instanceof Error ? lastError : new Error('Unknown network error');
@@ -114,6 +121,22 @@ function toValidMealType(value: string | undefined): 'breakfast' | 'lunch' | 'di
   return undefined;
 }
 
+function getMockFallback(count: number): Recipe[] {
+  const out: Recipe[] = [];
+  const base = mockRecipes;
+  for (let i = 0; i < count; i++) {
+    const baseIdx = i % base.length;
+    const b = base[baseIdx];
+    const clone: Recipe = {
+      ...b,
+      id: `mock-${b.id}-${i + 1}`,
+      name: `${b.name} #${i + 1}`,
+    };
+    out.push(clone);
+  }
+  return out;
+}
+
 /**
  * Convert a MealDB meal to our app's Recipe format
  */
@@ -123,7 +146,7 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
   for (let i = 1; i <= 20; i++) {
     const ingredient = meal[`strIngredient${i}` as keyof MealDBMeal] as string;
     const measure = meal[`strMeasure${i}` as keyof MealDBMeal] as string;
-    
+
     if (ingredient && ingredient.trim() !== '' && measure && measure.trim() !== '') {
       ingredients.push(`${measure.trim()} ${ingredient.trim()}`);
     } else if (ingredient && ingredient.trim() !== '') {
@@ -141,94 +164,142 @@ const convertMealToRecipe = (meal: MealDBMeal): Recipe => {
     .split('\n\n')
     .join('\n')
     .split('\n')
-    .filter(step => step.trim() !== '')
-    .map(step => step.trim());
+    .filter((step) => step.trim() !== '')
+    .map((step) => step.trim());
 
   // Extract tags
-  const tags = meal.strTags 
-    ? meal.strTags.split(',').map(tag => tag.trim().toLowerCase())
-    : [];
-  
+  const tags = meal.strTags ? meal.strTags.split(',').map((tag) => tag.trim().toLowerCase()) : [];
+
   // Add category and area as tags if they exist
   if (meal.strCategory && !tags.includes(meal.strCategory.toLowerCase())) {
     tags.push(meal.strCategory.toLowerCase());
   }
-  
+
   if (meal.strArea && !tags.includes(meal.strArea.toLowerCase())) {
     tags.push(meal.strArea.toLowerCase());
   }
 
   // Dessert-related tags and categories
   const dessertTags = [
-    'dessert', 'sweet', 'cake', 'cookie', 'pie', 'pudding', 'ice cream', 
-    'chocolate', 'candy', 'pastry', 'biscuit', 'brownie', 'custard', 
-    'tart', 'cheesecake', 'mousse', 'frosting', 'icing', 'glaze'
+    'dessert',
+    'sweet',
+    'cake',
+    'cookie',
+    'pie',
+    'pudding',
+    'ice cream',
+    'chocolate',
+    'candy',
+    'pastry',
+    'biscuit',
+    'brownie',
+    'custard',
+    'tart',
+    'cheesecake',
+    'mousse',
+    'frosting',
+    'icing',
+    'glaze',
   ];
-  
+
   // Check if it's a dessert
-  const isDessert = 
-    tags.some(tag => dessertTags.includes(tag)) || 
+  const isDessert =
+    tags.some((tag) => dessertTags.includes(tag)) ||
     meal.strCategory?.toLowerCase() === 'dessert' ||
     meal.strCategory?.toLowerCase() === 'sweets';
-  
+
   // Determine meal type based on tags and category
   let mealType: 'breakfast' | 'lunch' | 'dinner' | undefined = undefined;
-  
+
   // If it's a dessert, don't assign a meal type
   if (isDessert) {
     mealType = undefined;
   } else {
     // Breakfast-related tags
     const breakfastTags = [
-      'breakfast', 'brunch', 'morning', 'oatmeal', 'cereal', 'pancake', 
-      'waffle', 'egg', 'toast', 'smoothie', 'yogurt', 'muffin', 'bagel',
-      'croissant', 'granola', 'porridge'
+      'breakfast',
+      'brunch',
+      'morning',
+      'oatmeal',
+      'cereal',
+      'pancake',
+      'waffle',
+      'egg',
+      'toast',
+      'smoothie',
+      'yogurt',
+      'muffin',
+      'bagel',
+      'croissant',
+      'granola',
+      'porridge',
     ];
-    
+
     // Lunch-related tags
     const lunchTags = [
-      'lunch', 'salad', 'sandwich', 'soup', 'light', 'wrap', 'bowl', 
-      'taco', 'quesadilla', 'burger', 'roll', 'pita', 'flatbread', 
-      'hummus', 'falafel'
+      'lunch',
+      'salad',
+      'sandwich',
+      'soup',
+      'light',
+      'wrap',
+      'bowl',
+      'taco',
+      'quesadilla',
+      'burger',
+      'roll',
+      'pita',
+      'flatbread',
+      'hummus',
+      'falafel',
     ];
-    
+
     // Dinner-related tags
     const dinnerTags = [
-      'dinner', 'supper', 'main course', 'entree', 'roast', 'stew', 
-      'curry', 'pasta', 'chicken', 'beef', 'pork', 'fish', 'seafood', 
-      'casserole', 'grill', 'bake', 'hearty', 'substantial'
+      'dinner',
+      'supper',
+      'main course',
+      'entree',
+      'roast',
+      'stew',
+      'curry',
+      'pasta',
+      'chicken',
+      'beef',
+      'pork',
+      'fish',
+      'seafood',
+      'casserole',
+      'grill',
+      'bake',
+      'hearty',
+      'substantial',
     ];
-    
+
     // Check for breakfast-related tags
-    if (tags.some(tag => breakfastTags.includes(tag)) || 
-        meal.strCategory?.toLowerCase() === 'breakfast') {
+    if (tags.some((tag) => breakfastTags.includes(tag)) || meal.strCategory?.toLowerCase() === 'breakfast') {
       mealType = 'breakfast';
     }
     // Check for lunch-related tags
-    else if (tags.some(tag => lunchTags.includes(tag))) {
+    else if (tags.some((tag) => lunchTags.includes(tag))) {
       mealType = 'lunch';
     }
     // Check for dinner-related tags
-    else if (tags.some(tag => dinnerTags.includes(tag))) {
+    else if (tags.some((tag) => dinnerTags.includes(tag))) {
       mealType = 'dinner';
     }
     // Default to lunch for most recipes if no specific meal type is identified
-    // This is safer than defaulting to dinner, as lunch can be more versatile
     else {
       // Check if it's a side dish, appetizer, or starter
-      const sideOrAppetizer = tags.some(tag => 
-        ['side', 'side dish', 'appetizer', 'starter', 'snack'].includes(tag)
-      );
-      
+      const sideOrAppetizer = tags.some((tag) => ['side', 'side dish', 'appetizer', 'starter', 'snack'].includes(tag));
+
       if (sideOrAppetizer) {
         // Side dishes and appetizers can be either lunch or dinner, default to lunch
         mealType = 'lunch';
       } else {
         // For main dishes with protein, default to dinner
-        const hasProtein = ingredients.some(ingredient => 
-          /\b(chicken|beef|pork|lamb|fish|seafood|shrimp|turkey|meat)\b/i.test(ingredient)
-        );
-        
+        const hasProtein = ingredients.some((ingredient) => /\b(chicken|beef|pork|lamb|fish|seafood|shrimp|turkey|meat)\b/i.test(ingredient));
+
         mealType = hasProtein ? 'dinner' : 'lunch';
       }
     }
@@ -271,7 +342,7 @@ export const searchMealsByName = async (query: string): Promise<Recipe[]> => {
     return data.meals.map(convertMealToRecipe);
   } catch (error) {
     console.error('Error searching meals:', error);
-    return [];
+    return getMockFallback(8).filter((r) => r.name.toLowerCase().includes(query.toLowerCase()));
   }
 };
 
@@ -286,7 +357,9 @@ export const getMealById = async (id: string): Promise<Recipe | null> => {
     return convertMealToRecipe(data.meals[0]);
   } catch (error) {
     console.error('Error getting meal by ID:', error);
-    return null;
+    // Fallback: try to find in mock by numeric end or return a mock
+    const fallback = mockRecipes[Number(id.replace(/\D/g, '')) % mockRecipes.length] ?? mockRecipes[0];
+    return { ...fallback, id: `mock-${id}` };
   }
 };
 
@@ -300,7 +373,7 @@ export const getMealsByFirstLetter = async (letter: string): Promise<Recipe[]> =
     return data.meals.map(convertMealToRecipe);
   } catch (error) {
     console.error('Error getting meals by letter:', error);
-    return [];
+    return getMockFallback(10).filter((r) => r.name.toLowerCase().startsWith(letter.toLowerCase()));
   }
 };
 
@@ -311,10 +384,10 @@ export const getMealCategories = async (): Promise<string[]> => {
   try {
     const data = await fetchWithRetry<MealDBCategoriesResponse>(`${API_BASE_URL}/categories.php`);
     if (!data.categories) return [];
-    return data.categories.map(category => category.strCategory);
+    return data.categories.map((category) => category.strCategory);
   } catch (error) {
     console.error('Error getting meal categories:', error);
-    return [];
+    return ['Breakfast', 'Chicken', 'Beef', 'Seafood', 'Vegetarian'];
   }
 };
 
@@ -338,10 +411,12 @@ export const getMealsByCategory = async (category: string): Promise<Recipe[]> =>
       })
     );
     return results.filter((r): r is Recipe => r !== null);
-
   } catch (error) {
     console.error('Error getting meals by category:', error);
-    return [];
+    // Fallback: slice mock recipes roughly matching mealType idea
+    const lower = category.toLowerCase();
+    const filtered = mockRecipes.filter((r) => r.tags?.some((t) => t.toLowerCase() === lower) || r.mealType?.toLowerCase() === lower);
+    return (filtered.length ? filtered : mockRecipes).map((r, idx) => ({ ...r, id: `mock-${category}-${idx}` })).slice(0, 10);
   }
 };
 
@@ -352,29 +427,34 @@ export const getRandomMeals = async (count: number = 10): Promise<Recipe[]> => {
   try {
     const recipes: Recipe[] = [];
     const fetchedIds = new Set<string>();
-    
-    // We can only fetch one random meal at a time from the API
-    // So we'll make multiple requests to get the desired count
+
     for (let i = 0; i < count; i++) {
-      const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/random.php`);
-      if (data.meals && data.meals.length > 0) {
-        const meal = data.meals[0];
-        
-        // Avoid duplicates
-        if (!fetchedIds.has(meal.idMeal)) {
-          fetchedIds.add(meal.idMeal);
-          recipes.push(convertMealToRecipe(meal));
-        } else {
-          // If we got a duplicate, try again
-          i--;
+      try {
+        const data = await fetchWithRetry<MealDBResponse>(`${API_BASE_URL}/random.php`);
+        if (data.meals && data.meals.length > 0) {
+          const meal = data.meals[0];
+          if (!fetchedIds.has(meal.idMeal)) {
+            fetchedIds.add(meal.idMeal);
+            recipes.push(convertMealToRecipe(meal));
+          } else {
+            i--;
+          }
         }
+      } catch (inner) {
+        console.warn('Error fetching a random meal, continuing...', inner);
       }
     }
-    
+
+    if (recipes.length < count) {
+      const needed = count - recipes.length;
+      console.log(`[MealDB] Using mock fallback for ${needed} recipes`);
+      recipes.push(...getMockFallback(needed));
+    }
+
     return recipes;
   } catch (error) {
     console.error('Error getting random meals:', error);
-    return [];
+    return getMockFallback(count);
   }
 };
 
@@ -384,33 +464,32 @@ export const getRandomMeals = async (count: number = 10): Promise<Recipe[]> => {
  */
 export const loadInitialRecipes = async (count: number = 20): Promise<Recipe[]> => {
   try {
-    // Get some random recipes
     const randomRecipes = await getRandomMeals(Math.floor(count / 2));
-    
-    // Get some recipes from popular categories
+
     const popularCategories = ['Chicken', 'Beef', 'Seafood', 'Vegetarian', 'Breakfast'];
     let categoryRecipes: Recipe[] = [];
-    
+
     for (const category of popularCategories) {
       if (categoryRecipes.length < Math.ceil(count / 2)) {
         const recipes = await getMealsByCategory(category);
-        // Take a few recipes from each category
         categoryRecipes = [...categoryRecipes, ...recipes.slice(0, 2)];
       }
     }
-    
-    // Combine and shuffle the recipes
+
     const allRecipes = [...randomRecipes, ...categoryRecipes];
-    
-    // Shuffle array
+
     for (let i = allRecipes.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [allRecipes[i], allRecipes[j]] = [allRecipes[j], allRecipes[i]];
     }
-    
-    return allRecipes.slice(0, count);
+
+    const trimmed = allRecipes.slice(0, count);
+    if (trimmed.length < count) {
+      return [...trimmed, ...getMockFallback(count - trimmed.length)];
+    }
+    return trimmed;
   } catch (error) {
     console.error('Error loading initial recipes:', error);
-    return [];
+    return getMockFallback(count);
   }
 };
