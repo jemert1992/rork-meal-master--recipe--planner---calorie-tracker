@@ -494,6 +494,7 @@ const styles = StyleSheet.create({
   },
   mealContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
@@ -511,7 +512,6 @@ const styles = StyleSheet.create({
   },
   mealImage: {
     width: 90,
-    height: 'auto',
     aspectRatio: 1,
   },
   mealContent: {
@@ -568,6 +568,8 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
+    height: 38,
     marginRight: 8,
     backgroundColor: Colors.backgroundLight,
     borderRadius: 12,
