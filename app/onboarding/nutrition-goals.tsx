@@ -62,9 +62,22 @@ export default function NutritionGoalsScreen() {
       
       console.log('Complete profile data:', completeProfileData);
       
+      // Guard required name before creating profile
+      const safeName = (completeProfileData.name ?? '').toString().trim();
+      if (!safeName) {
+        Alert.alert(
+          'Name Required',
+          'Please enter your name to finish setting up your profile.',
+          [
+            { text: 'Go Back', onPress: () => router.push('/onboarding/personal-info') },
+          ]
+        );
+        return;
+      }
+      
       // Ensure all required fields are present
       const profileToCreate = {
-        name: completeProfileData.name || '',
+        name: safeName,
         age: completeProfileData.age || 25,
         gender: completeProfileData.gender || 'other',
         weight: completeProfileData.weight || 70,
@@ -72,13 +85,13 @@ export default function NutritionGoalsScreen() {
         activityLevel: completeProfileData.activityLevel || 'moderate',
         dietType: completeProfileData.dietType || 'any',
         allergies: completeProfileData.allergies || [],
-        calorieGoal: completeProfileData.calorieGoal,
-        proteinGoal: completeProfileData.proteinGoal,
-        carbsGoal: completeProfileData.carbsGoal,
-        fatGoal: completeProfileData.fatGoal,
+        calorieGoal: completeProfileData.calorieGoal ?? undefined,
+        proteinGoal: completeProfileData.proteinGoal ?? undefined,
+        carbsGoal: completeProfileData.carbsGoal ?? undefined,
+        fatGoal: completeProfileData.fatGoal ?? undefined,
         fitnessGoals: completeProfileData.fitnessGoals || [],
         autoGenerateMeals: completeProfileData.autoGenerateMeals ?? true,
-      };
+      } as const;
       
       // Create profile on the backend
       await createProfile(profileToCreate);

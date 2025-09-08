@@ -308,19 +308,30 @@ export const useUserStore = create<UserState>()(
       createProfile: async (profileData) => {
         try {
           set({ isLoading: true, error: null });
-          
-          const response = await trpcClient.user.createProfile.mutate({
+
+          const safeName = (profileData.name ?? '').toString().trim();
+          if (!safeName) {
+            const err = new Error('Name is required');
+            set({ isLoading: false, error: err.message });
+            throw err;
+          }
+
+          const payload = {
             ...profileData,
-            weight: profileData.weight || 0,
-            height: profileData.height || 0,
-            age: profileData.age || 0,
-            gender: profileData.gender || 'other',
-            activityLevel: profileData.activityLevel || 'sedentary',
-            dietType: profileData.dietType || 'any',
-            allergies: profileData.allergies || [],
-            fitnessGoals: profileData.fitnessGoals || [],
+            name: safeName,
+            // Provide sane minimum defaults to satisfy backend validation if callers omitted values
+            age: profileData.age ?? 25,
+            weight: profileData.weight ?? 70,
+            height: profileData.height ?? 170,
+            gender: profileData.gender ?? 'other',
+            activityLevel: profileData.activityLevel ?? 'moderate',
+            dietType: profileData.dietType ?? 'any',
+            allergies: profileData.allergies ?? [],
+            fitnessGoals: profileData.fitnessGoals ?? [],
             autoGenerateMeals: profileData.autoGenerateMeals ?? true,
-          });
+          };
+
+          const response = await trpcClient.user.createProfile.mutate(payload);
           
           if (response.success) {
             set({
