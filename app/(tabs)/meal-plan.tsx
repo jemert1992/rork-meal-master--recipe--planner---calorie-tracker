@@ -524,34 +524,10 @@ export default function MealPlanScreen() {
         </View>
       </View>
 
-      {dailyNutrition.calories > 0 && (
-        <View style={styles.nutritionBarContainer}>
-          <NutritionBar
-            calories={dailyNutrition.calories}
-            protein={dailyNutrition.protein}
-            carbs={dailyNutrition.carbs}
-            fat={dailyNutrition.fat}
-            calorieGoal={profile.calorieGoal}
-            proteinGoal={profile.proteinGoal}
-            carbsGoal={profile.carbsGoal}
-            fatGoal={profile.fatGoal}
-          />
-        </View>
-      )}
-
-      {showDietaryWarning && (
-        <View style={styles.warningContainer}>
-          <AlertCircle size={16} color={Colors.warning} />
-          <Text style={styles.warningText}>
-            Some meals may not match your dietary preferences ({profile.dietType})
-          </Text>
-        </View>
-      )}
-
       <ScrollView 
         ref={mealPlanContentRef}
         style={styles.content} 
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: 240, flexGrow: 1 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
         accessibilityRole="list"
         accessibilityLabel="Meal plan slots"
@@ -582,6 +558,30 @@ export default function MealPlanScreen() {
           onAdd={() => handleAddMeal('dinner')}
           hasAlternatives={alternativesAvailable.dinner}
         />
+
+        {dailyNutrition.calories > 0 && (
+          <View style={styles.nutritionBarContainer}>
+            <NutritionBar
+              calories={dailyNutrition.calories}
+              protein={dailyNutrition.protein}
+              carbs={dailyNutrition.carbs}
+              fat={dailyNutrition.fat}
+              calorieGoal={profile.calorieGoal}
+              proteinGoal={profile.proteinGoal}
+              carbsGoal={profile.carbsGoal}
+              fatGoal={profile.fatGoal}
+            />
+          </View>
+        )}
+
+        {showDietaryWarning && (
+          <View style={styles.warningContainer}>
+            <AlertCircle size={16} color={Colors.warning} />
+            <Text style={styles.warningText}>
+              Some meals may not match your dietary preferences ({profile.dietType})
+            </Text>
+          </View>
+        )}
 
         <Modal
           animationType="slide"
