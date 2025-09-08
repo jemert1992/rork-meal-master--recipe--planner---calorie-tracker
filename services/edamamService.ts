@@ -307,7 +307,7 @@ export const searchRecipesByQuery = async (query: string, limit: number = 20): P
     
     // Check if credentials are available
     if (EDAMAM_APP_ID === 'YOUR_EDAMAM_APP_ID' || EDAMAM_APP_KEY === 'YOUR_EDAMAM_APP_KEY') {
-      console.error('Edamam API credentials not configured');
+      console.warn('Edamam API not configured; skipping request.');
       return [];
     }
     
@@ -373,7 +373,7 @@ export const getRecipeById = async (id: string): Promise<Recipe | null> => {
     
     // Check if credentials are available
     if (EDAMAM_APP_ID === 'YOUR_EDAMAM_APP_ID' || EDAMAM_APP_KEY === 'YOUR_EDAMAM_APP_KEY') {
-      console.error('Edamam API credentials not configured');
+      console.warn('Edamam API not configured; skipping request.');
       return null;
     }
     
@@ -409,7 +409,7 @@ export const getRandomRecipes = async (limit: number = 20): Promise<Recipe[]> =>
     
     // Check if credentials are available
     if (EDAMAM_APP_ID === 'YOUR_EDAMAM_APP_ID' || EDAMAM_APP_KEY === 'YOUR_EDAMAM_APP_KEY') {
-      console.error('Edamam API credentials not configured');
+      console.warn('Edamam API not configured; skipping request.');
       return [];
     }
     
@@ -441,7 +441,7 @@ export const getRecipesByMealType = async (mealType: 'breakfast' | 'lunch' | 'di
     
     // Check if credentials are available
     if (EDAMAM_APP_ID === 'YOUR_EDAMAM_APP_ID' || EDAMAM_APP_KEY === 'YOUR_EDAMAM_APP_KEY') {
-      console.error('Edamam API credentials not configured');
+      console.warn('Edamam API not configured; skipping request.');
       return [];
     }
     
@@ -518,7 +518,7 @@ export const getRecipesByDietType = async (dietType: string, limit: number = 20)
     
     // Check if credentials are available
     if (EDAMAM_APP_ID === 'YOUR_EDAMAM_APP_ID' || EDAMAM_APP_KEY === 'YOUR_EDAMAM_APP_KEY') {
-      console.error('Edamam API credentials not configured');
+      console.warn('Edamam API not configured; skipping request.');
       return [];
     }
     
@@ -606,7 +606,7 @@ export const loadInitialRecipes = async (count: number = 20): Promise<Recipe[]> 
     
     // Check if credentials are available
     if (EDAMAM_APP_ID === 'YOUR_EDAMAM_APP_ID' || EDAMAM_APP_KEY === 'YOUR_EDAMAM_APP_KEY') {
-      console.error('Edamam API credentials not configured');
+      console.warn('Edamam API not configured; skipping request.');
       return [];
     }
     
