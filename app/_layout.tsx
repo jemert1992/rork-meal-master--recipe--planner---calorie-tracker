@@ -10,6 +10,7 @@ import { useUserStore } from "@/store/userStore";
 import { useTutorialStore } from "@/store/tutorialStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 
 
@@ -50,7 +51,9 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <RootLayoutNav />
+        <ErrorBoundary>
+          <RootLayoutNav />
+        </ErrorBoundary>
       </trpc.Provider>
     </QueryClientProvider>
   );
