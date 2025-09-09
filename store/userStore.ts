@@ -32,6 +32,8 @@ const DEFAULT_PROFILE: UserProfile = {
   dietType: 'any',
   fitnessGoals: [],
   autoGenerateMeals: true,
+  strictNoDuplicates: true,
+  requireDailyPlantBased: false,
 };
 
 export const useUserStore = create<UserState>()(

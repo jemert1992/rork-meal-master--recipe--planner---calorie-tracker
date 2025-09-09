@@ -141,7 +141,7 @@ export const useMealPlanStore = create<MealPlanState>()(
       isLoadingAlternatives: false,
       lastGenerationError: null,
       generationSuggestions: [],
-      uniquePerWeek: false,
+      uniquePerWeek: true,
       recipePoolsCache: null,
       isGenerating: false,
       generationProgress: 0,
@@ -655,8 +655,12 @@ export const useMealPlanStore = create<MealPlanState>()(
             const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMainSet.has(fb.main));
             return aScore - bScore;
           });
-          const candidate = sorted.find(r => !exclude.includes(r.id)) ?? sorted[0];
-          return candidate ?? null;
+          const candidate = sorted.find(r => !exclude.includes(r.id));
+          if (candidate) return candidate;
+          if ((profileForUnique.strictNoDuplicates ?? get().uniquePerWeek) === true) {
+            return null;
+          }
+          return sorted[0] ?? null;
         };
 
         const userProfile = getUserProfile();
