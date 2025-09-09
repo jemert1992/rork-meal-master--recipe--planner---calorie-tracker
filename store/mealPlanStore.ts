@@ -1319,12 +1319,13 @@ export const useMealPlanStore = create<MealPlanState>()(
           const ranked = candidates.slice().sort((a, b) => {
             const fa = featuresFor(a);
             const fb = featuresFor(b);
-            const aMainPenalty = fa.main ? (usedMainCount.get(fa.main) ?? 0) * 12 : 0;
-            const bMainPenalty = fb.main ? (usedMainCount.get(fb.main) ?? 0) * 12 : 0;
-            const aCuisinePenalty = fa.cuisine ? (usedCuisineCount.get(fa.cuisine) ?? 0) * 6 : 0;
-            const bCuisinePenalty = fb.cuisine ? (usedCuisineCount.get(fb.cuisine) ?? 0) * 6 : 0;
-            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false) + aMainPenalty + aCuisinePenalty;
-            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false) + bMainPenalty + bCuisinePenalty;
+            const usedPenalty = (id?: string) => (!enforceUnique && id && used.has(id)) ? 200 : 0;
+            const aMainPenalty = fa.main ? (usedMainCount.get(fa.main) ?? 0) * 20 : 0;
+            const bMainPenalty = fb.main ? (usedMainCount.get(fb.main) ?? 0) * 20 : 0;
+            const aCuisinePenalty = fa.cuisine ? (usedCuisineCount.get(fa.cuisine) ?? 0) * 10 : 0;
+            const bCuisinePenalty = fb.cuisine ? (usedCuisineCount.get(fb.cuisine) ?? 0) * 10 : 0;
+            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false) + aMainPenalty + aCuisinePenalty + usedPenalty(a.id);
+            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false) + bMainPenalty + bCuisinePenalty + usedPenalty(b.id);
             return aScore - bScore;
           });
           return ranked[0] ?? null;
@@ -1340,7 +1341,8 @@ export const useMealPlanStore = create<MealPlanState>()(
           if (!currentDayPlan.breakfast) {
             let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
             if (!chosen && breakfastPool.length > 0) {
-              chosen = breakfastPool[0];
+              const firstNotUsed = breakfastPool.find(r => !used.has(r.id));
+              chosen = firstNotUsed ?? breakfastPool[0];
               if (enforceUnique && chosen && used.has(chosen.id)) repeatsUnavoidable = true;
             }
             if (chosen) {
@@ -1386,7 +1388,8 @@ export const useMealPlanStore = create<MealPlanState>()(
           if (!currentDayPlan.lunch) {
             let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch', lunchCalories), lunchCalories, 'lunch', date);
             if (!chosen && lunchPool.length > 0) {
-              chosen = lunchPool[0];
+              const firstNotUsed = lunchPool.find(r => !used.has(r.id));
+              chosen = firstNotUsed ?? lunchPool[0];
               if (enforceUnique && chosen && used.has(chosen.id)) repeatsUnavoidable = true;
             }
             if (chosen) {
@@ -1432,7 +1435,8 @@ export const useMealPlanStore = create<MealPlanState>()(
           if (!currentDayPlan.dinner) {
             let chosen = pickFromPools(dinnerPool, getLocalFallbacks('dinner', dinnerCalories), dinnerCalories, 'dinner', date);
             if (!chosen && dinnerPool.length > 0) {
-              chosen = dinnerPool[0];
+              const firstNotUsed = dinnerPool.find(r => !used.has(r.id));
+              chosen = firstNotUsed ?? dinnerPool[0];
               if (enforceUnique && chosen && used.has(chosen.id)) repeatsUnavoidable = true;
             }
             if (chosen) {
