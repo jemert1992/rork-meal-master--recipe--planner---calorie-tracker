@@ -474,7 +474,7 @@ export default function RecipesScreen() {
         </Pressable>
       </View>
 
-      {isLoading && !refreshing ? (
+      {isLoading && !refreshing && recipes.length === 0 ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loaderText}>Loading recipes...</Text>
