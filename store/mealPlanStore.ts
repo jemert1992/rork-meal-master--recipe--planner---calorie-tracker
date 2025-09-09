@@ -160,8 +160,25 @@ function isBatchFriendly(recipe: Recipe | undefined): boolean {
   if (!recipe) return false;
   const t = (recipe.tags ?? []).map((x) => normalizeText(String(x)));
   const name = normalizeText(recipe.name);
-  const hints = ['meal-prep','make-ahead','batch','sheet-pan','tray bake','slow cooker','instant pot','stew','casserole','overnight','oats','chia','granola'];
+  const hints = ['meal-prep','make-ahead','batch','sheet-pan','tray bake','slow cooker','instant pot','stew','casserole','overnight','oats','chia','granola','chili','soup','roast','roasted'];
   return hints.some((h) => t.some((x) => x.includes(h)) || name.includes(h));
+}
+
+function repurposeSuggestionFor(recipe: Recipe | undefined): string | null {
+  if (!recipe) return null;
+  const main = extractMainIngredient(recipe.ingredients ?? [], recipe.tags ?? []) ?? '';
+  const n = normalizeText(recipe.name);
+  if (n.includes('roast') || n.includes('roasted') || n.includes('sheet')) {
+    if (main.includes('chicken')) return 'Shred for chicken salad sandwiches or tacos';
+    if (main.includes('vegg')) return 'Chop into a breakfast hash with eggs';
+  }
+  if (n.includes('chili') || n.includes('stew')) return 'Serve over rice or on baked potatoes';
+  if (main.includes('chicken')) return 'Make chicken salad wraps or quesadillas';
+  if (main.includes('beef')) return 'Turn into tacos or stuffed sweet potatoes';
+  if (main.includes('salmon') || main.includes('tuna')) return 'Flake into a grain bowl with greens';
+  if (main.includes('tofu') || main.includes('tempeh')) return 'Crumble into a quick stir-fry or salad';
+  if (main.includes('lentil') || main.includes('bean') || main.includes('chickpea')) return 'Mash into patties or toss with greens for lunch';
+  return 'Pack as bowls or wraps with fresh greens';
 }
 
 function ingredientOverlapScore(base: string[] | undefined, other: string[] | undefined): number {
@@ -961,7 +978,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         const newDayPlan: DailyMeals = { ...currentDayPlan };
         if (breakfast) { newDayPlan.breakfast = breakfast; }
         if (lunch) { newDayPlan.lunch = lunch; }
-        if (dinner) { newDayPlan.dinner = dinner; }
+        if (dinner) { newDayPlan.dinner = { ...dinner, batchPrep: true } as any; }
         if (!newDayPlan.breakfast) {
           const any = pickAny('breakfast', breakfastCalories, date, inDayMain);
           if (any) {
@@ -1170,9 +1187,9 @@ export const useMealPlanStore = create<MealPlanState>()(
           const lunch = choose(ln, 'lunch', lunchCalories);
           const dinner = choose(dn, 'dinner', dinnerCalories);
           const newDayPlan: DailyMeals = {} as DailyMeals;
-          if (breakfast) { newDayPlan.breakfast = breakfast; get().weeklyUsedRecipeIds.add(breakfast.recipeId ?? ''); result.generatedMeals.push('breakfast'); }
+          if (breakfast) { newDayPlan.breakfast = { ...breakfast, batchPrep: isBatchFriendly(get().mealPlan[date]?.breakfast?.recipeId ? undefined : undefined) }; get().weeklyUsedRecipeIds.add(breakfast.recipeId ?? ''); result.generatedMeals.push('breakfast'); }
           if (lunch) { newDayPlan.lunch = lunch; get().weeklyUsedRecipeIds.add(lunch.recipeId ?? ''); result.generatedMeals.push('lunch'); }
-          if (dinner) { newDayPlan.dinner = dinner; get().weeklyUsedRecipeIds.add(dinner.recipeId ?? ''); result.generatedMeals.push('dinner'); }
+          if (dinner) { newDayPlan.dinner = { ...dinner, batchPrep: true }; get().weeklyUsedRecipeIds.add(dinner.recipeId ?? ''); result.generatedMeals.push('dinner'); }
           if (result.generatedMeals.length === 3) {
             result.success = true;
             result.suggestions = ['All meals for the day have been successfully generated!', 'Variety preference applied.'];
@@ -1518,8 +1535,9 @@ export const useMealPlanStore = create<MealPlanState>()(
                         fat: chosen.fat,
                         fiber: chosen.fiber,
                         servings: 1,
-                        notes: 'Make-ahead'
-                      };
+                        notes: 'Make-ahead',
+                        batchPrep: true,
+                      } as any;
                       newMealPlan[nextDate] = nextDayPlan;
                       result.generatedMeals.push(`${nextDate}-breakfast-prep`);
                       repeats += 1;
@@ -1615,7 +1633,8 @@ export const useMealPlanStore = create<MealPlanState>()(
                 fat: chosen.fat,
                 fiber: chosen.fiber,
                 servings: 1,
-              };
+                batchPrep: isBatchFriendly(chosen),
+              } as any;
               used.add(chosen.id);
               const fSelD = featuresFor(chosen);
               if (fSelD.main) usedMainCount.set(fSelD.main, (usedMainCount.get(fSelD.main) ?? 0) + 1);
@@ -1624,6 +1643,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               filledCount++;
 
               if (allowLeftovers && isBatchFriendly(chosen)) {
+                const repurpose = repurposeSuggestionFor(chosen);
                 for (let g = 1; g <= leftoverGap; g++) {
                   const idx = dates.indexOf(date) + g;
                   if (idx >= 0 && idx < dates.length) {
@@ -1639,10 +1659,18 @@ export const useMealPlanStore = create<MealPlanState>()(
                         fat: chosen.fat,
                         fiber: chosen.fiber,
                         servings: 1,
-                        notes: 'Leftovers'
-                      };
+                        notes: 'Leftovers',
+                        isLeftover: true,
+                        leftoverSource: { date, mealType: 'dinner' },
+                        repurposeSuggestion: repurpose ?? undefined,
+                      } as any;
+                      // annotate dinner with planned target
+                      currentDayPlan.dinner = {
+                        ...(currentDayPlan.dinner as any),
+                        plannedLeftoverTarget: { date: nextDate, mealType: 'lunch' },
+                        batchPrep: true,
+                      } as any;
                       newMealPlan[nextDate] = nextDayPlan;
-                      // Do not mark as used to avoid blocking unique pool; it's intentional leftover
                       result.generatedMeals.push(`${nextDate}-lunch-leftovers`);
                     }
                     break;

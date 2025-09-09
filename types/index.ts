@@ -78,6 +78,11 @@ export type MealItem = {
   ingredients?: CustomIngredient[];
   servings?: number;
   notes?: string;
+  isLeftover?: boolean;
+  leftoverSource?: { date: string; mealType: MealType };
+  plannedLeftoverTarget?: { date: string; mealType: MealType };
+  repurposeSuggestion?: string;
+  batchPrep?: boolean;
 };
 
 export type CustomIngredient = {

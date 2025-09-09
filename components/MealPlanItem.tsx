@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Image, Modal, FlatList, ActivityIndicator, TextInput, Platform, AccessibilityActionEvent } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info, Minus, Plus } from 'lucide-react-native';
+import { X, Clock, Users, RefreshCw, Check, AlertCircle, Info, Minus, Plus, Repeat, Package, ArrowRight } from 'lucide-react-native';
 import { MealItem, Recipe } from '@/types';
 import { useRecipeStore } from '@/store/recipeStore';
 import { useMealPlanStore } from '@/store/mealPlanStore';
@@ -224,18 +224,44 @@ export default function MealPlanItem({ mealType, meal, date, onRemove, onAdd, ha
                     </View>
                   </View>
                 )}
-                {recipe && recipe.tags.length > 0 && (
+                {(meal?.isLeftover || meal?.batchPrep || recipe?.tags.length) ? (
                   <View style={styles.tagsContainer} accessibilityRole="list" accessibilityLabel="Tags list">
-                    {recipe.tags.slice(0, 3).map((tag, index) => (
+                    {meal?.isLeftover && (
+                      <View style={[styles.tag, styles.leftoverTag]} accessibilityRole="text" accessibilityLabel="Leftovers tag" testID={`tag-leftover-${mealType}`}>
+                        <Repeat size={12} color={Colors.white} />
+                        <Text style={[styles.tagText, styles.tagTextOnDark]}>Leftovers</Text>
+                      </View>
+                    )}
+                    {meal?.batchPrep && (
+                      <View style={[styles.tag, styles.batchPrepTag]} accessibilityRole="text" accessibilityLabel="Batch prep tag" testID={`tag-batchprep-${mealType}`}>
+                        <Package size={12} color={Colors.white} />
+                        <Text style={[styles.tagText, styles.tagTextOnDark]}>Batch prep</Text>
+                      </View>
+                    )}
+                    {recipe && recipe.tags.slice(0, Math.max(0, 3 - ((meal?.isLeftover?1:0) + (meal?.batchPrep?1:0)))).map((tag, index) => (
                       <View key={`${recipe.id}-tag-${index}`} style={styles.tag} accessibilityRole="text" accessibilityLabel={`Tag ${tag}`}>
                         <Text style={styles.tagText}>{tag}</Text>
                       </View>
                     ))}
                   </View>
-                )}
+                ) : null}
               </View>
             </Pressable>
           </View>
+
+          {meal?.plannedLeftoverTarget && (
+            <View style={styles.leftoverPlanRow} accessibilityRole="text" accessibilityLabel={`Planned leftovers to ${meal.plannedLeftoverTarget.date} ${meal.plannedLeftoverTarget.mealType}`} testID={`leftover-plan-${mealType}`}>
+              <ArrowRight size={14} color={Colors.primary} />
+              <Text style={styles.leftoverPlanText}>Save extra for {meal.plannedLeftoverTarget.mealType} on {meal.plannedLeftoverTarget.date}</Text>
+            </View>
+          )}
+
+          {meal?.isLeftover && (meal.repurposeSuggestion || meal.notes) && (
+            <View style={styles.repurposeRow} accessibilityRole="text" accessibilityLabel={`Leftover idea: ${meal.repurposeSuggestion ?? meal.notes}`} testID={`leftover-idea-${mealType}`}>
+              <Info size={14} color={Colors.textLight} />
+              <Text style={styles.repurposeText}>{meal.repurposeSuggestion ?? meal.notes}</Text>
+            </View>
+          )}
 
           <View style={styles.controlRow}>
             <View 
@@ -573,11 +599,25 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     borderWidth: 1,
     borderColor: Colors.primary + '20',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  leftoverTag: {
+    backgroundColor: Colors.text,
+    borderColor: Colors.text,
+  },
+  batchPrepTag: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   tagText: {
     fontSize: 11,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  tagTextOnDark: {
+    color: Colors.white,
   },
   stepper: {
     flexDirection: 'row',
@@ -835,6 +875,30 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
     gap: 8,
+  },
+  leftoverPlanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  leftoverPlanText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  repurposeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingBottom: 6,
+  },
+  repurposeText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   iconButton: {
     height: 36,
