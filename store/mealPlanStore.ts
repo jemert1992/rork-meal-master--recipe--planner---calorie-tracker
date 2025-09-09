@@ -97,6 +97,38 @@ function normalizeText(s: string | undefined): string {
   return (s ?? '').toLowerCase();
 }
 
+function isBreakfastAppropriate(recipe: Recipe | undefined): boolean {
+  if (!recipe) return false;
+  const name = normalizeText(recipe.name);
+  const tags = (recipe.tags ?? []).map((t) => normalizeText(String(t)));
+  const ingredients = (recipe.ingredients ?? []).map((i) => normalizeText(String(i)));
+  const mealTypeOk = recipe.mealType === 'breakfast' || tags.includes('breakfast') || tags.includes('brunch');
+  const positive = [
+    'oat', 'oatmeal', 'porridge', 'granola', 'cereal', 'yogurt', 'parfait', 'fruit', 'banana', 'berry',
+    'toast', 'bagel', 'peanut butter', 'pb', 'jam', 'avocado', 'egg', 'eggs', 'omelet', 'omelette', 'scramble',
+    'pancake', 'waffle', 'chia', 'smoothie', 'smoothie bowl', 'muesli', 'overnight oats'
+  ];
+  const negative = [
+    'pasta', 'spaghetti', 'lasagna', 'carbonara', 'bolognese', 'pizza', 'burger', 'steak', 'bbq', 'barbecue',
+    'curry', 'biryani', 'stew', 'fried rice', 'noodle', 'noodles', 'taco', 'enchilada', 'quesadilla'
+  ];
+  const hasPositive = positive.some((p) => name.includes(p) || tags.some((t) => t.includes(p)) || ingredients.some((i) => i.includes(p)));
+  const hasNegative = negative.some((n) => name.includes(n) || tags.some((t) => t.includes(n)) || ingredients.some((i) => i.includes(n)));
+  if (hasNegative) return false;
+  return mealTypeOk || hasPositive;
+}
+
+function simpleBreakfastScoreBoost(recipe: Recipe | undefined): number {
+  if (!recipe) return 0;
+  const tags = (recipe.tags ?? []).map((t) => normalizeText(String(t)));
+  const name = normalizeText(recipe.name);
+  const simpleHints = ['simple', 'quick', 'easy', '5-min', 'no-cook', 'minimal', 'basic'];
+  const simpleItems = ['oatmeal','yogurt','toast','omelet','eggs','smoothie','chia','granola','parfait'];
+  const hasSimpleHint = simpleHints.some((h) => tags.includes(h) || name.includes(h));
+  const isSimpleItem = simpleItems.some((s) => name.includes(s));
+  return (hasSimpleHint ? -8 : 0) + (isSimpleItem ? -6 : 0);
+}
+
 function detectCuisine(tags: string[]): string | null {
   const cuisines = ['italian','mexican','indian','thai','chinese','japanese','mediterranean','american','french','spanish','greek','korean','viet','vietnamese','middle-eastern','latin','british'];
   const t = tags.map((x) => normalizeText(x));
@@ -531,7 +563,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           const targetCalories = Math.round(calorieGoal * mealSplit[mealType]);
           const weeklyUsedRecipeIds = Array.from(get().weeklyUsedRecipeIds);
           const enforceUnique = get().uniquePerWeek;
-          const alternatives = await firebaseService.getAlternativeRecipes(
+          let alternatives = await firebaseService.getAlternativeRecipes(
             mealType,
             currentRecipeId,
             {
@@ -544,6 +576,9 @@ export const useMealPlanStore = create<MealPlanState>()(
             },
             10
           );
+          if (mealType === 'breakfast') {
+            alternatives = alternatives.filter((r) => isBreakfastAppropriate(r));
+          }
           if (alternatives.length === 0) {
             set({
               alternativeRecipes: {},
@@ -642,8 +677,10 @@ export const useMealPlanStore = create<MealPlanState>()(
           let pool: Recipe[] = byType.length > 0 ? byType : all;
           if (pool.length === 0) pool = getMockRecipes();
           if (pool.length === 0) return null;
-          // Last-resort fallback must remain allergy-safe. Ignore dietType and uniqueness if needed, but never allergies/exclusions.
           pool = pool.filter(r => get().isRecipeSuitable(r, 'any', allergies, excludedIngredients));
+          if (mealType === 'breakfast') {
+            pool = pool.filter((r) => isBreakfastAppropriate(r));
+          }
           if (pool.length === 0) return null;
           const prevId = get().mealPlan[prevDateString(d)]?.[mealType]?.recipeId;
           const prevRecipe = getRecipeById(prevId);
@@ -651,8 +688,10 @@ export const useMealPlanStore = create<MealPlanState>()(
           const sorted = pool.slice().sort((a, b) => {
             const fa = featuresFor(a);
             const fb = featuresFor(b);
-            const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMainSet.has(fa.main));
-            const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMainSet.has(fb.main));
+            const baseAScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMainSet.has(fa.main));
+            const baseBScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMainSet.has(fb.main));
+            const aScore = mealType === 'breakfast' ? baseAScore + simpleBreakfastScoreBoost(a) : baseAScore;
+            const bScore = mealType === 'breakfast' ? baseBScore + simpleBreakfastScoreBoost(b) : baseBScore;
             return aScore - bScore;
           });
           const candidate = sorted.find(r => !exclude.includes(r.id));
@@ -722,6 +761,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               result.generatedMeals.push(type);
             };
             if (remote && remote.length > 0) {
+              if (specificMealType === 'breakfast') {
+                remote = remote.filter((r) => isBreakfastAppropriate(r));
+              }
               const prevId = get().mealPlan[prevDateString(date)]?.[specificMealType]?.recipeId;
               const prevRecipe = remote.find((r) => r.id === prevId);
               const prevF = featuresFor(prevRecipe);
@@ -736,7 +778,10 @@ export const useMealPlanStore = create<MealPlanState>()(
               apply((ranked[0] as Recipe), specificMealType);
             } else {
               const target = specificMealType === 'breakfast' ? breakfastCalories : specificMealType === 'lunch' ? lunchCalories : dinnerCalories;
-              const filtered = recipes.filter(r => r.mealType === specificMealType && get().isRecipeSuitable(r, dietType, allergies, excludedIngredients) && !weeklyUsedRecipeIds.includes(r.id));
+              let filtered = recipes.filter(r => r.mealType === specificMealType && get().isRecipeSuitable(r, dietType, allergies, excludedIngredients) && !weeklyUsedRecipeIds.includes(r.id));
+              if (specificMealType === 'breakfast') {
+                filtered = filtered.filter((r) => isBreakfastAppropriate(r));
+              }
               if (filtered.length > 0) {
                 const prevId = get().mealPlan[prevDateString(date)]?.[specificMealType]?.recipeId;
                 const prevRecipe = getRecipeById(prevId);
@@ -809,15 +854,20 @@ export const useMealPlanStore = create<MealPlanState>()(
             dn = Array.isArray(dn) ? dn.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : dn;
             set({ generationProgress: 0.5 });
             const selectFirst = (arr: (Recipe[] | null), type: 'breakfast'|'lunch'|'dinner', target: number): boolean => {
-              const pool = Array.isArray(arr) ? (arr as Recipe[]) : [];
+              let pool = Array.isArray(arr) ? (arr as Recipe[]) : [];
+              if (type === 'breakfast') {
+                pool = pool.filter((r) => isBreakfastAppropriate(r));
+              }
               const prevId = get().mealPlan[prevDateString(date)]?.[type]?.recipeId;
               const prevRecipe = pool.find((r) => r.id === prevId);
               const prevF = featuresFor(prevRecipe);
               const ranked = pool.slice().sort((a, b) => {
                 const fa = featuresFor(a);
                 const fb = featuresFor(b);
-                const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
-                const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                const baseAScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
+                const baseBScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                const aScore = type === 'breakfast' ? baseAScore + simpleBreakfastScoreBoost(a) : baseAScore;
+                const bScore = type === 'breakfast' ? baseBScore + simpleBreakfastScoreBoost(b) : baseBScore;
                 return aScore - bScore;
               });
               const pick = ranked.find(r => (!enforceUnique || !get().weeklyUsedRecipeIds.has(r.id))) ?? ranked[0];
@@ -833,6 +883,9 @@ export const useMealPlanStore = create<MealPlanState>()(
                 return true;
               }
               const any = pickAny(type, target, date, inDayMain);
+              if (type === 'breakfast' && (!any || !isBreakfastAppropriate(any))) {
+                return false;
+              }
               if (any) {
                 const meal: MealItem = { recipeId: any.id, name: any.name, calories: any.calories, protein: any.protein, carbs: any.carbs, fat: any.fat, fiber: any.fiber, servings: 1 };
                 const f = featuresFor(any);
@@ -1040,7 +1093,10 @@ export const useMealPlanStore = create<MealPlanState>()(
           dn = Array.isArray(dn) ? dn.map((r) => sanitizeRecipe(r)).filter((r) => isRecipeDataValid(r)) : dn;
           set({ generationProgress: 0.55 });
           const choose = (pool: (Recipe[] | null), fallbackType: 'breakfast'|'lunch'|'dinner', target: number): MealItem | null => {
-            const arr = Array.isArray(pool) ? (pool as Recipe[]) : [];
+            let arr = Array.isArray(pool) ? (pool as Recipe[]) : [];
+            if (fallbackType === 'breakfast') {
+              arr = arr.filter((r) => isBreakfastAppropriate(r));
+            }
             const prevId = get().mealPlan[prevDateString(date)]?.[fallbackType]?.recipeId;
             const prevRecipe = arr.find((r) => r.id === prevId);
             const prevF = featuresFor(prevRecipe);
@@ -1052,11 +1108,17 @@ export const useMealPlanStore = create<MealPlanState>()(
               return aScore - bScore;
             });
             const from = ranked.find(r => (!enforceUnique || !get().weeklyUsedRecipeIds.has(r.id))) ?? ranked[0] ?? null;
+            if (fallbackType === 'breakfast' && from && !isBreakfastAppropriate(from)) {
+              return null;
+            }
             if (from) {
               const f = featuresFor(from); if (f.main) inDayMain.add(f.main);
               return { recipeId: from.id, name: from.name, calories: from.calories, protein: from.protein, carbs: from.carbs, fat: from.fat, fiber: from.fiber, servings: 1 };
             }
-            const local = recipes.filter(r => r.mealType === fallbackType && get().isRecipeSuitable(r, dietType, allergies, excludedIngredients));
+            let local = recipes.filter(r => r.mealType === fallbackType && get().isRecipeSuitable(r, dietType, allergies, excludedIngredients));
+            if (fallbackType === 'breakfast') {
+              local = local.filter((r) => isBreakfastAppropriate(r));
+            }
             if (local.length > 0) {
               const rankedLocal = local.slice().sort((a, b) => {
                 const fa = featuresFor(a);
@@ -1239,6 +1301,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           breakfastPool = Array.isArray(bk) ? (bk as Recipe[]) : [];
           lunchPool = Array.isArray(ln) ? (ln as Recipe[]) : [];
           dinnerPool = Array.isArray(dn) ? (dn as Recipe[]) : [];
+          breakfastPool = breakfastPool.filter((r) => isBreakfastAppropriate(r));
           if (breakfastPool.length === 0 || lunchPool.length === 0 || dinnerPool.length === 0) {
             try {
               const { useRecipeStore } = require('@/store/recipeStore');
@@ -1259,6 +1322,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               const { mockRecipes } = require('@/constants/mockData');
               const all: Recipe[] = mockRecipes as Recipe[];
               if (breakfastPool.length === 0) breakfastPool = all.filter((r) => r.mealType === 'breakfast');
+              breakfastPool = breakfastPool.filter((r) => isBreakfastAppropriate(r));
               if (lunchPool.length === 0) lunchPool = all.filter((r) => r.mealType === 'lunch');
               if (dinnerPool.length === 0) dinnerPool = all.filter((r) => r.mealType === 'dinner');
             } catch {}
@@ -1294,6 +1358,9 @@ export const useMealPlanStore = create<MealPlanState>()(
         const pickFromPools = (primary: Recipe[], fallback: Recipe[], targetCalories: number, type: MealType, dateStr: string): Recipe | null => {
           const combine = (arr: Recipe[]) => {
             let candidates = arr.filter((r) => r && typeof r.id === 'string');
+            if (type === 'breakfast') {
+              candidates = candidates.filter((r) => isBreakfastAppropriate(r));
+            }
             if (enforceUnique) {
               const filtered = candidates.filter((r) => !used.has(r.id));
               candidates = filtered.length > 0 ? filtered : candidates;
@@ -1309,10 +1376,12 @@ export const useMealPlanStore = create<MealPlanState>()(
           // If still empty, relax uniqueness but keep meal type
           if (candidates.length === 0) {
             const sameType = [...primary, ...fallback].filter((r) => r.mealType === type);
-            if (sameType.length > 0) candidates = sameType; // allow repeats to avoid empty slot
+            let poolSame = sameType;
+            if (type === 'breakfast') poolSame = poolSame.filter((r) => isBreakfastAppropriate(r));
+            if (poolSame.length > 0) candidates = poolSame; // allow repeats to avoid empty slot
           }
-          // If still empty, relax type constraint then uniqueness completely
-          if (candidates.length === 0) {
+          // If still empty, for breakfast do NOT relax to non-breakfast items
+          if (candidates.length === 0 && type !== 'breakfast') {
             const anySource = [...primary, ...fallback, ...getLocalFallbacks(type, targetCalories)];
             if (anySource.length > 0) candidates = anySource;
           }
