@@ -920,6 +920,80 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   <Text style={[styles.togglePillText, (profile.planLeftovers ?? false) && { color: Colors.white }]}>Plan leftovers</Text>
                 </Pressable>
               </View>
+
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 6 }}>Breakfast repeats</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    style={({ pressed }) => [styles.togglePill, (profile.breakfastRepeatMode ?? 'repeat') === 'repeat' && styles.togglePillActive, pressed && styles.focusRing]}
+                    onPress={() => updateProfile({ breakfastRepeatMode: 'repeat' })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Repeat same breakfast across days"
+                    testID="breakfast-repeat-repeat"
+                  >
+                    <Check size={14} color={(profile.breakfastRepeatMode ?? 'repeat') === 'repeat' ? Colors.white : Colors.text} />
+                    <Text style={[styles.togglePillText, (profile.breakfastRepeatMode ?? 'repeat') === 'repeat' && { color: Colors.white }]}>Repeat</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.togglePill, (profile.breakfastRepeatMode ?? 'repeat') === 'alternate' && styles.togglePillActive, pressed && styles.focusRing]}
+                    onPress={() => updateProfile({ breakfastRepeatMode: 'alternate' })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Alternate between two breakfasts"
+                    testID="breakfast-repeat-alternate"
+                  >
+                    <Check size={14} color={(profile.breakfastRepeatMode ?? 'repeat') === 'alternate' ? Colors.white : Colors.text} />
+                    <Text style={[styles.togglePillText, (profile.breakfastRepeatMode ?? 'repeat') === 'alternate' && { color: Colors.white }]}>Alternate A/B</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.togglePill, (profile.breakfastRepeatMode ?? 'repeat') === 'no-repeat' && styles.togglePillActive, pressed && styles.focusRing]}
+                    onPress={() => updateProfile({ breakfastRepeatMode: 'no-repeat' })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Do not repeat breakfasts"
+                    testID="breakfast-repeat-none"
+                  >
+                    <Check size={14} color={(profile.breakfastRepeatMode ?? 'repeat') === 'no-repeat' ? Colors.white : Colors.text} />
+                    <Text style={[styles.togglePillText, (profile.breakfastRepeatMode ?? 'repeat') === 'no-repeat' && { color: Colors.white }]}>No repeat</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.weeklyPlanVarietyHint}>Tip: Batch-preppable breakfasts like oats, frittata, and parfaits work great for repeats and can be prepped on weekends.</Text>
+              </View>
+
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 6 }}>Lunch repeats</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    style={({ pressed }) => [styles.togglePill, (profile.lunchRepeatMode ?? 'no-repeat') === 'repeat' && styles.togglePillActive, pressed && styles.focusRing]}
+                    onPress={() => updateProfile({ lunchRepeatMode: 'repeat' })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Repeat same lunch across days"
+                    testID="lunch-repeat-repeat"
+                  >
+                    <Check size={14} color={(profile.lunchRepeatMode ?? 'no-repeat') === 'repeat' ? Colors.white : Colors.text} />
+                    <Text style={[styles.togglePillText, (profile.lunchRepeatMode ?? 'no-repeat') === 'repeat' && { color: Colors.white }]}>Repeat</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.togglePill, (profile.lunchRepeatMode ?? 'no-repeat') === 'alternate' && styles.togglePillActive, pressed && styles.focusRing]}
+                    onPress={() => updateProfile({ lunchRepeatMode: 'alternate' })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Alternate between two lunches"
+                    testID="lunch-repeat-alternate"
+                  >
+                    <Check size={14} color={(profile.lunchRepeatMode ?? 'no-repeat') === 'alternate' ? Colors.white : Colors.text} />
+                    <Text style={[styles.togglePillText, (profile.lunchRepeatMode ?? 'no-repeat') === 'alternate' && { color: Colors.white }]}>Alternate A/B</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.togglePill, (profile.lunchRepeatMode ?? 'no-repeat') === 'no-repeat' && styles.togglePillActive, pressed && styles.focusRing]}
+                    onPress={() => updateProfile({ lunchRepeatMode: 'no-repeat' })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Do not repeat lunches"
+                    testID="lunch-repeat-none"
+                  >
+                    <Check size={14} color={(profile.lunchRepeatMode ?? 'no-repeat') === 'no-repeat' ? Colors.white : Colors.text} />
+                    <Text style={[styles.togglePillText, (profile.lunchRepeatMode ?? 'no-repeat') === 'no-repeat' && { color: Colors.white }]}>No repeat</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.weeklyPlanVarietyHint}>Tip: If leftovers are enabled, we’ll prioritize leftover lunches over repeats.</Text>
+              </View>
               
               <Text style={styles.weeklyPlanInfo}>
                 {profile.dietType && profile.dietType !== 'any' 

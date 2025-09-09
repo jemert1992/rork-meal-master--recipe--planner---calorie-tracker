@@ -41,6 +41,10 @@ const DEFAULT_PROFILE: UserProfile = {
   preferBatchPrep: true,
   planLeftovers: true,
   maxLeftoverGapDays: 2,
+  // Breakfast repeats
+  breakfastRepeatMode: 'repeat',
+  // Lunch repeats
+  lunchRepeatMode: 'no-repeat',
 };
 
 export const useUserStore = create<UserState>()(

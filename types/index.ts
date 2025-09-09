@@ -193,6 +193,10 @@ export type UserProfile = {
   preferBatchPrep?: boolean;
   planLeftovers?: boolean;
   maxLeftoverGapDays?: number;
+  // Breakfast repeats
+  breakfastRepeatMode?: 'no-repeat' | 'repeat' | 'alternate';
+  // Lunch repeats
+  lunchRepeatMode?: 'no-repeat' | 'repeat' | 'alternate';
   fitnessGoals?: FitnessGoal[];
   calorieGoal?: number;
   proteinGoal?: number;

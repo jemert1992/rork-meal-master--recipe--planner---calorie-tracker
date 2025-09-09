@@ -1281,6 +1281,7 @@ export const useMealPlanStore = create<MealPlanState>()(
         const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
         const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
+        const breakfastRepeatMode = (getUserProfile().breakfastRepeatMode ?? 'repeat') as 'no-repeat' | 'repeat' | 'alternate';
 
         const used = new Set<string>();
         const usedMainCount = new Map<string, number>();
@@ -1404,6 +1405,46 @@ export const useMealPlanStore = create<MealPlanState>()(
         const newMealPlan = { ...get().mealPlan } as MealPlan;
         let filledCount = 0;
         const totalSlots = dates.length * 3;
+        const breakfastAssignments: Record<string, Recipe | null> = {};
+        const breakfastAssignedOnce = new Set<string>();
+        if (breakfastRepeatMode !== 'no-repeat') {
+          const bkCandidates = breakfastPool.filter((r) => isBreakfastAppropriate(r));
+          const pickTop = (excludeId?: string | null): Recipe | null => {
+            const cands = bkCandidates.filter((r) => r && r.id !== (excludeId ?? null));
+            if (cands.length === 0) return null;
+            const ranked = cands.slice().sort((a, b) => {
+              const aSimple = simpleBreakfastScoreBoost(a);
+              const bSimple = simpleBreakfastScoreBoost(b);
+              const aBatch = isBatchFriendly(a) ? -10 : 0;
+              const bBatch = isBatchFriendly(b) ? -10 : 0;
+              const aDiff = Math.abs((a.calories ?? 0) - breakfastCalories);
+              const bDiff = Math.abs((b.calories ?? 0) - breakfastCalories);
+              return (aDiff + aSimple + aBatch) - (bDiff + bSimple + bBatch);
+            });
+            return ranked[0] ?? null;
+          };
+          if (breakfastRepeatMode === 'repeat') {
+            let cursor = 0;
+            let lastId: string | null = null;
+            while (cursor < dates.length) {
+              const pick = pickTop(lastId);
+              if (!pick) break;
+              const block = 3;
+              for (let k = 0; k < block && (cursor + k) < dates.length; k++) {
+                breakfastAssignments[dates[cursor + k]] = pick;
+              }
+              cursor += block;
+              lastId = pick.id;
+            }
+          } else if (breakfastRepeatMode === 'alternate') {
+            const A = pickTop(null);
+            const B = pickTop(A?.id ?? null);
+            for (let i = 0; i < dates.length; i++) {
+              const recipe = (i % 2 === 0 ? A : B) ?? A ?? B ?? null;
+              breakfastAssignments[dates[i]] = recipe;
+            }
+          }
+        }
 
         const pickFromPools = (primary: Recipe[], fallback: Recipe[], targetCalories: number, type: MealType, dateStr: string): Recipe | null => {
           const combine = (arr: Recipe[]) => {
@@ -1494,77 +1535,104 @@ export const useMealPlanStore = create<MealPlanState>()(
           const leftoverGap = Math.max(1, Math.min(3, Number(profBatch.maxLeftoverGapDays ?? 2)));
 
           if (!currentDayPlan.breakfast) {
-            let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
-            if (!chosen && breakfastPool.length > 0) {
-              const firstNotUsed = breakfastPool.find(r => !used.has(r.id));
-              chosen = firstNotUsed ?? breakfastPool[0];
-              if (enforceUnique && chosen && used.has(chosen.id)) repeatsUnavoidable = true;
-            }
-            if (chosen) {
+            const assigned = breakfastAssignments[date] ?? null;
+            if (assigned) {
               currentDayPlan.breakfast = {
-                recipeId: chosen.id,
-                name: chosen.name,
-                calories: chosen.calories,
-                protein: chosen.protein,
-                carbs: chosen.carbs,
-                fat: chosen.fat,
-                fiber: chosen.fiber,
+                recipeId: assigned.id,
+                name: assigned.name,
+                calories: assigned.calories,
+                protein: assigned.protein,
+                carbs: assigned.carbs,
+                fat: assigned.fat,
+                fiber: assigned.fiber,
                 servings: 1,
-              };
-              used.add(chosen.id);
-              const fSel = featuresFor(chosen);
+                batchPrep: isBatchFriendly(assigned),
+                notes: isBatchFriendly(assigned) ? 'Make-ahead' : undefined,
+              } as any;
+              if (!breakfastAssignedOnce.has(assigned.id)) {
+                used.add(assigned.id);
+                breakfastAssignedOnce.add(assigned.id);
+              } else {
+                if (enforceUnique) repeatsUnavoidable = true;
+              }
+              const fSel = featuresFor(assigned);
               if (fSel.main) usedMainCount.set(fSel.main, (usedMainCount.get(fSel.main) ?? 0) + 1);
               if (fSel.cuisine) usedCuisineCount.set(fSel.cuisine, (usedCuisineCount.get(fSel.cuisine) ?? 0) + 1);
-              result.generatedMeals.push(`${date}-breakfast`);
+              result.generatedMeals.push(`${date}-breakfast-assigned`);
               filledCount++;
-
-              if (allowLeftovers && isBatchFriendly(chosen)) {
-                let repeats = 0;
-                for (let g = 1; g <= leftoverGap; g++) {
-                  const idx = dates.indexOf(date) + g;
-                  if (idx >= 0 && idx < dates.length) {
-                    const nextDate = dates[idx];
-                    const nextDayPlan = newMealPlan[nextDate] || ({} as DailyMeals);
-                    if (!nextDayPlan.breakfast) {
-                      nextDayPlan.breakfast = {
-                        recipeId: chosen.id,
-                        name: `${chosen.name} (Make-ahead)`,
-                        calories: chosen.calories,
-                        protein: chosen.protein,
-                        carbs: chosen.carbs,
-                        fat: chosen.fat,
-                        fiber: chosen.fiber,
-                        servings: 1,
-                        notes: 'Make-ahead',
-                        batchPrep: true,
-                      } as any;
-                      newMealPlan[nextDate] = nextDayPlan;
-                      result.generatedMeals.push(`${nextDate}-breakfast-prep`);
-                      repeats += 1;
-                    }
-                  }
-                  if (repeats >= 2) break;
-                }
+            } else {
+              let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
+              if (!chosen && breakfastPool.length > 0) {
+                const firstNotUsed = breakfastPool.find(r => !used.has(r.id));
+                chosen = firstNotUsed ?? breakfastPool[0];
+                if (enforceUnique && chosen && used.has(chosen.id)) repeatsUnavoidable = true;
               }
-            } else if (breakfastPool.length + getLocalFallbacks('breakfast', breakfastCalories).length > 0) {
-              const any = [...breakfastPool, ...getLocalFallbacks('breakfast', breakfastCalories)][0];
-              if (enforceUnique && any && used.has(any.id)) repeatsUnavoidable = true;
-              currentDayPlan.breakfast = {
-                recipeId: any.id,
-                name: any.name,
-                calories: any.calories,
-                protein: any.protein,
-                carbs: any.carbs,
-                fat: any.fat,
-                fiber: any.fiber,
-                servings: 1,
-              };
-              used.add(any.id);
-              const fAnyB = featuresFor(any);
-              if (fAnyB.main) usedMainCount.set(fAnyB.main, (usedMainCount.get(fAnyB.main) ?? 0) + 1);
-              if (fAnyB.cuisine) usedCuisineCount.set(fAnyB.cuisine, (usedCuisineCount.get(fAnyB.cuisine) ?? 0) + 1);
-              result.generatedMeals.push(`${date}-breakfast-relaxed`);
-              filledCount++;
+              if (chosen) {
+                currentDayPlan.breakfast = {
+                  recipeId: chosen.id,
+                  name: chosen.name,
+                  calories: chosen.calories,
+                  protein: chosen.protein,
+                  carbs: chosen.carbs,
+                  fat: chosen.fat,
+                  fiber: chosen.fiber,
+                  servings: 1,
+                };
+                used.add(chosen.id);
+                const fSel2 = featuresFor(chosen);
+                if (fSel2.main) usedMainCount.set(fSel2.main, (usedMainCount.get(fSel2.main) ?? 0) + 1);
+                if (fSel2.cuisine) usedCuisineCount.set(fSel2.cuisine, (usedCuisineCount.get(fSel2.cuisine) ?? 0) + 1);
+                result.generatedMeals.push(`${date}-breakfast`);
+                filledCount++;
+
+                if (allowLeftovers && isBatchFriendly(chosen)) {
+                  let repeats = 0;
+                  for (let g = 1; g <= leftoverGap; g++) {
+                    const idx = dates.indexOf(date) + g;
+                    if (idx >= 0 && idx < dates.length) {
+                      const nextDate = dates[idx];
+                      const nextDayPlan = newMealPlan[nextDate] || ({} as DailyMeals);
+                      if (!nextDayPlan.breakfast && (!breakfastAssignments[nextDate])) {
+                        nextDayPlan.breakfast = {
+                          recipeId: chosen.id,
+                          name: `${chosen.name} (Make-ahead)`,
+                          calories: chosen.calories,
+                          protein: chosen.protein,
+                          carbs: chosen.carbs,
+                          fat: chosen.fat,
+                          fiber: chosen.fiber,
+                          servings: 1,
+                          notes: 'Make-ahead',
+                          batchPrep: true,
+                        } as any;
+                        newMealPlan[nextDate] = nextDayPlan;
+                        result.generatedMeals.push(`${nextDate}-breakfast-prep`);
+                        repeats += 1;
+                      }
+                    }
+                    if (repeats >= 2) break;
+                  }
+                }
+              } else if (breakfastPool.length + getLocalFallbacks('breakfast', breakfastCalories).length > 0) {
+                const any = [...breakfastPool, ...getLocalFallbacks('breakfast', breakfastCalories)][0];
+                if (enforceUnique && any && used.has(any.id)) repeatsUnavoidable = true;
+                currentDayPlan.breakfast = {
+                  recipeId: any.id,
+                  name: any.name,
+                  calories: any.calories,
+                  protein: any.protein,
+                  carbs: any.carbs,
+                  fat: any.fat,
+                  fiber: any.fiber,
+                  servings: 1,
+                };
+                used.add(any.id);
+                const fAnyB = featuresFor(any);
+                if (fAnyB.main) usedMainCount.set(fAnyB.main, (usedMainCount.get(fAnyB.main) ?? 0) + 1);
+                if (fAnyB.cuisine) usedCuisineCount.set(fAnyB.cuisine, (usedCuisineCount.get(fAnyB.cuisine) ?? 0) + 1);
+                result.generatedMeals.push(`${date}-breakfast-relaxed`);
+                filledCount++;
+              }
             }
             progressed += perSlot; set({ generationProgress: Math.min(0.3 + progressed, 0.95) });
           }
