@@ -184,6 +184,10 @@ export type UserProfile = {
   preferSimpleMeals?: boolean; // bias toward simple for all meals
   noComplexMeals?: boolean; // strict filter out complex meals
   breakfastSimpleBiasStrong?: boolean; // heavily bias simple for breakfast
+  // Batch prep & leftovers
+  preferBatchPrep?: boolean;
+  planLeftovers?: boolean;
+  maxLeftoverGapDays?: number;
   fitnessGoals?: FitnessGoal[];
   calorieGoal?: number;
   proteinGoal?: number;

@@ -156,6 +156,24 @@ function featuresFor(recipe: Recipe | undefined): { main: string | null; cuisine
   return { main, cuisine };
 }
 
+function isBatchFriendly(recipe: Recipe | undefined): boolean {
+  if (!recipe) return false;
+  const t = (recipe.tags ?? []).map((x) => normalizeText(String(x)));
+  const name = normalizeText(recipe.name);
+  const hints = ['meal-prep','make-ahead','batch','sheet-pan','tray bake','slow cooker','instant pot','stew','casserole','overnight','oats','chia','granola'];
+  return hints.some((h) => t.some((x) => x.includes(h)) || name.includes(h));
+}
+
+function ingredientOverlapScore(base: string[] | undefined, other: string[] | undefined): number {
+  const a = new Set((base ?? []).map((x) => normalizeText(String(x))));
+  let overlap = 0;
+  (other ?? []).forEach((ing) => {
+    const s = normalizeText(String(ing));
+    if (a.has(s)) overlap += 1;
+  });
+  return overlap;
+}
+
 function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, sameCuisine: boolean, sameDayMainHit: boolean, complexity: Recipe['complexity'] | undefined, type: MealType, profile: ReturnType<typeof getUserProfile>): number {
   let penalty = 0;
   if (sameId) penalty += 1000;
@@ -1388,14 +1406,12 @@ export const useMealPlanStore = create<MealPlanState>()(
             const locals = getLocalFallbacks(type, targetCalories);
             if (locals.length > 0) candidates = [...combine(locals)];
           }
-          // If still empty, relax uniqueness but keep meal type
           if (candidates.length === 0) {
             const sameType = [...primary, ...fallback].filter((r) => r.mealType === type);
             let poolSame = sameType;
             if (type === 'breakfast') poolSame = poolSame.filter((r) => isBreakfastAppropriate(r));
-            if (poolSame.length > 0) candidates = poolSame; // allow repeats to avoid empty slot
+            if (poolSame.length > 0) candidates = poolSame;
           }
-          // If still empty, for breakfast do NOT relax to non-breakfast items
           if (candidates.length === 0 && type !== 'breakfast') {
             const anySource = [...primary, ...fallback, ...getLocalFallbacks(type, targetCalories)];
             if (anySource.length > 0) candidates = anySource;
@@ -1413,8 +1429,38 @@ export const useMealPlanStore = create<MealPlanState>()(
             const aCuisinePenalty = fa.cuisine ? (usedCuisineCount.get(fa.cuisine) ?? 0) * 10 : 0;
             const bCuisinePenalty = fb.cuisine ? (usedCuisineCount.get(fb.cuisine) ?? 0) * 10 : 0;
             const prof = getUserProfile();
-            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false, a.complexity, type, prof) + aMainPenalty + aCuisinePenalty + usedPenalty(a.id);
-            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false, b.complexity, type, prof) + bMainPenalty + bCuisinePenalty + usedPenalty(b.id);
+            const batchBonusA = (prof.preferBatchPrep ? (isBatchFriendly(a) ? -25 : 0) : 0);
+            const batchBonusB = (prof.preferBatchPrep ? (isBatchFriendly(b) ? -25 : 0) : 0);
+            const neighborPrev = newMealPlan[prevDateString(dateStr)] || ({} as DailyMeals);
+            const sameDay = newMealPlan[dateStr] || ({} as DailyMeals);
+            const dayIngs: string[] = [sameDay.breakfast?.recipeId, sameDay.lunch?.recipeId, sameDay.dinner?.recipeId]
+              .map((rid) => rid) // keep ids for find
+              .filter((rid): rid is string => typeof rid === 'string')
+              .map((rid) => {
+                const source = [...primary, ...fallback];
+                const found = source.find((r) => r.id === rid);
+                return found ? (found.ingredients ?? []).join('|') : '';
+              })
+              .join('|')
+              .split('|')
+              .filter(Boolean);
+            const prevIngs: string[] = ['breakfast','lunch','dinner']
+              .map((mt) => (neighborPrev as any)[mt]?.recipeId as string | undefined)
+              .filter((rid): rid is string => !!rid)
+              .map((rid) => {
+                const src = [...primary, ...fallback];
+                const f = src.find((r) => r.id === rid);
+                return f ? (f.ingredients ?? []).join('|') : '';
+              })
+              .join('|')
+              .split('|')
+              .filter(Boolean);
+            const aOverlap = ingredientOverlapScore(dayIngs, a.ingredients) + Math.floor(ingredientOverlapScore(prevIngs, a.ingredients) * 0.5);
+            const bOverlap = ingredientOverlapScore(dayIngs, b.ingredients) + Math.floor(ingredientOverlapScore(prevIngs, b.ingredients) * 0.5);
+            const overlapBonusA = prof.preferBatchPrep ? -Math.min(20, aOverlap * 3) : 0;
+            const overlapBonusB = prof.preferBatchPrep ? -Math.min(20, bOverlap * 3) : 0;
+            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false, a.complexity, type, prof) + aMainPenalty + aCuisinePenalty + usedPenalty(a.id) + batchBonusA + overlapBonusA;
+            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false, b.complexity, type, prof) + bMainPenalty + bCuisinePenalty + usedPenalty(b.id) + batchBonusB + overlapBonusB;
             return aScore - bScore;
           });
           return ranked[0] ?? null;
@@ -1426,6 +1472,9 @@ export const useMealPlanStore = create<MealPlanState>()(
         let repeatsUnavoidable = false;
         for (const date of dates) {
           const currentDayPlan = newMealPlan[date] || {} as DailyMeals;
+          const profBatch = getUserProfile();
+          const allowLeftovers = !!profBatch.planLeftovers;
+          const leftoverGap = Math.max(1, Math.min(3, Number(profBatch.maxLeftoverGapDays ?? 2)));
 
           if (!currentDayPlan.breakfast) {
             let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
@@ -1451,6 +1500,34 @@ export const useMealPlanStore = create<MealPlanState>()(
               if (fSel.cuisine) usedCuisineCount.set(fSel.cuisine, (usedCuisineCount.get(fSel.cuisine) ?? 0) + 1);
               result.generatedMeals.push(`${date}-breakfast`);
               filledCount++;
+
+              if (allowLeftovers && isBatchFriendly(chosen)) {
+                let repeats = 0;
+                for (let g = 1; g <= leftoverGap; g++) {
+                  const idx = dates.indexOf(date) + g;
+                  if (idx >= 0 && idx < dates.length) {
+                    const nextDate = dates[idx];
+                    const nextDayPlan = newMealPlan[nextDate] || ({} as DailyMeals);
+                    if (!nextDayPlan.breakfast) {
+                      nextDayPlan.breakfast = {
+                        recipeId: chosen.id,
+                        name: `${chosen.name} (Make-ahead)`,
+                        calories: chosen.calories,
+                        protein: chosen.protein,
+                        carbs: chosen.carbs,
+                        fat: chosen.fat,
+                        fiber: chosen.fiber,
+                        servings: 1,
+                        notes: 'Make-ahead'
+                      };
+                      newMealPlan[nextDate] = nextDayPlan;
+                      result.generatedMeals.push(`${nextDate}-breakfast-prep`);
+                      repeats += 1;
+                    }
+                  }
+                  if (repeats >= 2) break;
+                }
+              }
             } else if (breakfastPool.length + getLocalFallbacks('breakfast', breakfastCalories).length > 0) {
               const any = [...breakfastPool, ...getLocalFallbacks('breakfast', breakfastCalories)][0];
               if (enforceUnique && any && used.has(any.id)) repeatsUnavoidable = true;
@@ -1545,6 +1622,33 @@ export const useMealPlanStore = create<MealPlanState>()(
               if (fSelD.cuisine) usedCuisineCount.set(fSelD.cuisine, (usedCuisineCount.get(fSelD.cuisine) ?? 0) + 1);
               result.generatedMeals.push(`${date}-dinner`);
               filledCount++;
+
+              if (allowLeftovers && isBatchFriendly(chosen)) {
+                for (let g = 1; g <= leftoverGap; g++) {
+                  const idx = dates.indexOf(date) + g;
+                  if (idx >= 0 && idx < dates.length) {
+                    const nextDate = dates[idx];
+                    const nextDayPlan = newMealPlan[nextDate] || ({} as DailyMeals);
+                    if (!nextDayPlan.lunch) {
+                      nextDayPlan.lunch = {
+                        recipeId: chosen.id,
+                        name: `${chosen.name} (Leftovers)`,
+                        calories: chosen.calories,
+                        protein: chosen.protein,
+                        carbs: chosen.carbs,
+                        fat: chosen.fat,
+                        fiber: chosen.fiber,
+                        servings: 1,
+                        notes: 'Leftovers'
+                      };
+                      newMealPlan[nextDate] = nextDayPlan;
+                      // Do not mark as used to avoid blocking unique pool; it's intentional leftover
+                      result.generatedMeals.push(`${nextDate}-lunch-leftovers`);
+                    }
+                    break;
+                  }
+                }
+              }
             } else if (dinnerPool.length + getLocalFallbacks('dinner', dinnerCalories).length > 0) {
               const any = [...dinnerPool, ...getLocalFallbacks('dinner', dinnerCalories)][0];
               if (enforceUnique && any && used.has(any.id)) repeatsUnavoidable = true;

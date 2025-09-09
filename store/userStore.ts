@@ -37,6 +37,10 @@ const DEFAULT_PROFILE: UserProfile = {
   preferSimpleMeals: true,
   breakfastSimpleBiasStrong: true,
   noComplexMeals: false,
+  // Batch prep & leftovers defaults
+  preferBatchPrep: true,
+  planLeftovers: true,
+  maxLeftoverGapDays: 2,
 };
 
 export const useUserStore = create<UserState>()(

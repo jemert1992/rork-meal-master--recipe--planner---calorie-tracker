@@ -829,6 +829,26 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   <Check size={14} color={(profile.breakfastSimpleBiasStrong ?? false) ? Colors.white : Colors.text} />
                   <Text style={[styles.togglePillText, (profile.breakfastSimpleBiasStrong ?? false) && { color: Colors.white }]}>Easy breakfasts</Text>
                 </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.preferBatchPrep ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ preferBatchPrep: !(profile.preferBatchPrep ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle prefer batch-prep meals"
+                  testID="toggle-batch-prep"
+                >
+                  <Check size={14} color={(profile.preferBatchPrep ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.preferBatchPrep ?? false) && { color: Colors.white }]}>Batch prep</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.planLeftovers ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ planLeftovers: !(profile.planLeftovers ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle plan leftovers"
+                  testID="toggle-leftovers"
+                >
+                  <Check size={14} color={(profile.planLeftovers ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.planLeftovers ?? false) && { color: Colors.white }]}>Plan leftovers</Text>
+                </Pressable>
               </View>
               
               <Text style={styles.weeklyPlanInfo}>
@@ -836,13 +856,15 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   ? `Based on your ${profile.dietType} diet • Variety on`
                   : 'Based on your preferences • Variety on'}
                 {` • ${profile.preferSimpleMeals ? 'Simple bias' : 'Balanced'}`}
+                {profile.preferBatchPrep ? ' • Batch-friendly' : ''}
+                {profile.planLeftovers ? ' • Leftovers planned' : ''}
               </Text>
               <Text
                 style={styles.weeklyPlanVarietyHint}
-                accessibilityLabel="Variety rule explanation"
+                accessibilityLabel="Variety and meal-prep rule explanation"
                 testID="variety-hint"
               >
-                We avoid repeating the same main ingredient or cuisine back-to-back and balance meals within the day.
+                We avoid repeating main proteins/cuisines and, when enabled, prefer make-ahead meals and schedule leftovers to reduce waste.
               </Text>
 
               {(generationSuggestions?.some?.((s: string) => s.includes('Some repeats may occur—')) ?? false) && (
