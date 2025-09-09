@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -77,6 +77,8 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [sharingPlan, setSharingPlan] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+
+  const [showSummary, setShowSummary] = useState(false);
 
   // Swap modal state
   const [swapVisible, setSwapVisible] = useState(false);
@@ -350,11 +352,16 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   };
 
   const getRecipeDetails = (recipeId?: string) => {
-    if (!recipeId) return { name: undefined, image: undefined };
+    if (!recipeId) return { name: undefined, image: undefined, complexity: undefined, prepTime: undefined, batchFriendly: undefined } as { name?: string; image?: string; complexity?: string; prepTime?: string; batchFriendly?: boolean };
     const recipe = recipes.find(r => r.id === recipeId);
+    const tags = (recipe?.tags ?? []).map(t => String(t).toLowerCase());
+    const batchFriendly = tags.some(t => t.includes('meal-prep') || t.includes('make-ahead') || t.includes('batch') || t.includes('overnight') || t.includes('sheet-pan') || t.includes('slow cooker'));
     return {
       name: recipe?.name,
-      image: recipe?.image
+      image: recipe?.image,
+      complexity: recipe?.complexity,
+      prepTime: recipe?.prepTime,
+      batchFriendly
     };
   };
 
@@ -370,6 +377,69 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
   };
 
   const plannedMealsCount = countPlannedMeals();
+
+  const weekSummary = useMemo(() => {
+    const days: Array<{
+      date: string;
+      pretty: string;
+      meals: Array<{
+        slot: 'breakfast'|'lunch'|'dinner';
+        name: string;
+        category: 'breakfast'|'lunch'|'dinner'|'snack';
+        complexity: string;
+        prepTime: string;
+        batchPrep: boolean;
+      }>;
+    }> = [];
+    const pairedPrep: Array<{ title: string; details: string }>= [];
+
+    const getRecipeById = (id?: string) => recipes.find(r => r.id === id);
+    const isBatchFriendly = (id?: string): boolean => {
+      const r = getRecipeById(id);
+      const tags = (r?.tags ?? []).map(t => String(t).toLowerCase());
+      const name = String(r?.name ?? '').toLowerCase();
+      const hints = ['meal-prep','make-ahead','batch','sheet-pan','tray bake','slow cooker','instant pot','stew','casserole','overnight','oats','chia','granola'];
+      return hints.some(h => tags.some(t => t.includes(h)) || name.includes(h));
+    };
+
+    weekDays.forEach(d => {
+      const dayPlan = mealPlan[d.dateString] || {};
+      const entries: Array<{ slot: 'breakfast'|'lunch'|'dinner'; name: string; category: 'breakfast'|'lunch'|'dinner'|'snack'; complexity: string; prepTime: string; batchPrep: boolean; }>= [];
+      (['breakfast','lunch','dinner'] as const).forEach(slot => {
+        const recId = (dayPlan[slot]?.recipeId);
+        const r = getRecipeById(recId);
+        if (r) {
+          const complexity = r.complexity ?? 'simple';
+          const prepTime = r.prepTime ?? '-';
+          const batchPrep = isBatchFriendly(recId);
+          entries.push({ slot, name: r.name, category: slot, complexity, prepTime, batchPrep });
+        }
+      });
+      days.push({ date: d.dateString, pretty: `${d.dayName} ${format(d.date, 'MMM d')}`, meals: entries });
+    });
+
+    weekDays.forEach((d, idx) => {
+      const dayPlan = mealPlan[d.dateString] || {};
+      const dinnerId = dayPlan.dinner?.recipeId;
+      const nextIdx = idx + 1;
+      if (dinnerId && nextIdx < weekDays.length) {
+        const nextDate = weekDays[nextIdx].dateString;
+        const nextDay = mealPlan[nextDate] || {};
+        if (nextDay.lunch?.recipeId === dinnerId) {
+          const r = getRecipeById(dinnerId);
+          if (r) pairedPrep.push({ title: `${r.name}`, details: `Cook extra on ${format(d.date, 'EEE')} dinner → pack for ${format(weekDays[nextIdx].date, 'EEE')} lunch` });
+        }
+      }
+      const bkId = dayPlan.breakfast?.recipeId;
+      const bkBatch = isBatchFriendly(bkId);
+      if (bkId && bkBatch) {
+        const r = getRecipeById(bkId);
+        if (r) pairedPrep.push({ title: `${r.name}`, details: `Prep ${format(d.date, 'EEE')} for ${format(d.date, 'EEE')} + ${idx+1<weekDays.length?format(weekDays[idx+1].date,'EEE'):''}${idx+2<weekDays.length?`, ${format(weekDays[idx+2].date,'EEE')}`:''}` });
+      }
+    });
+
+    return { days, pairedPrep };
+  }, [mealPlan, weekDays, recipes]);
   const totalPossibleMeals = weekDays.length * 3; // 7 days * 3 meals
   const completionPercentage = Math.round((plannedMealsCount / totalPossibleMeals) * 100);
   
@@ -882,6 +952,17 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               )}
             </View>
             
+            <Pressable
+              style={({ pressed }) => [styles.summaryButton, pressed && styles.focusRing]}
+              onPress={() => setShowSummary(true)}
+              accessibilityRole="button"
+              accessibilityLabel="View plan summary"
+              testID="open-plan-summary"
+            >
+              <Sparkles size={16} color={Colors.white} />
+              <Text style={styles.summaryButtonText}>View Plan Summary</Text>
+            </Pressable>
+
             <View style={styles.weekNavigationContainer}>
               <Pressable 
                 style={({ pressed }) => [styles.weekNavigationButton, pressed && styles.focusRing]} 
@@ -1012,6 +1093,60 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
               </View>
             </View>
           </View>
+      </Modal>
+
+      {/* Summary Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={showSummary}
+        onRequestClose={() => setShowSummary(false)}
+        testID="weekly-summary-modal"
+      >
+        <View style={styles.modalContentFull}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Weekly Plan Summary</Text>
+            <Pressable style={styles.closeButton} onPress={() => setShowSummary(false)} accessibilityLabel="Close summary" accessibilityRole="button" testID="weekly-summary-close">
+              <X size={24} color={Colors.text} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+              {weekSummary.days.map((d) => (
+                <View key={`sum-${d.date}`} style={styles.summaryDayBlock}>
+                  <Text style={styles.summaryDayTitle}>{d.pretty}</Text>
+                  {d.meals.length === 0 ? (
+                    <Text style={styles.summaryEmpty}>No meals planned</Text>
+                  ) : (
+                    d.meals.map((m, i) => (
+                      <View key={`sum-${d.date}-${m.slot}-${i}`} style={styles.summaryRow}>
+                        <Text style={styles.summarySlot}>{m.slot.toUpperCase()}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.summaryName} numberOfLines={2}>{m.name}</Text>
+                          <Text style={styles.summaryMeta}>Category: {m.category} • Complexity: {m.complexity} • Prep: {m.prepTime} • Batch: {m.batchPrep ? 'Yes' : 'No'}</Text>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              ))}
+
+              <View style={styles.summaryPrepBlock}>
+                <Text style={styles.summarySectionTitle}>Paired Meal Prepping Plan</Text>
+                {weekSummary.pairedPrep.length === 0 ? (
+                  <Text style={styles.summaryEmpty}>No paired prep suggestions this week.</Text>
+                ) : (
+                  weekSummary.pairedPrep.map((p, idx) => (
+                    <View key={`pair-${idx}`} style={styles.summaryPairRow}>
+                      <Sparkles size={14} color={Colors.primary} />
+                      <Text style={styles.summaryPairText}>{p.title} — {p.details}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </View>
+          </ScrollView>
+        </View>
       </Modal>
 
       {/* Swap Modal */}
@@ -1651,6 +1786,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  summaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.secondary,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    gap: 8,
+  },
+  summaryButtonText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   pickForMeText: {
     fontSize: 16,
     fontWeight: '800',
@@ -1832,6 +1983,73 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.textLight,
   },
+  // Summary styles
+  summaryDayBlock: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    marginBottom: 12,
+  },
+  summaryDayTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 6,
+  },
+  summarySlot: {
+    width: 78,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  summaryName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  summaryMeta: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  summaryPrepBlock: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  summarySectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  summaryPairRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  summaryPairText: {
+    fontSize: 13,
+    color: Colors.text,
+    flex: 1,
+  },
+  summaryEmpty: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+
   // Error Modal Styles
   errorModalOverlay: {
     flex: 1,
