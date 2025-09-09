@@ -783,7 +783,7 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                 </View>
               )}
               
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
                 <Pressable
                   style={({ pressed }) => [styles.togglePill, (profile.strictNoDuplicates ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
                   onPress={() => updateProfile({ strictNoDuplicates: !(profile.strictNoDuplicates ?? false) })}
@@ -802,12 +802,40 @@ export default function WeeklyMealPlanner({ onGenerateGroceryList }: WeeklyMealP
                   <Check size={14} color={(profile.requireDailyPlantBased ?? false) ? Colors.white : Colors.text} />
                   <Text style={[styles.togglePillText, (profile.requireDailyPlantBased ?? false) && { color: Colors.white }]}>Plant-based daily</Text>
                 </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.preferSimpleMeals ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ preferSimpleMeals: !(profile.preferSimpleMeals ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle prefer simple meals"
+                >
+                  <Check size={14} color={(profile.preferSimpleMeals ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.preferSimpleMeals ?? false) && { color: Colors.white }]}>Prefer simple</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.noComplexMeals ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ noComplexMeals: !(profile.noComplexMeals ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle disallow complex meals"
+                >
+                  <Check size={14} color={(profile.noComplexMeals ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.noComplexMeals ?? false) && { color: Colors.white }]}>No complex</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.togglePill, (profile.breakfastSimpleBiasStrong ?? false) && styles.togglePillActive, pressed && styles.focusRing]}
+                  onPress={() => updateProfile({ breakfastSimpleBiasStrong: !(profile.breakfastSimpleBiasStrong ?? false) })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle strong simple bias for breakfast"
+                >
+                  <Check size={14} color={(profile.breakfastSimpleBiasStrong ?? false) ? Colors.white : Colors.text} />
+                  <Text style={[styles.togglePillText, (profile.breakfastSimpleBiasStrong ?? false) && { color: Colors.white }]}>Easy breakfasts</Text>
+                </Pressable>
               </View>
               
               <Text style={styles.weeklyPlanInfo}>
                 {profile.dietType && profile.dietType !== 'any' 
                   ? `Based on your ${profile.dietType} diet • Variety on`
                   : 'Based on your preferences • Variety on'}
+                {` • ${profile.preferSimpleMeals ? 'Simple bias' : 'Balanced'}`}
               </Text>
               <Text
                 style={styles.weeklyPlanVarietyHint}

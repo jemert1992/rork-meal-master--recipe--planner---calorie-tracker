@@ -23,7 +23,7 @@ export type Recipe = {
   instructions: string[];
   tags: string[];
   mealType?: MealType;
-  complexity?: 'simple' | 'complex';
+  complexity?: 'simple' | 'intermediate' | 'complex';
   dietaryPreferences?: Array<'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'low-carb' | 'high-protein'>;
   fitnessGoals?: Array<FitnessGoal>;
   source?: string;
@@ -55,7 +55,7 @@ export type FirestoreRecipe = {
   };
   tags: {
     meal_type?: MealType;
-    complexity?: 'simple' | 'complex';
+    complexity?: 'simple' | 'intermediate' | 'complex';
     diet?: string[];
     goal?: string[];
     prep_time: number;
@@ -180,6 +180,10 @@ export type UserProfile = {
   excludedCuisines?: string[];
   strictNoDuplicates?: boolean;
   requireDailyPlantBased?: boolean;
+  // Complexity preferences
+  preferSimpleMeals?: boolean; // bias toward simple for all meals
+  noComplexMeals?: boolean; // strict filter out complex meals
+  breakfastSimpleBiasStrong?: boolean; // heavily bias simple for breakfast
   fitnessGoals?: FitnessGoal[];
   calorieGoal?: number;
   proteinGoal?: number;

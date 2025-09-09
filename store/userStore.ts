@@ -34,6 +34,9 @@ const DEFAULT_PROFILE: UserProfile = {
   autoGenerateMeals: true,
   strictNoDuplicates: true,
   requireDailyPlantBased: false,
+  preferSimpleMeals: true,
+  breakfastSimpleBiasStrong: true,
+  noComplexMeals: false,
 };
 
 export const useUserStore = create<UserState>()(

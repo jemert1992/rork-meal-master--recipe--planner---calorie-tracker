@@ -126,7 +126,8 @@ function simpleBreakfastScoreBoost(recipe: Recipe | undefined): number {
   const simpleItems = ['oatmeal','yogurt','toast','omelet','eggs','smoothie','chia','granola','parfait'];
   const hasSimpleHint = simpleHints.some((h) => tags.includes(h) || name.includes(h));
   const isSimpleItem = simpleItems.some((s) => name.includes(s));
-  return (hasSimpleHint ? -8 : 0) + (isSimpleItem ? -6 : 0);
+  const complexityPenalty = recipe.complexity === 'complex' ? 25 : recipe.complexity === 'intermediate' ? 8 : -8;
+  return (hasSimpleHint ? -8 : 0) + (isSimpleItem ? -6 : 0) + complexityPenalty;
 }
 
 function detectCuisine(tags: string[]): string | null {
@@ -155,12 +156,23 @@ function featuresFor(recipe: Recipe | undefined): { main: string | null; cuisine
   return { main, cuisine };
 }
 
-function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, sameCuisine: boolean, sameDayMainHit: boolean): number {
+function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, sameCuisine: boolean, sameDayMainHit: boolean, complexity: Recipe['complexity'] | undefined, type: MealType, profile: ReturnType<typeof getUserProfile>): number {
   let penalty = 0;
   if (sameId) penalty += 1000;
   if (sameMain) penalty += 60;
   if (sameCuisine) penalty += 30;
   if (sameDayMainHit) penalty += 20;
+  const noComplex = !!profile.noComplexMeals;
+  const preferSimple = !!profile.preferSimpleMeals;
+  const breakfastBias = !!profile.breakfastSimpleBiasStrong;
+  if (complexity === 'complex') {
+    penalty += noComplex ? 1000 : (type === 'breakfast' ? 120 : 40);
+  } else if (complexity === 'intermediate') {
+    penalty += (type === 'breakfast' ? 20 : 8);
+  } else if (complexity === 'simple' && preferSimple) {
+    penalty -= 10;
+    if (type === 'breakfast' && breakfastBias) penalty -= 20;
+  }
   return Math.abs(calorieDiff) + penalty;
 }
 
@@ -688,10 +700,9 @@ export const useMealPlanStore = create<MealPlanState>()(
           const sorted = pool.slice().sort((a, b) => {
             const fa = featuresFor(a);
             const fb = featuresFor(b);
-            const baseAScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMainSet.has(fa.main));
-            const baseBScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMainSet.has(fb.main));
-            const aScore = mealType === 'breakfast' ? baseAScore + simpleBreakfastScoreBoost(a) : baseAScore;
-            const bScore = mealType === 'breakfast' ? baseBScore + simpleBreakfastScoreBoost(b) : baseBScore;
+            const prof = getUserProfile();
+            const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMainSet.has(fa.main), a.complexity, mealType, prof) + (mealType === 'breakfast' ? simpleBreakfastScoreBoost(a) : 0);
+            const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMainSet.has(fb.main), b.complexity, mealType, prof) + (mealType === 'breakfast' ? simpleBreakfastScoreBoost(b) : 0);
             return aScore - bScore;
           });
           const candidate = sorted.find(r => !exclude.includes(r.id));
@@ -771,8 +782,9 @@ export const useMealPlanStore = create<MealPlanState>()(
                 const ta = specificMealType === 'breakfast' ? breakfastCalories : specificMealType === 'lunch' ? lunchCalories : dinnerCalories;
                 const fa = featuresFor(a);
                 const fb = featuresFor(b);
-                const aScore = combineScore((a.calories ?? 0) - ta, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
-                const bScore = combineScore((b.calories ?? 0) - ta, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                const prof = getUserProfile();
+                const aScore = combineScore((a.calories ?? 0) - ta, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main), a.complexity, specificMealType, prof);
+                const bScore = combineScore((b.calories ?? 0) - ta, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main), b.complexity, specificMealType, prof);
                 return aScore - bScore;
               });
               apply((ranked[0] as Recipe), specificMealType);
@@ -789,8 +801,9 @@ export const useMealPlanStore = create<MealPlanState>()(
                 filtered.sort((a, b) => {
                   const fa = featuresFor(a);
                   const fb = featuresFor(b);
-                  const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
-                  const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                  const prof = getUserProfile();
+                  const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main), a.complexity, specificMealType, prof);
+                  const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main), b.complexity, specificMealType, prof);
                   return aScore - bScore;
                 });
                 apply(filtered[0], specificMealType);
@@ -864,10 +877,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               const ranked = pool.slice().sort((a, b) => {
                 const fa = featuresFor(a);
                 const fb = featuresFor(b);
-                const baseAScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
-                const baseBScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
-                const aScore = type === 'breakfast' ? baseAScore + simpleBreakfastScoreBoost(a) : baseAScore;
-                const bScore = type === 'breakfast' ? baseBScore + simpleBreakfastScoreBoost(b) : baseBScore;
+                const prof = getUserProfile();
+                const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main), a.complexity, type, prof) + (type === 'breakfast' ? simpleBreakfastScoreBoost(a) : 0);
+                const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main), b.complexity, type, prof) + (type === 'breakfast' ? simpleBreakfastScoreBoost(b) : 0);
                 return aScore - bScore;
               });
               const pick = ranked.find(r => (!enforceUnique || !get().weeklyUsedRecipeIds.has(r.id))) ?? ranked[0];
@@ -988,8 +1000,9 @@ export const useMealPlanStore = create<MealPlanState>()(
                 const prevF = featuresFor(prev);
                 candidates.sort((a,b) => {
                   const fa = featuresFor(a), fb = featuresFor(b);
-                  const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false);
-                  const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false);
+                  const prof2 = getUserProfile();
+                  const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false, a.complexity, type, prof2);
+                  const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false, b.complexity, type, prof2);
                   return aScore - bScore;
                 });
                 return candidates[0] ?? null;
@@ -1103,8 +1116,9 @@ export const useMealPlanStore = create<MealPlanState>()(
             const ranked = arr.slice().sort((a, b) => {
               const fa = featuresFor(a);
               const fb = featuresFor(b);
-              const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
-              const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+              const profLocal = getUserProfile();
+              const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main), a.complexity, fallbackType, profLocal);
+              const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main), b.complexity, fallbackType, profLocal);
               return aScore - bScore;
             });
             const from = ranked.find(r => (!enforceUnique || !get().weeklyUsedRecipeIds.has(r.id))) ?? ranked[0] ?? null;
@@ -1123,8 +1137,9 @@ export const useMealPlanStore = create<MealPlanState>()(
               const rankedLocal = local.slice().sort((a, b) => {
                 const fa = featuresFor(a);
                 const fb = featuresFor(b);
-                const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main));
-                const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main));
+                const prof = getUserProfile();
+                const aScore = combineScore((a.calories ?? 0) - target, false, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, fa.main !== null && inDayMain.has(fa.main), a.complexity, fallbackType, prof);
+                const bScore = combineScore((b.calories ?? 0) - target, false, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, fb.main !== null && inDayMain.has(fb.main), b.complexity, fallbackType, prof);
                 return aScore - bScore;
               });
               const r = rankedLocal[0];
@@ -1397,8 +1412,9 @@ export const useMealPlanStore = create<MealPlanState>()(
             const bMainPenalty = fb.main ? (usedMainCount.get(fb.main) ?? 0) * 20 : 0;
             const aCuisinePenalty = fa.cuisine ? (usedCuisineCount.get(fa.cuisine) ?? 0) * 10 : 0;
             const bCuisinePenalty = fb.cuisine ? (usedCuisineCount.get(fb.cuisine) ?? 0) * 10 : 0;
-            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false) + aMainPenalty + aCuisinePenalty + usedPenalty(a.id);
-            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false) + bMainPenalty + bCuisinePenalty + usedPenalty(b.id);
+            const prof = getUserProfile();
+            const aScore = combineScore((a.calories ?? 0) - targetCalories, a.id === prevId, fa.main !== null && fa.main === prevF.main, fa.cuisine !== null && fa.cuisine === prevF.cuisine, false, a.complexity, type, prof) + aMainPenalty + aCuisinePenalty + usedPenalty(a.id);
+            const bScore = combineScore((b.calories ?? 0) - targetCalories, b.id === prevId, fb.main !== null && fb.main === prevF.main, fb.cuisine !== null && fb.cuisine === prevF.cuisine, false, b.complexity, type, prof) + bMainPenalty + bCuisinePenalty + usedPenalty(b.id);
             return aScore - bScore;
           });
           return ranked[0] ?? null;
