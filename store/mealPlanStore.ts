@@ -1281,9 +1281,13 @@ export const useMealPlanStore = create<MealPlanState>()(
         const breakfastCalories = Math.round(calorieGoal * mealSplit.breakfast);
         const lunchCalories = Math.round(calorieGoal * mealSplit.lunch);
         const dinnerCalories = Math.round(calorieGoal * mealSplit.dinner);
-        const breakfastRepeatMode = (getUserProfile().breakfastRepeatMode ?? 'repeat') as 'no-repeat' | 'repeat' | 'alternate';
+        let breakfastRepeatMode = (getUserProfile().breakfastRepeatMode ?? 'repeat') as 'no-repeat' | 'repeat' | 'alternate';
 
         const used = new Set<string>();
+        const lunchRepeatMode = ((getUserProfile().lunchRepeatMode ?? 'no-repeat') as 'no-repeat' | 'repeat' | 'alternate');
+        if (enforceUnique) {
+          breakfastRepeatMode = 'no-repeat';
+        }
         const usedMainCount = new Map<string, number>();
         const usedCuisineCount = new Map<string, number>();
         const currentState = get();
@@ -1537,6 +1541,9 @@ export const useMealPlanStore = create<MealPlanState>()(
           if (!currentDayPlan.breakfast) {
             const assigned = breakfastAssignments[date] ?? null;
             if (assigned) {
+              if (enforceUnique && assigned && used.has(assigned.id)) {
+                // skip assigned repeat and pick fresh below
+              } else {
               currentDayPlan.breakfast = {
                 recipeId: assigned.id,
                 name: assigned.name,
@@ -1560,6 +1567,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               if (fSel.cuisine) usedCuisineCount.set(fSel.cuisine, (usedCuisineCount.get(fSel.cuisine) ?? 0) + 1);
               result.generatedMeals.push(`${date}-breakfast-assigned`);
               filledCount++;
+              }
             } else {
               let chosen = pickFromPools(breakfastPool, getLocalFallbacks('breakfast', breakfastCalories), breakfastCalories, 'breakfast', date);
               if (!chosen && breakfastPool.length > 0) {
@@ -1641,7 +1649,12 @@ export const useMealPlanStore = create<MealPlanState>()(
             let chosen = pickFromPools(lunchPool, getLocalFallbacks('lunch', lunchCalories), lunchCalories, 'lunch', date);
             if (!chosen && lunchPool.length > 0) {
               const firstNotUsed = lunchPool.find(r => !used.has(r.id));
-              chosen = firstNotUsed ?? lunchPool[0];
+              chosen = firstNotUsed ?? null;
+              if (!chosen) {
+                if (lunchRepeatMode !== 'no-repeat') {
+                  chosen = lunchPool[0];
+                }
+              }
               if (enforceUnique && chosen && used.has(chosen.id)) repeatsUnavoidable = true;
             }
             if (chosen) {
@@ -1662,9 +1675,12 @@ export const useMealPlanStore = create<MealPlanState>()(
               result.generatedMeals.push(`${date}-lunch`);
               filledCount++;
             } else if (lunchPool.length + getLocalFallbacks('lunch', lunchCalories).length > 0) {
-              const any = [...lunchPool, ...getLocalFallbacks('lunch', lunchCalories)][0];
-              if (enforceUnique && any && used.has(any.id)) repeatsUnavoidable = true;
-              currentDayPlan.lunch = {
+              const merged = [...lunchPool, ...getLocalFallbacks('lunch', lunchCalories)];
+              const anyUnused = merged.find(r => !used.has(r.id));
+              const any = anyUnused ?? (lunchRepeatMode !== 'no-repeat' ? merged[0] : undefined);
+              if (any) {
+                if (enforceUnique && used.has(any.id)) repeatsUnavoidable = true;
+                currentDayPlan.lunch = {
                 recipeId: any.id,
                 name: any.name,
                 calories: any.calories,
@@ -1681,6 +1697,7 @@ export const useMealPlanStore = create<MealPlanState>()(
               result.generatedMeals.push(`${date}-lunch-relaxed`);
               filledCount++;
             }
+            
             progressed += perSlot; set({ generationProgress: Math.min(0.3 + progressed, 0.95) });
           }
 
