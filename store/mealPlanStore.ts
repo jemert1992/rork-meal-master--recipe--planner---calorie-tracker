@@ -1866,17 +1866,17 @@ export const useMealPlanStore = create<MealPlanState>()(
           lastGenerationError: result.error,
           generationSuggestions: result.suggestions,
           isGenerating: false,
-          generationProgress: 1,
+          generationProgress: 1
         });
 
         return result;
-      },
+      }
     }),
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        mealPlan: state.mealPlan,
+        mealPlan: state.mealPlan
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -1890,7 +1890,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           state.isGenerating = false;
           state.generationProgress = 0;
         }
-      },
+      }
     }
   )
 );
