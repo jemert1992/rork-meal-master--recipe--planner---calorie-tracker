@@ -1870,27 +1870,28 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
 
         return result;
-      },
-    }),
+      }),
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        mealPlan: state.mealPlan
+        mealPlan: state.mealPlan,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.weeklyUsedRecipeIds = new Set<string>();
-          state.alternativeRecipes = {};
-          state.isLoadingAlternatives = false;
-          state.lastGenerationError = null;
-          state.generationSuggestions = [];
-          state.recipePoolsCache = null;
-          state.uniquePerWeek = state.uniquePerWeek ?? false;
-          state.isGenerating = false;
-          state.generationProgress = 0;
-        }
-      }
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state) {
+            state.weeklyUsedRecipeIds = new Set<string>();
+            state.alternativeRecipes = {};
+            state.isLoadingAlternatives = false;
+            state.lastGenerationError = null;
+            state.generationSuggestions = [];
+            state.recipePoolsCache = null;
+            state.uniquePerWeek = state.uniquePerWeek ?? false;
+            state.isGenerating = false;
+            state.generationProgress = 0;
+          }
+        };
+      },
     }
   )
 );
