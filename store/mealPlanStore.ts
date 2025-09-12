@@ -64,7 +64,7 @@ const getUserProfile = () => {
   }
 };
 
-const withTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T | null> => {
+const withTimeout = async <T>(p: Promise<T>, ms: number): Promise<T | null> => {
   return new Promise((resolve) => {
     let settled = false;
     const t = setTimeout(() => {
