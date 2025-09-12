@@ -1871,7 +1871,7 @@ export const useMealPlanStore = create<MealPlanState>()(
 
         return result;
       }
-    },
+    }),
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
