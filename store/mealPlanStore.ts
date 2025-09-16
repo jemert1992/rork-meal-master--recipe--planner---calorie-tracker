@@ -211,7 +211,7 @@ function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, s
   return Math.abs(calorieDiff) + penalty;
 }
 
-export const useMealPlanStore = create<MealPlanState>()(
+export const useMealPlanStore = create<MealPlanState>(
   persist(
     (set, get) => ({
       mealPlan: mockMealPlan,
