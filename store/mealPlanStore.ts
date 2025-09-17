@@ -1868,7 +1868,7 @@ const mealPlanInitializer = (set: any, get: any) => ({
         });
 
         return result;
-      }
+      },
 });
 
 export const useMealPlanStore = create<MealPlanState>()(
