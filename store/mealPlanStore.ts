@@ -213,7 +213,8 @@ function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, s
 
 export const useMealPlanStore = create<MealPlanState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      return {
       mealPlan: mockMealPlan,
       weeklyUsedRecipeIds: new Set<string>(),
       alternativeRecipes: {},
@@ -1870,28 +1871,26 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
 
         return result;
-      }
-    }),
+      };
+    },
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         mealPlan: state.mealPlan,
       }),
-      onRehydrateStorage: () => {
-        return (state) => {
-          if (state) {
-            state.weeklyUsedRecipeIds = new Set<string>();
-            state.alternativeRecipes = {};
-            state.isLoadingAlternatives = false;
-            state.lastGenerationError = null;
-            state.generationSuggestions = [];
-            state.recipePoolsCache = null;
-            state.uniquePerWeek = state.uniquePerWeek ?? false;
-            state.isGenerating = false;
-            state.generationProgress = 0;
-          }
-        };
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.weeklyUsedRecipeIds = new Set<string>();
+          state.alternativeRecipes = {};
+          state.isLoadingAlternatives = false;
+          state.lastGenerationError = null;
+          state.generationSuggestions = [];
+          state.recipePoolsCache = null;
+          state.uniquePerWeek = state.uniquePerWeek ?? false;
+          state.isGenerating = false;
+          state.generationProgress = 0;
+        }
       }
     }
   )
