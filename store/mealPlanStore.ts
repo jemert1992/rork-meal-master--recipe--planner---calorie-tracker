@@ -213,8 +213,7 @@ function combineScore(calorieDiff: number, sameId: boolean, sameMain: boolean, s
 
 export const useMealPlanStore = create<MealPlanState>()(
   persist(
-    (set, get) => {
-      return {
+    (set, get) => ({
       mealPlan: mockMealPlan,
       weeklyUsedRecipeIds: new Set<string>(),
       alternativeRecipes: {},
@@ -441,7 +440,7 @@ export const useMealPlanStore = create<MealPlanState>()(
           issues,
           totalCalories,
           calorieDeviation
-        };
+        }
       },
       
       isRecipeSuitable: (recipe, dietType = 'any', allergies = [], excludedIngredients = []) => {
@@ -1871,8 +1870,8 @@ export const useMealPlanStore = create<MealPlanState>()(
         });
 
         return result;
-      };
-    },
+      },
+    }),
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
