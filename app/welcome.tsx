@@ -65,9 +65,8 @@ export default function WelcomeScreen() {
   }, [mounted, tutorialCompleted, hasRedirectedToTabs, isLoggedIn, router]);
 
   const handleStartTutorial = useCallback(() => {
-    startTutorial();
     router.replace('/onboarding/personal-info');
-  }, [startTutorial, router]);
+  }, [router]);
 
   if (!mounted) {
     return null;
@@ -137,14 +136,14 @@ export default function WelcomeScreen() {
             onPress={handleStartTutorial}
             hitSlop={Platform.OS === 'web' ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
-            accessibilityLabel="Start Tutorial"
-            testID="start-tutorial-button"
+            accessibilityLabel="Get Started"
+            testID="get-started-button"
           >
             <LinearGradient
               colors={[Colors.primary, Colors.primaryDark]}
               style={styles.buttonGradient}
             >
-              <Text style={styles.buttonText}>Start Tutorial</Text>
+              <Text style={styles.buttonText}>Get Started</Text>
               <ArrowRight size={20} color={Colors.white} />
             </LinearGradient>
           </Pressable>
